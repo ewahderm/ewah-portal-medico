@@ -52,6 +52,12 @@ export const CATALOGOS: CatalogoConfig[] = [
     descripcion: "Salas/consultorios de tu clínica, usados para agendar citas.",
     esGlobal: false,
   },
+  {
+    tabla: "sedes",
+    nombre: "Sedes",
+    descripcion: "Sucursales físicas de tu clínica.",
+    esGlobal: false,
+  },
 ];
 
 export function getCatalogo(tabla: string): CatalogoConfig | undefined {
