@@ -16,9 +16,13 @@ Reconstrucción módulo por módulo, con confirmación en cada decisión grande.
 - [x] Verificación visual en navegador real (login, signup, flujo de error) vía `npx playwright cli --browser=chrome` usando el Chrome ya instalado en la máquina — no requiere descargar el Chromium de Playwright, que falla por red en este entorno. Ver nota de proceso más abajo.
 - [x] Vercel: dos ambientes — Production (`main`, https://ewah-portal-medico.vercel.app) y Preview/staging (rama `staging`, URL estable `https://ewah-portal-medico-git-staging-ewah.vercel.app`). Variables de entorno correctas en ambos ambientes (incl. `SUPABASE_SERVICE_ROLE_KEY` que solo tenía Production desde la integración nativa de hace días). `lib/site-url.ts` arma la URL de invitación dinámicamente con `VERCEL_URL` en vez de depender de una env var fija por ambiente.
 - [x] CLI de Vercel instalado y logueado (`vercel login`, `vercel link`) — se usa para todo lo de deploy/env vars ya que el MCP remoto de Vercel no logró autorizar el team `ewah` (ver nota abajo)
+- [x] Rediseño de login/signup con identidad visual EWAH Tech (hero oscuro degradado violeta-fucsia + card de acción), corregido bug de fuente (`--font-sans` circular en globals.css)
+- [x] Módulo Parámetros (datos maestros / tablas de referencia): motor genérico reutilizable (registro + acciones + UI con tabs) + 5 catálogos globales para Pacientes (Tipos de Identificación, Géneros, Países, EPS, Medios de Contacto), con datos reales sembrados — `supabase/migrations/0004_parametros.sql`, `apps/web/lib/parametros/`, `apps/web/app/(protected)/parametros/`. Catálogos futuros por-clínica (Sede, Consultorio...) reusan la misma infraestructura, solo agregando `clinica_id` + `esGlobal: false` en el registro.
 
 ## En progreso / próximo
 
+- [ ] Correr `supabase/migrations/0004_parametros.sql` en el SQL Editor
+- [ ] Probar `/parametros` con sesión real (no se pudo verificar en navegador más allá del login — no hay credenciales de prueba en este entorno)
 - [ ] Confirmar que agregaste en Supabase → Authentication → URL Configuration → Redirect URLs: `https://ewah-portal-medico.vercel.app/**`, `https://*-ewah.vercel.app/**`, `http://localhost:3000/**`
 - [ ] Configurar Resend como SMTP personalizado en Supabase Auth (dashboard) cuando haya dominio verificado — hoy usa el mailer por defecto de Supabase y Resend en modo sandbox (solo a tu propio correo)
 - [ ] Actualizar las plantillas de email de Supabase (Confirm signup, Invite user, Reset password) para usar el formato `/auth/confirm?token_hash=...&type=...&next=...`
