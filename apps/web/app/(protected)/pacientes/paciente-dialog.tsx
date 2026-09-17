@@ -52,6 +52,12 @@ type Catalogos = {
 
 const COLOMBIA_NOMBRE = "Colombia";
 
+// Base UI's <Select.Value> muestra el valor crudo (el uuid) salvo que se
+// le pase `items` para poder resolver la etiqueta a mostrar.
+function toItems(opciones: Opcion[]) {
+  return opciones.map((o) => ({ value: o.id, label: o.nombre }));
+}
+
 export function PacienteDialog({
   catalogos,
   paciente,
@@ -70,12 +76,12 @@ export function PacienteDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={trigger as React.ReactElement} />
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>{paciente ? "Editar paciente" : "Nuevo paciente"}</DialogTitle>
         </DialogHeader>
 
-        <form action={formAction} className="max-h-[70vh] space-y-4 overflow-y-auto pr-1">
+        <form action={formAction} className="max-h-[70vh] space-y-5 overflow-y-auto px-1 pb-1">
           {paciente ? <input type="hidden" name="id" value={paciente.id} /> : null}
 
           {state?.error ? (
@@ -84,12 +90,13 @@ export function PacienteDialog({
             </Alert>
           ) : null}
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-6">
             <div className="space-y-2">
               <Label htmlFor="tipoIdentificacionId">Tipo de identificación</Label>
               <Select
                 name="tipoIdentificacionId"
                 required
+                items={toItems(catalogos.tiposIdentificacion)}
                 defaultValue={paciente?.tipo_identificacion_id}
               >
                 <SelectTrigger id="tipoIdentificacionId" className="w-full">
@@ -116,7 +123,7 @@ export function PacienteDialog({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-6">
             <div className="space-y-2">
               <Label htmlFor="primerNombre">Primer nombre</Label>
               <Input
@@ -136,7 +143,7 @@ export function PacienteDialog({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-6">
             <div className="space-y-2">
               <Label htmlFor="primerApellido">Primer apellido</Label>
               <Input
@@ -156,7 +163,7 @@ export function PacienteDialog({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-6">
             <div className="space-y-2">
               <Label htmlFor="fechaNacimiento">Fecha de nacimiento</Label>
               <Input
@@ -168,7 +175,11 @@ export function PacienteDialog({
             </div>
             <div className="space-y-2">
               <Label htmlFor="generoId">Género</Label>
-              <Select name="generoId" defaultValue={paciente?.genero_id ?? undefined}>
+              <Select
+                name="generoId"
+                items={toItems(catalogos.generos)}
+                defaultValue={paciente?.genero_id ?? undefined}
+              >
                 <SelectTrigger id="generoId" className="w-full">
                   <SelectValue placeholder="Selecciona" />
                 </SelectTrigger>
@@ -183,11 +194,12 @@ export function PacienteDialog({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-6">
             <div className="space-y-2">
               <Label htmlFor="nacionalidadId">Nacionalidad</Label>
               <Select
                 name="nacionalidadId"
+                items={toItems(catalogos.paises)}
                 defaultValue={paciente?.nacionalidad_id ?? colombiaId}
               >
                 <SelectTrigger id="nacionalidadId" className="w-full">
@@ -206,6 +218,7 @@ export function PacienteDialog({
               <Label htmlFor="paisResidenciaId">País de residencia</Label>
               <Select
                 name="paisResidenciaId"
+                items={toItems(catalogos.paises)}
                 defaultValue={paciente?.pais_residencia_id ?? colombiaId}
               >
                 <SelectTrigger id="paisResidenciaId" className="w-full">
@@ -222,11 +235,12 @@ export function PacienteDialog({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-6">
             <div className="space-y-2">
               <Label htmlFor="canalCaptacionId">¿Cómo nos conoció?</Label>
               <Select
                 name="canalCaptacionId"
+                items={toItems(catalogos.canalesCaptacion)}
                 defaultValue={paciente?.canal_captacion_id ?? undefined}
               >
                 <SelectTrigger id="canalCaptacionId" className="w-full">
@@ -243,7 +257,11 @@ export function PacienteDialog({
             </div>
             <div className="space-y-2">
               <Label htmlFor="epsId">EPS</Label>
-              <Select name="epsId" defaultValue={paciente?.eps_id ?? undefined}>
+              <Select
+                name="epsId"
+                items={toItems(catalogos.eps)}
+                defaultValue={paciente?.eps_id ?? undefined}
+              >
                 <SelectTrigger id="epsId" className="w-full">
                   <SelectValue placeholder="Selecciona" />
                 </SelectTrigger>
@@ -263,7 +281,7 @@ export function PacienteDialog({
             <Input id="email" name="email" type="email" defaultValue={paciente?.email ?? ""} />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-6">
             <div className="space-y-2">
               <Label htmlFor="telefono1">Teléfono principal</Label>
               <Input
