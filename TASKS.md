@@ -37,8 +37,8 @@ Reconstrucción módulo por módulo, con confirmación en cada decisión grande.
 
 ## En progreso / próximo
 
-- [x] Migraciones `0004` a `0011` corridas en Supabase (confirmado por el usuario 2026-09-17)
-- [ ] Correr `supabase/migrations/0012_bloqueo_dia_completo.sql`, `0013_tratamiento_sede_medio_pago.sql` y `0014_contactos_paciente.sql` en el SQL Editor (en ese orden)
+- [x] Migraciones `0001` a `0014` confirmadas aplicadas en Supabase (2026-09-17) — todas ya estaban corridas manualmente; se reconcilió el historial del CLI con `supabase migration repair` para que coincida con la realidad
+- [x] Supabase CLI vinculado al proyecto (`nrzjgqgbhgxnjizuvdqz`) — de ahora en adelante las migraciones nuevas se aplican con `supabase db push --linked` directamente, sin copiar y pegar en el SQL Editor. Ver nota de proceso más abajo.
 - [ ] Configurar tus propias "Sedes", "Tipos de tratamiento", "Consultorios" y "Medios de pago" en `/parametros` si lo sembrado por defecto (Sede Principal, Consultorio 1, Botox/Ácido hialurónico/Limpieza facial/Peeling/Otro, Efectivo/Tarjeta débito/Tarjeta crédito/Transferencia/PSE/Otro) no coincide con la clínica real
 - [ ] Probar `/parametros`, `/pacientes`, `/tratamientos` y `/citas` con sesión real ahora que las migraciones ya corrieron
 - [ ] Confirmar que agregaste en Supabase → Authentication → URL Configuration → Redirect URLs: `https://ewah-portal-medico.vercel.app/**`, `https://*-ewah.vercel.app/**`, `http://localhost:3000/**`
@@ -51,6 +51,15 @@ Reconstrucción módulo por módulo, con confirmación en cada decisión grande.
 Google Drive ya está autorizado. El usuario compartió muestras reales (`Referencias - Usuario.csv`, `ControlPacientes - ConsumoInsumos.csv`) el 2026-09-17, pero decidió explícitamente seguir el roadmap original (Agenda/Citas) antes de construir Inventario e importar los datos del legado — no se retoma hasta que se llegue a ese punto del backlog.
 
 **Hallazgo de seguridad:** la tabla `Usuario` del legado guarda contraseñas en texto plano. Esa columna nunca se importa ni se guarda en el repo — al migrar usuarios se reutiliza el flujo de invitación por correo ya existente (`inviteStaff`) para que cada quien cree su propia contraseña. Detalle completo y pendientes (mapeo de `IdRol` legado, qué cuentas migrar, tablas de Insumos/Lotes que faltan) en memoria (`import_datos_legado.md`), no en este archivo, para no dejar datos sensibles de referencia aquí.
+
+### Nota de proceso: cómo se aplican las migraciones ahora
+
+El usuario vinculó el Supabase CLI al proyecto (`supabase login` + `supabase link --project-ref nrzjgqgbhgxnjizuvdqz`, corridos por él mismo en su propia terminal — la contraseña de la base de datos nunca pasa por el chat). Desde entonces, cada migración nueva se aplica así:
+
+1. `npx supabase db push --linked --dry-run` — confirma qué migraciones va a aplicar antes de tocar nada.
+2. `npx supabase db push --linked` — las aplica de verdad.
+
+Ya no hace falta pedirle al usuario que copie y pegue el SQL en el Editor de Supabase. Si alguna vez el usuario corre una migración a mano de todos modos (pasó con `0012`-`0014`: las corrió él mismo sin avisar, y `db push` lo delató con errores de "ya existe"), se reconcilia con `npx supabase migration repair <version> --status applied --linked` antes de seguir — nunca forzar un `db push` después de un error de "already exists" sin repararlo primero, porque el resto del archivo podría no haberse aplicado.
 
 ### Nota: MCP de Vercel sin autorizar
 
