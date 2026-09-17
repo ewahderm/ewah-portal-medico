@@ -21,10 +21,11 @@ Reconstrucción módulo por módulo, con confirmación en cada decisión grande.
 - [x] Campo "Medio de Contacto" del paciente redefinido a "¿Cómo nos conoció?" (canal de captación/atribución de marketing: Google, redes sociales, recomendado...) en vez de medio de contacto preferido — `supabase/migrations/0006_canal_captacion.sql`
 - [x] Módulo Parámetros (datos maestros / tablas de referencia): motor genérico reutilizable (registro + acciones + UI con tabs) + 5 catálogos globales para Pacientes (Tipos de Identificación, Géneros, Países, EPS, Medios de Contacto), con datos reales sembrados — `supabase/migrations/0004_parametros.sql`, `apps/web/lib/parametros/`, `apps/web/app/(protected)/parametros/`. Catálogos futuros por-clínica (Sede, Consultorio...) reusan la misma infraestructura, solo agregando `clinica_id` + `esGlobal: false` en el registro.
 - [x] Módulo Pacientes: listar/buscar (búsqueda indexada con pg_trgm + unaccent, mejora sobre el escaneo en memoria del legado), crear, editar, desactivar (nunca se borra — retención de historia clínica). Sin columnas de Edad/RangoEdad en el paciente (decisión: se calculan y guardan como dato histórico inmutable en Tratamientos, para análisis por edad) — `supabase/migrations/0005_pacientes.sql`, `apps/web/lib/pacientes/`, `apps/web/app/(protected)/pacientes/`.
+- [x] Auditoría de cambios a datos clínicos: tabla genérica `auditoria` + trigger reutilizable `fn_auditoria()` (INSERT/UPDATE/DELETE, guarda quién/cuándo/valores anteriores y nuevos como jsonb), aplicado a `pacientes`; solo lectura para admins de la propia clínica. Requisito médico-legal de trazabilidad, no solo buena práctica — decidido antes de construir Tratamientos para no duplicar el patrón sin ella — `supabase/migrations/0007_auditoria.sql`.
 
 ## En progreso / próximo
 
-- [ ] Correr `supabase/migrations/0004_parametros.sql`, `0005_pacientes.sql` y `0006_canal_captacion.sql` en el SQL Editor (en ese orden)
+- [ ] Correr `supabase/migrations/0004_parametros.sql`, `0005_pacientes.sql`, `0006_canal_captacion.sql` y `0007_auditoria.sql` en el SQL Editor (en ese orden)
 - [ ] Probar `/parametros` y `/pacientes` con sesión real (no se pudo verificar en navegador más allá del login — no hay credenciales de prueba en este entorno)
 - [ ] Confirmar que agregaste en Supabase → Authentication → URL Configuration → Redirect URLs: `https://ewah-portal-medico.vercel.app/**`, `https://*-ewah.vercel.app/**`, `http://localhost:3000/**`
 - [ ] Configurar Resend como SMTP personalizado en Supabase Auth (dashboard) cuando haya dominio verificado — hoy usa el mailer por defecto de Supabase y Resend en modo sandbox (solo a tu propio correo)
@@ -38,6 +39,16 @@ Reconstrucción módulo por módulo, con confirmación en cada decisión grande.
 ### Nota de proceso: cómo verificar visualmente en este entorno
 
 `npx playwright install chromium` falla por red (timeout a `cdn.playwright.dev`). En vez de eso: `cd apps/web && npx playwright cli open --browser=chrome <url>` usa el Chrome/Edge ya instalado en Windows sin descargar nada. Comandos útiles: `goto`, `snapshot` (refs de elementos), `fill <ref> <valor>`, `click <ref>`, `console error`, `screenshot --filename=x.png`, `close`. Los artefactos quedan en `apps/web/.playwright-cli/` (gitignorado).
+
+## Deuda técnica identificada (revisión de buenas prácticas, 2026-09-17)
+
+Revisadas antes de construir Tratamientos; el usuario priorizó solo Auditoría por ahora (arriba). El resto queda en backlog, no se descartó:
+
+- [ ] Historia clínica append-only en Tratamientos: no editar registros clínicos in-place, corregir con una entrada nueva que referencie la original — decidir el diseño de la tabla `tratamientos` con esto en mente.
+- [ ] Storage de fotos/documentos (antes/después, consentimientos) con aislamiento por `clinica_id` en las políticas del bucket — definir antes de que Tratamientos lo necesite.
+- [ ] Pruebas automatizadas de aislamiento multi-tenant (RLS): hoy solo se verifica visualmente por navegador; no escala a medida que crecen los módulos.
+- [ ] Separar Supabase de staging y producción — disparador: el día que entren datos reales de pacientes a producción (hoy comparten uno solo, decisión deliberada de "Un solo Supabase por ahora").
+- [ ] Monitoreo de errores (Sentry o similar) antes de uso real en producción.
 
 ## Backlog (por módulo, ver docs/spec-ewah-app.md)
 
