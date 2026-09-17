@@ -76,12 +76,12 @@ export function PacienteDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={trigger as React.ReactElement} />
-      <DialogContent className="max-w-2xl">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>{paciente ? "Editar paciente" : "Nuevo paciente"}</DialogTitle>
         </DialogHeader>
 
-        <form action={formAction} className="max-h-[70vh] space-y-5 overflow-y-auto px-1 pb-1">
+        <form action={formAction} className="space-y-5">
           {paciente ? <input type="hidden" name="id" value={paciente.id} /> : null}
 
           {state?.error ? (

@@ -83,7 +83,7 @@ export function PermissionMatrixDialog({
           </Button>
         }
       />
-      <DialogContent className="max-w-2xl">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Permisos de {rolNombre}</DialogTitle>
         </DialogHeader>
