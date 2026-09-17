@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import { crearBloqueo } from "@/lib/citas/actions";
 import { opcionesHora, sumarMinutos } from "@/lib/citas/horarios";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -46,6 +47,21 @@ export function BloqueoDialog({
   const [state, formAction, pending] = useActionState(crearBloqueo, null);
   const [horaInicio, setHoraInicio] = useState("09:00");
   const [horaFin, setHoraFin] = useState(sumarMinutos("09:00", 60));
+  const [todoElDia, setTodoElDia] = useState(false);
+  const [profesionalesSeleccionados, setProfesionalesSeleccionados] = useState<Set<string>>(
+    new Set(),
+  );
+
+  function toggleProfesional(id: string, marcado: boolean) {
+    setProfesionalesSeleccionados((prev) => {
+      const copia = new Set(prev);
+      if (marcado) copia.add(id);
+      else copia.delete(id);
+      return copia;
+    });
+  }
+
+  const todosSeleccionados = profesionales.length > 0 && profesionalesSeleccionados.size === profesionales.length;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -58,8 +74,8 @@ export function BloqueoDialog({
         <form action={formAction} className="space-y-5">
           <Alert>
             <AlertDescription>
-              Usa esto para vacaciones, almuerzo o capacitaciones — bloquea el horario
-              en la agenda sin asociar un paciente.
+              Usa esto para vacaciones, incapacidades, almuerzo o capacitaciones — bloquea
+              la agenda de uno o varios profesionales sin asociar un paciente.
             </AlertDescription>
           </Alert>
 
@@ -69,104 +85,133 @@ export function BloqueoDialog({
             </Alert>
           ) : null}
 
-          <div className="grid grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label htmlFor="profesionalId">Profesional</Label>
-              <Select name="profesionalId" required items={toItems(profesionales)}>
-                <SelectTrigger id="profesionalId" className="w-full">
-                  <SelectValue placeholder="Selecciona" />
-                </SelectTrigger>
-                <SelectContent>
-                  {profesionales.map((op) => (
-                    <SelectItem key={op.id} value={op.id}>
-                      {op.nombre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label>Profesionales</Label>
+              <button
+                type="button"
+                className="text-xs text-accent-foreground hover:underline"
+                onClick={() =>
+                  setProfesionalesSeleccionados(
+                    todosSeleccionados ? new Set() : new Set(profesionales.map((p) => p.id)),
+                  )
+                }
+              >
+                {todosSeleccionados ? "Ninguno" : "Todos"}
+              </button>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="consultorioId">Consultorio</Label>
-              <Select name="consultorioId" required items={toItems(consultorios)}>
-                <SelectTrigger id="consultorioId" className="w-full">
-                  <SelectValue placeholder="Selecciona" />
-                </SelectTrigger>
-                <SelectContent>
-                  {consultorios.map((op) => (
-                    <SelectItem key={op.id} value={op.id}>
-                      {op.nombre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="grid max-h-40 grid-cols-2 gap-x-4 gap-y-2 overflow-y-auto rounded-lg border border-input p-3">
+              {profesionales.map((p) => (
+                <label key={p.id} className="flex items-center gap-2 text-sm">
+                  <Checkbox
+                    name="profesionalIds"
+                    value={p.id}
+                    checked={profesionalesSeleccionados.has(p.id)}
+                    onCheckedChange={(marcado) => toggleProfesional(p.id, marcado === true)}
+                  />
+                  {p.nombre}
+                </label>
+              ))}
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-6">
-            <div className="space-y-2">
-              <Label htmlFor="fecha">Fecha</Label>
-              <Input
-                id="fecha"
-                name="fecha"
-                type="date"
-                required
-                defaultValue={fechaSeleccionada}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="horaInicio">Hora inicio</Label>
-              <Select
-                name="horaInicio"
-                required
-                items={OPCIONES_HORA}
-                value={horaInicio}
-                onValueChange={(valor) => {
-                  const nuevaHoraInicio = String(valor);
-                  setHoraInicio(nuevaHoraInicio);
-                  setHoraFin(sumarMinutos(nuevaHoraInicio, 60));
-                }}
-              >
-                <SelectTrigger id="horaInicio" className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {OPCIONES_HORA.map((op) => (
-                    <SelectItem key={op.value} value={op.value}>
-                      {op.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="horaFin">Hora fin</Label>
-              <Select
-                name="horaFin"
-                required
-                items={OPCIONES_HORA}
-                value={horaFin}
-                onValueChange={(valor) => setHoraFin(String(valor))}
-              >
-                <SelectTrigger id="horaFin" className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {OPCIONES_HORA.map((op) => (
-                    <SelectItem key={op.value} value={op.value}>
-                      {op.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="consultorioId">Consultorio (opcional)</Label>
+            <Select name="consultorioId" items={toItems(consultorios)}>
+              <SelectTrigger id="consultorioId" className="w-full">
+                <SelectValue placeholder="Sin consultorio específico" />
+              </SelectTrigger>
+              <SelectContent>
+                {consultorios.map((op) => (
+                  <SelectItem key={op.id} value={op.id}>
+                    {op.nombre}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="fecha">Fecha</Label>
+            <Input
+              id="fecha"
+              name="fecha"
+              type="date"
+              required
+              defaultValue={fechaSeleccionada}
+            />
+          </div>
+
+          <label className="flex items-center gap-2 text-sm">
+            <Checkbox
+              name="todoElDia"
+              checked={todoElDia}
+              onCheckedChange={(marcado) => setTodoElDia(marcado === true)}
+            />
+            Todo el día
+          </label>
+
+          {!todoElDia ? (
+            <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="horaInicio">Hora inicio</Label>
+                <Select
+                  name="horaInicio"
+                  required
+                  items={OPCIONES_HORA}
+                  value={horaInicio}
+                  onValueChange={(valor) => {
+                    const nuevaHoraInicio = String(valor);
+                    setHoraInicio(nuevaHoraInicio);
+                    setHoraFin(sumarMinutos(nuevaHoraInicio, 60));
+                  }}
+                >
+                  <SelectTrigger id="horaInicio" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {OPCIONES_HORA.map((op) => (
+                      <SelectItem key={op.value} value={op.value}>
+                        {op.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="horaFin">Hora fin</Label>
+                <Select
+                  name="horaFin"
+                  required
+                  items={OPCIONES_HORA}
+                  value={horaFin}
+                  onValueChange={(valor) => setHoraFin(String(valor))}
+                >
+                  <SelectTrigger id="horaFin" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {OPCIONES_HORA.map((op) => (
+                      <SelectItem key={op.value} value={op.value}>
+                        {op.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          ) : null}
 
           <div className="space-y-2">
             <Label htmlFor="motivo">Motivo (opcional)</Label>
             <Textarea id="motivo" name="motivo" rows={2} placeholder="Ej: vacaciones" />
           </div>
 
-          <Button type="submit" className="w-full" disabled={pending}>
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={pending || profesionalesSeleccionados.size === 0}
+          >
             {pending ? "Guardando..." : "Bloquear horario"}
           </Button>
         </form>

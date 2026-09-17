@@ -98,14 +98,22 @@ export default async function CitasPage({
       .order("orden"),
   ]);
 
+  // consultorio_id es opcional en un bloqueo de día completo (no depende
+  // de una sala) — usar !inner (join obligatorio) los excluiría siempre
+  // que no se esté filtrando por sede, así que solo se usa cuando hace
+  // falta para poder filtrar por consultorios.sede_id.
+  const embedConsultorio = sedeId
+    ? "consultorios!inner(nombre, sedes(nombre))"
+    : "consultorios(nombre, sedes(nombre))";
+
   let query = supabase
     .from("citas")
     .select(
-      `id, fecha, hora_inicio, hora_fin, estado, es_bloqueo, motivo,
+      `id, fecha, hora_inicio, hora_fin, estado, es_bloqueo, motivo, todo_el_dia,
        paciente_id, profesional_id, tipo_tratamiento_id,
        pacientes(primer_nombre, segundo_nombre, primer_apellido, segundo_apellido),
        tipos_tratamiento(nombre),
-       consultorios!inner(nombre, sedes(nombre)),
+       ${embedConsultorio},
        profesional:usuarios!citas_profesional_id_fkey(nombre)`,
     )
     .gte("fecha", format(desde, "yyyy-MM-dd"))

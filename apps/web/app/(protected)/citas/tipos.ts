@@ -5,6 +5,7 @@ export type CitaRow = {
   hora_fin: string;
   estado: string;
   es_bloqueo: boolean;
+  todo_el_dia: boolean;
   motivo: string | null;
   paciente_id: string | null;
   profesional_id: string;
