@@ -88,7 +88,7 @@ export default async function CitasPage({
     supabase.from("usuarios").select("id, nombre").eq("activo", true).order("nombre"),
     supabase
       .from("consultorios")
-      .select("id, nombre")
+      .select("id, nombre, sede_id")
       .eq("activo", true)
       .order("orden"),
     supabase.from("sedes").select("id, nombre").eq("activo", true).order("orden"),
@@ -149,6 +149,7 @@ export default async function CitasPage({
             <BloqueoDialog
               profesionales={profesionales}
               consultorios={consultorios}
+              sedes={sedes}
               fechaSeleccionada={fechaISO}
               trigger={<Button variant="outline">Bloquear horario</Button>}
             />
@@ -158,6 +159,7 @@ export default async function CitasPage({
               pacientes={pacientes}
               profesionales={profesionales}
               consultorios={consultorios}
+              sedes={sedes}
               tiposTratamiento={tiposTratamiento}
               fechaSeleccionada={fechaISO}
               trigger={<Button>Nueva cita</Button>}

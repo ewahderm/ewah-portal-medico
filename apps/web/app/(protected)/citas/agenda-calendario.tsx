@@ -105,7 +105,7 @@ export function AgendaCalendario({
   pacientes: { id: string; nombre: string }[];
   tiposTratamiento: { id: string; nombre: string }[];
   profesionales: { id: string; nombre: string }[];
-  consultorios: { id: string; nombre: string }[];
+  consultorios: { id: string; nombre: string; sede_id: string }[];
   sedes: { id: string; nombre: string }[];
   mediosPago: { id: string; nombre: string }[];
   usuarioActualId: string;
@@ -198,6 +198,7 @@ export function AgendaCalendario({
           pacientes={pacientes}
           profesionales={profesionales}
           consultorios={consultorios}
+          sedes={sedes}
           tiposTratamiento={tiposTratamiento}
           fechaSeleccionada={nuevaCita.fecha}
           horaInicioSeleccionada={nuevaCita.horaInicio}

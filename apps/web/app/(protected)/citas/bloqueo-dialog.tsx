@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useMemo, useState } from "react";
 import { crearBloqueo } from "@/lib/citas/actions";
 import { opcionesHora, sumarMinutos } from "@/lib/citas/horarios";
 import { Button } from "@/components/ui/button";
@@ -20,8 +20,10 @@ import { Combobox } from "@/components/ui/combobox";
 import { SIN_SELECCION } from "@/lib/forms/opcional";
 
 type Opcion = { id: string; nombre: string };
+type Consultorio = { id: string; nombre: string; sede_id: string };
 
 const OPCIONES_HORA = opcionesHora();
+const TODAS_LAS_SEDES = "__todas_las_sedes__";
 
 function toItems(opciones: Opcion[]) {
   return opciones.map((o) => ({ value: o.id, label: o.nombre }));
@@ -34,11 +36,13 @@ function toItemsOpcional(opciones: Opcion[]) {
 export function BloqueoDialog({
   profesionales,
   consultorios,
+  sedes,
   fechaSeleccionada,
   trigger,
 }: {
   profesionales: Opcion[];
-  consultorios: Opcion[];
+  consultorios: Consultorio[];
+  sedes: Opcion[];
   fechaSeleccionada: string;
   trigger: React.ReactNode;
 }) {
@@ -47,8 +51,14 @@ export function BloqueoDialog({
   const [horaInicio, setHoraInicio] = useState("09:00");
   const [horaFin, setHoraFin] = useState(sumarMinutos("09:00", 60));
   const [todoElDia, setTodoElDia] = useState(false);
+  const [sedeId, setSedeId] = useState(TODAS_LAS_SEDES);
   const [profesionalesSeleccionados, setProfesionalesSeleccionados] = useState<Set<string>>(
     new Set(),
+  );
+
+  const consultoriosDisponibles = useMemo(
+    () => (sedeId === TODAS_LAS_SEDES ? consultorios : consultorios.filter((c) => c.sede_id === sedeId)),
+    [consultorios, sedeId],
   );
 
   function toggleProfesional(id: string, marcado: boolean) {
@@ -114,14 +124,26 @@ export function BloqueoDialog({
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="consultorioId">Consultorio (opcional)</Label>
-            <Combobox
-              id="consultorioId"
-              name="consultorioId"
-              items={toItemsOpcional(consultorios)}
-              defaultValue={SIN_SELECCION}
-            />
+          <div className="grid grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="sedeIdFiltro">Sede</Label>
+              <Combobox
+                id="sedeIdFiltro"
+                items={[{ value: TODAS_LAS_SEDES, label: "Todas las sedes" }, ...toItems(sedes)]}
+                value={sedeId}
+                onValueChange={(valor) => setSedeId(String(valor ?? TODAS_LAS_SEDES))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="consultorioId">Consultorio (opcional)</Label>
+              <Combobox
+                key={sedeId}
+                id="consultorioId"
+                name="consultorioId"
+                items={toItemsOpcional(consultoriosDisponibles)}
+                defaultValue={SIN_SELECCION}
+              />
+            </div>
           </div>
 
           <div className="space-y-2">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useMemo, useState } from "react";
 import { crearCita } from "@/lib/citas/actions";
 import { opcionesHora, sumarMinutos } from "@/lib/citas/horarios";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import {
 import { Combobox } from "@/components/ui/combobox";
 
 type Opcion = { id: string; nombre: string };
+type Consultorio = { id: string; nombre: string; sede_id: string };
 
 const OPCIONES_HORA = opcionesHora();
 
@@ -28,6 +29,7 @@ export function CitaDialog({
   pacientes,
   profesionales,
   consultorios,
+  sedes,
   tiposTratamiento,
   fechaSeleccionada,
   horaInicioSeleccionada,
@@ -37,7 +39,8 @@ export function CitaDialog({
 }: {
   pacientes: Opcion[];
   profesionales: Opcion[];
-  consultorios: Opcion[];
+  consultorios: Consultorio[];
+  sedes: Opcion[];
   tiposTratamiento: Opcion[];
   fechaSeleccionada: string;
   horaInicioSeleccionada?: string;
@@ -51,6 +54,12 @@ export function CitaDialog({
   const [state, formAction, pending] = useActionState(crearCita, null);
   const [horaInicio, setHoraInicio] = useState(horaInicioSeleccionada ?? "09:00");
   const [horaFin, setHoraFin] = useState(sumarMinutos(horaInicioSeleccionada ?? "09:00", 60));
+  const [sedeId, setSedeId] = useState("");
+
+  const consultoriosDeLaSede = useMemo(
+    () => consultorios.filter((c) => c.sede_id === sedeId),
+    [consultorios, sedeId],
+  );
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -96,25 +105,44 @@ export function CitaDialog({
             />
           </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="profesionalId">Profesional</Label>
+            <Combobox
+              id="profesionalId"
+              name="profesionalId"
+              required
+              items={toItems(profesionales)}
+              placeholder="Selecciona"
+            />
+          </div>
+
           <div className="grid grid-cols-2 gap-6">
             <div className="space-y-2">
-              <Label htmlFor="profesionalId">Profesional</Label>
+              <Label htmlFor="sedeId">Sede</Label>
               <Combobox
-                id="profesionalId"
-                name="profesionalId"
-                required
-                items={toItems(profesionales)}
+                id="sedeId"
+                items={toItems(sedes)}
+                value={sedeId}
+                onValueChange={(valor) => setSedeId(String(valor ?? ""))}
                 placeholder="Selecciona"
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="consultorioId">Consultorio</Label>
               <Combobox
+                key={sedeId}
                 id="consultorioId"
                 name="consultorioId"
                 required
-                items={toItems(consultorios)}
-                placeholder="Selecciona"
+                disabled={consultoriosDeLaSede.length === 0}
+                items={toItems(consultoriosDeLaSede)}
+                placeholder={
+                  !sedeId
+                    ? "Elige una sede primero"
+                    : consultoriosDeLaSede.length === 0
+                      ? "Sin consultorios en esta sede"
+                      : "Selecciona"
+                }
               />
             </div>
           </div>
