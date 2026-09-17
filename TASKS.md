@@ -31,9 +31,9 @@ Reconstrucción módulo por módulo, con confirmación en cada decisión grande.
 
 ## En progreso / próximo
 
-- [ ] Correr `supabase/migrations/0004_parametros.sql`, `0005_pacientes.sql`, `0006_canal_captacion.sql`, `0007_auditoria.sql`, `0008_tratamientos.sql`, `0009_paises_completos.sql`, `0010_citas.sql` y `0011_sedes.sql` en el SQL Editor (en ese orden)
+- [x] Migraciones `0004` a `0011` corridas en Supabase (confirmado por el usuario 2026-09-17)
 - [ ] Configurar tus propias "Sedes", "Tipos de tratamiento" y "Consultorios" en `/parametros` si lo sembrado por defecto (Sede Principal, Consultorio 1, Botox/Ácido hialurónico/Limpieza facial/Peeling/Otro) no coincide con la clínica real
-- [ ] Probar `/parametros` y `/pacientes` con sesión real (no se pudo verificar en navegador más allá del login — no hay credenciales de prueba en este entorno)
+- [ ] Probar `/parametros`, `/pacientes`, `/tratamientos` y `/citas` con sesión real ahora que las migraciones ya corrieron
 - [ ] Confirmar que agregaste en Supabase → Authentication → URL Configuration → Redirect URLs: `https://ewah-portal-medico.vercel.app/**`, `https://*-ewah.vercel.app/**`, `http://localhost:3000/**`
 - [ ] Configurar Resend como SMTP personalizado en Supabase Auth (dashboard) cuando haya dominio verificado — hoy usa el mailer por defecto de Supabase y Resend en modo sandbox (solo a tu propio correo)
 - [ ] Actualizar las plantillas de email de Supabase (Confirm signup, Invite user, Reset password) para usar el formato `/auth/confirm?token_hash=...&type=...&next=...`
