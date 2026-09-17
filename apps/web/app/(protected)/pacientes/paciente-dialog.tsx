@@ -235,45 +235,44 @@ export function PacienteDialog({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label htmlFor="canalCaptacionId">¿Cómo nos conoció?</Label>
-              <Select
-                name="canalCaptacionId"
-                items={toItems(catalogos.canalesCaptacion)}
-                defaultValue={paciente?.canal_captacion_id ?? undefined}
-              >
-                <SelectTrigger id="canalCaptacionId" className="w-full">
-                  <SelectValue placeholder="Selecciona" />
-                </SelectTrigger>
-                <SelectContent>
-                  {catalogos.canalesCaptacion.map((op) => (
-                    <SelectItem key={op.id} value={op.id}>
-                      {op.nombre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="epsId">EPS</Label>
-              <Select
-                name="epsId"
-                items={toItems(catalogos.eps)}
-                defaultValue={paciente?.eps_id ?? undefined}
-              >
-                <SelectTrigger id="epsId" className="w-full">
-                  <SelectValue placeholder="Selecciona" />
-                </SelectTrigger>
-                <SelectContent>
-                  {catalogos.eps.map((op) => (
-                    <SelectItem key={op.id} value={op.id}>
-                      {op.nombre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="canalCaptacionId">¿Cómo nos conoció?</Label>
+            <Select
+              name="canalCaptacionId"
+              items={toItems(catalogos.canalesCaptacion)}
+              defaultValue={paciente?.canal_captacion_id ?? undefined}
+            >
+              <SelectTrigger id="canalCaptacionId" className="w-full">
+                <SelectValue placeholder="Selecciona" />
+              </SelectTrigger>
+              <SelectContent>
+                {catalogos.canalesCaptacion.map((op) => (
+                  <SelectItem key={op.id} value={op.id}>
+                    {op.nombre}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="epsId">EPS</Label>
+            <Select
+              name="epsId"
+              items={toItems(catalogos.eps)}
+              defaultValue={paciente?.eps_id ?? undefined}
+            >
+              <SelectTrigger id="epsId" className="w-full">
+                <SelectValue placeholder="Selecciona" />
+              </SelectTrigger>
+              <SelectContent>
+                {catalogos.eps.map((op) => (
+                  <SelectItem key={op.id} value={op.id}>
+                    {op.nombre}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
