@@ -40,6 +40,12 @@ export const CATALOGOS: CatalogoConfig[] = [
     descripcion: "Cómo se enteró el paciente de la clínica (para atribución de marketing).",
     esGlobal: true,
   },
+  {
+    tabla: "tipos_tratamiento",
+    nombre: "Tipos de tratamiento",
+    descripcion: "Menú de tratamientos que ofrece tu clínica (Botox, limpieza facial, etc.).",
+    esGlobal: false,
+  },
 ];
 
 export function getCatalogo(tabla: string): CatalogoConfig | undefined {

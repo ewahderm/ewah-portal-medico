@@ -35,11 +35,16 @@ export async function crearValorCatalogo(
   if (catalogo.esGlobal) return { error: "Este catálogo lo administra EWAH Tech." };
   if (!nombre) return { error: "El nombre es obligatorio." };
 
+  const usuario = await getCurrentUsuario();
+  if (!usuario) return { error: "Sesión inválida." };
+
   const check = await requirePermiso("CREATE");
   if (!check.ok) return { error: check.error };
 
   const supabase = await createClient();
-  const { error } = await supabase.from(tabla).insert({ codigo, nombre });
+  const { error } = await supabase
+    .from(tabla)
+    .insert({ codigo, nombre, clinica_id: usuario.clinica_id });
   if (error) {
     if (error.code === "23505") return { error: "Ya existe un valor con ese código." };
     return { error: "No se pudo crear el valor." };
