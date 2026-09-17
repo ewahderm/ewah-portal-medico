@@ -24,15 +24,22 @@ Reconstrucción módulo por módulo, con confirmación en cada decisión grande.
 - [x] Auditoría de cambios a datos clínicos: tabla genérica `auditoria` + trigger reutilizable `fn_auditoria()` (INSERT/UPDATE/DELETE, guarda quién/cuándo/valores anteriores y nuevos como jsonb), aplicado a `pacientes`; solo lectura para admins de la propia clínica. Requisito médico-legal de trazabilidad, no solo buena práctica — decidido antes de construir Tratamientos para no duplicar el patrón sin ella — `supabase/migrations/0007_auditoria.sql`.
 - [x] Módulo Tratamientos (núcleo clínico): registro append-only — un tratamiento nunca se edita in-place (`fn_tratamientos_solo_anular` lo impide a nivel de base de datos), solo se anula con motivo y, si fue un error, se corrige creando un registro nuevo (`corrige_a`) desde el botón "Corregir". Edad del paciente al momento del tratamiento calculada automáticamente por trigger (`fn_calcular_edad_tratamiento`, nunca a mano). Incluye costo, notas clínicas y fotos antes/después (bucket privado de Storage `tratamiento-fotos` con aislamiento por clínica). "Tipos de tratamiento" es el primer catálogo *por clínica* de Parámetros (motor genérico extendido para soportar `clinica_id` además de catálogos globales). Hereda auditoría (0007) y el estándar de diálogos — `supabase/migrations/0008_tratamientos.sql`, `apps/web/lib/tratamientos/`, `apps/web/app/(protected)/tratamientos/`.
 
+- [x] Catálogo de Países completo (~198 países, antes solo 25 + Otro) — reordenado alfabéticamente, "Otro" siempre al final — `supabase/migrations/0009_paises_completos.sql`
+
 ## En progreso / próximo
 
-- [ ] Correr `supabase/migrations/0004_parametros.sql`, `0005_pacientes.sql`, `0006_canal_captacion.sql`, `0007_auditoria.sql` y `0008_tratamientos.sql` en el SQL Editor (en ese orden)
+- [ ] Correr `supabase/migrations/0004_parametros.sql`, `0005_pacientes.sql`, `0006_canal_captacion.sql`, `0007_auditoria.sql`, `0008_tratamientos.sql` y `0009_paises_completos.sql` en el SQL Editor (en ese orden)
+- [ ] Autorizar el conector de Google Drive en claude.ai (ver nota abajo) para poder importar más adelante pacientes/tratamientos/consumo de insumos/tablas de referencia desde los spreadsheets del sistema legado
 - [ ] Configurar tus propios "Tipos de tratamiento" en `/parametros` si los que se sembraron por defecto (Botox, Ácido hialurónico, Limpieza facial, Peeling, Otro) no coinciden con lo que ofrece la clínica
 - [ ] Probar `/parametros` y `/pacientes` con sesión real (no se pudo verificar en navegador más allá del login — no hay credenciales de prueba en este entorno)
 - [ ] Confirmar que agregaste en Supabase → Authentication → URL Configuration → Redirect URLs: `https://ewah-portal-medico.vercel.app/**`, `https://*-ewah.vercel.app/**`, `http://localhost:3000/**`
 - [ ] Configurar Resend como SMTP personalizado en Supabase Auth (dashboard) cuando haya dominio verificado — hoy usa el mailer por defecto de Supabase y Resend en modo sandbox (solo a tu propio correo)
 - [ ] Actualizar las plantillas de email de Supabase (Confirm signup, Invite user, Reset password) para usar el formato `/auth/confirm?token_hash=...&type=...&next=...`
 - [ ] Considerar generar una skill de proyecto para `run` (arranque del dev server + verificación visual) vía `/run-skill-generator`, ya que hubo que resolver arranque/puerto/parada y el método de navegador manualmente
+
+### Nota: Google Drive sin autorizar (necesario para importar datos del legado)
+
+El usuario tiene en Google Sheets las tablas de referencia y los datos actuales de pacientes/tratamientos/consumo de insumos del sistema legado, y en algún momento hay que importarlos. El conector de Google Drive no está autorizado en esta sesión de Claude Code (esto no se resuelve por chat: el usuario debe conectarlo desde la configuración de conectores en claude.ai, o vía `/mcp` en una sesión interactiva). Sin esto no puedo leer los spreadsheets. Una vez autorizado, retomar: mapear cada hoja a su tabla destino (pacientes, tratamientos, catálogos de Parámetros, insumos aún no construido) y decidir el proceso de import (script puntual vs. UI de import).
 
 ### Nota: MCP de Vercel sin autorizar
 
