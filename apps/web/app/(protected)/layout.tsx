@@ -28,6 +28,9 @@ export default async function ProtectedLayout({
             <Link href="/citas" className="text-muted-foreground hover:text-foreground">
               Agenda
             </Link>
+            <Link href="/inventario" className="text-muted-foreground hover:text-foreground">
+              Inventario
+            </Link>
             <Link href="/usuarios" className="text-muted-foreground hover:text-foreground">
               Usuarios
             </Link>

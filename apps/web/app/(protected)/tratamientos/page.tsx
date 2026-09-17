@@ -15,6 +15,7 @@ import {
 import { TratamientoDialog } from "./tratamiento-dialog";
 import { AnularDialog } from "./anular-dialog";
 import { FotosDialog } from "./fotos-dialog";
+import { InsumosDialog } from "./insumos-dialog";
 
 function nombreCompleto(p: {
   primer_nombre: string;
@@ -82,15 +83,19 @@ export default async function TratamientosPage() {
   const [
     { data: puedeCrear },
     { data: puedeAnular },
+    { data: puedeRegistrarConsumo },
     { data: pacientesData },
     { data: tiposTratamiento },
     { data: profesionales },
     { data: sedes },
     { data: mediosPago },
+    { data: insumosData },
+    { data: lotesData },
     { data: tratamientos },
   ] = await Promise.all([
     supabase.rpc("has_permission", { modulo_code: "tratamientos", permiso_code: "CREATE" }),
     supabase.rpc("has_permission", { modulo_code: "tratamientos", permiso_code: "VOID" }),
+    supabase.rpc("has_permission", { modulo_code: "inventario", permiso_code: "CREATE" }),
     supabase
       .from("pacientes")
       .select("id, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido")
@@ -104,6 +109,11 @@ export default async function TratamientosPage() {
     supabase.from("usuarios").select("id, nombre").eq("activo", true).order("nombre"),
     supabase.from("sedes").select("id, nombre").eq("activo", true).order("orden"),
     supabase.from("medios_pago").select("id, nombre").eq("activo", true).order("orden"),
+    supabase.from("insumos").select("id, nombre").eq("activo", true).order("orden"),
+    supabase
+      .from("lotes")
+      .select("id, insumo_id, sede_id, numero_lote, cantidad_actual")
+      .eq("activo", true),
     supabase
       .from("tratamientos")
       .select(
@@ -120,6 +130,8 @@ export default async function TratamientosPage() {
 
   const historial = (tratamientos ?? []) as unknown as TratamientoRow[];
   const pacientes = (pacientesData ?? []).map((p) => ({ id: p.id, nombre: nombreCompleto(p) }));
+  const insumos = insumosData ?? [];
+  const lotes = lotesData ?? [];
 
   return (
     <div className="space-y-6">
@@ -194,6 +206,13 @@ export default async function TratamientosPage() {
                     </div>
                   </TableCell>
                   <TableCell className="flex justify-end gap-2 text-right">
+                    <InsumosDialog
+                      tratamientoId={t.id}
+                      sedeId={t.sede_id}
+                      insumos={insumos}
+                      lotes={lotes}
+                      puedeRegistrar={!!puedeRegistrarConsumo}
+                    />
                     <FotosDialog
                       tratamientoId={t.id}
                       puedeSubir={!!puedeCrear}

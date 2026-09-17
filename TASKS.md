@@ -34,23 +34,25 @@ Reconstrucción módulo por módulo, con confirmación en cada decisión grande.
 - [x] Tratamientos: campos del sistema anterior agregados — Sede y Medio de Pago (obligatorios, como en el legado) y CUFE (opcional, código de facturación electrónica DIAN). "Medios de pago" es el cuarto catálogo *por clínica* de Parámetros. El trigger de inmutabilidad de Tratamientos (0008) se actualizó para cubrir estas columnas nuevas — `supabase/migrations/0013_tratamiento_sede_medio_pago.sql`.
 - [x] Módulo nuevo: Contactos de paciente (registro tipo CRM de llamadas/WhatsApp/email/presencial, con resultado y próxima acción) — append-only, reutiliza los permisos de Pacientes en vez de un módulo de RBAC nuevo — `supabase/migrations/0014_contactos_paciente.sql`, `apps/web/lib/contactos/`.
 - [x] Vista de paciente con pestañas estilo CRM: `/pacientes/[id]` muestra Tratamientos, Citas y Contactos del paciente (lectura; Contactos además permite registrar uno nuevo), más una pestaña "Insumos" en modo "Próximamente" hasta que exista el módulo de Inventario. Se accede desde un botón "Ver" nuevo en la lista de Pacientes.
+- [x] Módulo Inventario: catálogo por-clínica de Insumos (sexto catálogo de Parámetros), Lotes (stock físico por Sede, no por clínica completa) y un libro de Movimientos append-only (entrada/salida_consumo/ajuste) — `lotes.cantidad_actual` es un valor cacheado que un trigger mantiene sincronizado con la suma real de movimientos, la fuente de verdad es la tabla de movimientos. El consumo de insumos se registra desde cada Tratamiento (botón "Insumos", mismo patrón que "Fotos"), filtrando los lotes disponibles por la sede del tratamiento. "CantidadInvima" (del CSV legado) se guarda aparte de la cantidad real usada, para el reporte regulatorio. Un consumo que deja el lote en negativo se advierte pero no se bloquea (mismo criterio que los choques de horario en Agenda). Esto también activa la pestaña "Insumos" de la ficha de paciente, que antes decía "Próximamente" — `supabase/migrations/0015_inventario.sql`, `apps/web/lib/inventario/`, `apps/web/app/(protected)/inventario/`.
 
 ## En progreso / próximo
 
 - [x] Migraciones `0001` a `0014` confirmadas aplicadas en Supabase (2026-09-17) — todas ya estaban corridas manualmente; se reconcilió el historial del CLI con `supabase migration repair` para que coincida con la realidad
 - [x] Supabase CLI vinculado al proyecto (`nrzjgqgbhgxnjizuvdqz`) — de ahora en adelante las migraciones nuevas se aplican con `supabase db push --linked` directamente, sin copiar y pegar en el SQL Editor. Ver nota de proceso más abajo.
-- [ ] Configurar tus propias "Sedes", "Tipos de tratamiento", "Consultorios" y "Medios de pago" en `/parametros` si lo sembrado por defecto (Sede Principal, Consultorio 1, Botox/Ácido hialurónico/Limpieza facial/Peeling/Otro, Efectivo/Tarjeta débito/Tarjeta crédito/Transferencia/PSE/Otro) no coincide con la clínica real
+- [x] Migración `0015_inventario.sql` aplicada vía `supabase db push --linked`
+- [ ] Configurar tus propias "Sedes", "Tipos de tratamiento", "Consultorios", "Medios de pago" e "Insumos" en `/parametros` si lo sembrado por defecto (Sede Principal, Consultorio 1, Botox/Ácido hialurónico/Limpieza facial/Peeling/Otro, Efectivo/Tarjeta débito/Tarjeta crédito/Transferencia/PSE/Otro, Toxina botulínica/Ácido hialurónico/Guantes/Jeringa/Gasa) no coincide con la clínica real
 - [ ] Probar `/parametros`, `/pacientes`, `/tratamientos` y `/citas` con sesión real ahora que las migraciones ya corrieron
 - [ ] Confirmar que agregaste en Supabase → Authentication → URL Configuration → Redirect URLs: `https://ewah-portal-medico.vercel.app/**`, `https://*-ewah.vercel.app/**`, `http://localhost:3000/**`
 - [ ] Configurar Resend como SMTP personalizado en Supabase Auth (dashboard) cuando haya dominio verificado — hoy usa el mailer por defecto de Supabase y Resend en modo sandbox (solo a tu propio correo)
 - [ ] Actualizar las plantillas de email de Supabase (Confirm signup, Invite user, Reset password) para usar el formato `/auth/confirm?token_hash=...&type=...&next=...`
 - [ ] Considerar generar una skill de proyecto para `run` (arranque del dev server + verificación visual) vía `/run-skill-generator`, ya que hubo que resolver arranque/puerto/parada y el método de navegador manualmente
 
-### Nota: import de datos del legado — pausado a propósito
+### Nota: import de datos del legado — ya no bloqueado por falta de Inventario, sigue pausado por decisión
 
-Google Drive ya está autorizado. El usuario compartió muestras reales (`Referencias - Usuario.csv`, `ControlPacientes - ConsumoInsumos.csv`) el 2026-09-17, pero decidió explícitamente seguir el roadmap original (Agenda/Citas) antes de construir Inventario e importar los datos del legado — no se retoma hasta que se llegue a ese punto del backlog.
+Google Drive ya está autorizado. El usuario compartió muestras reales (`Referencias - Usuario.csv`, `ControlPacientes - ConsumoInsumos.csv`) el 2026-09-17. Con Inventario ya construido, el bloqueador técnico de `ControlPacientes - ConsumoInsumos` desapareció — pero el import sigue sin retomarse hasta que el usuario lo pida explícitamente (no es automático solo porque el módulo ya exista).
 
-**Hallazgo de seguridad:** la tabla `Usuario` del legado guarda contraseñas en texto plano. Esa columna nunca se importa ni se guarda en el repo — al migrar usuarios se reutiliza el flujo de invitación por correo ya existente (`inviteStaff`) para que cada quien cree su propia contraseña. Detalle completo y pendientes (mapeo de `IdRol` legado, qué cuentas migrar, tablas de Insumos/Lotes que faltan) en memoria (`import_datos_legado.md`), no en este archivo, para no dejar datos sensibles de referencia aquí.
+**Hallazgo de seguridad:** la tabla `Usuario` del legado guarda contraseñas en texto plano. Esa columna nunca se importa ni se guarda en el repo — al migrar usuarios se reutiliza el flujo de invitación por correo ya existente (`inviteStaff`) para que cada quien cree su propia contraseña. Detalle completo y pendientes (mapeo de `IdRol` legado, qué cuentas migrar) en memoria (`import_datos_legado.md`), no en este archivo, para no dejar datos sensibles de referencia aquí.
 
 ### Nota de proceso: cómo se aplican las migraciones ahora
 
@@ -81,7 +83,6 @@ Revisadas antes de construir Tratamientos. Auditoría, historia clínica append-
 
 - [ ] Wizard de personalización de Parámetros por clínica (ya desbloqueado — Pacientes es el caso real que consume los catálogos) — cada clínica activa/desactiva valores del catálogo global (ej. de las 15 EPS o 26 países, solo marca las relevantes para ella) sin borrarlos del sistema, y puede agregar valores propios que no están en la lista global. Se integra al flujo de registro de clínica (`/signup` → onboarding) para configurar desde el inicio. Diseño: tabla de selección `clinica_catalogo_valores (clinica_id, tabla, valor_id, activo)` + extender los catálogos existentes para aceptar valores custom por clínica.
 - [ ] Agenda: integración con Google Calendar (Citas y BloqueoHorario ya están hechos, ver arriba)
-- [ ] Inventario: Insumos, Lotes, Movimientos, Consumo — desbloquea el import pausado de `ControlPacientes - ConsumoInsumos` (ver memoria `import_datos_legado.md`)
 - [ ] Financiero: Gastos, Cuentas por Pagar/Cobrar
 - [ ] Activos fijos e Instalaciones
 - [ ] Control ambiental

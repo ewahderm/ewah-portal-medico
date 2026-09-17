@@ -70,6 +70,16 @@ type CitaRow = {
   profesional: { nombre: string } | null;
 };
 
+type ConsumoRow = {
+  id: string;
+  cantidad: number;
+  cantidad_invima: number | null;
+  sitio_anatomico: string | null;
+  created_at: string;
+  lotes: { numero_lote: string | null; insumos: { nombre: string; unidad_medida: string } | null } | null;
+  tratamientos: { fecha: string } | null;
+};
+
 type ContactoRow = {
   id: string;
   fecha: string;
@@ -118,6 +128,7 @@ export default async function PacienteDetallePage({
     { data: tratamientosData },
     { data: citasData },
     { data: contactosData },
+    { data: consumosData },
   ] = await Promise.all([
     supabase.rpc("has_permission", { modulo_code: "pacientes", permiso_code: "CREATE" }),
     supabase
@@ -146,11 +157,22 @@ export default async function PacienteDetallePage({
       )
       .eq("paciente_id", id)
       .order("fecha", { ascending: false }),
+    supabase
+      .from("movimientos_insumos")
+      .select(
+        `id, cantidad, cantidad_invima, sitio_anatomico, created_at,
+         lotes(numero_lote, insumos(nombre, unidad_medida)),
+         tratamientos!inner(paciente_id, fecha)`,
+      )
+      .eq("tratamientos.paciente_id", id)
+      .eq("tipo", "salida_consumo")
+      .order("created_at", { ascending: false }),
   ]);
 
   const tratamientos = (tratamientosData ?? []) as unknown as TratamientoRow[];
   const citas = (citasData ?? []) as unknown as CitaRow[];
   const contactos = (contactosData ?? []) as unknown as ContactoRow[];
+  const consumos = (consumosData ?? []) as unknown as ConsumoRow[];
 
   return (
     <div className="space-y-6">
@@ -284,12 +306,43 @@ export default async function PacienteDetallePage({
               <CardTitle className="text-base font-medium">Insumos usados</CardTitle>
             </CardHeader>
             <CardContent>
-              <Alert>
-                <AlertDescription>
-                  Próximamente — esta pestaña se activa cuando el módulo de Inventario esté
-                  listo.
-                </AlertDescription>
-              </Alert>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Fecha del tratamiento</TableHead>
+                    <TableHead>Insumo</TableHead>
+                    <TableHead>Lote</TableHead>
+                    <TableHead>Cantidad</TableHead>
+                    <TableHead>Sitio</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {consumos.map((c) => (
+                    <TableRow key={c.id}>
+                      <TableCell className="text-muted-foreground">
+                        {c.tratamientos?.fecha ?? "—"}
+                      </TableCell>
+                      <TableCell>{c.lotes?.insumos?.nombre ?? "—"}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {c.lotes?.numero_lote ?? "—"}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {c.cantidad} {c.lotes?.insumos?.unidad_medida ?? ""}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {c.sitio_anatomico ?? "—"}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {consumos.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center text-muted-foreground">
+                        Sin insumos registrados.
+                      </TableCell>
+                    </TableRow>
+                  ) : null}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
         </TabsContent>
