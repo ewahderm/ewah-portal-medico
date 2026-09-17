@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AuthHero } from "@/components/auth-hero";
+import { EwahLogo } from "@/components/ewah-logo";
 import { SignupForm } from "./signup-form";
 
 export default function SignupPage() {
@@ -8,7 +9,7 @@ export default function SignupPage() {
       <AuthHero />
 
       <div className="flex flex-col items-center justify-center gap-8 bg-muted/30 px-4 py-12">
-        <span className="text-lg font-extrabold tracking-tight lg:hidden">EWAH Tech</span>
+        <EwahLogo variant="dark" className="lg:hidden" />
 
         <div className="w-full max-w-sm rounded-2xl border bg-card p-8 shadow-xl">
           <h2 className="text-2xl font-bold tracking-tight">Registra tu clínica</h2>

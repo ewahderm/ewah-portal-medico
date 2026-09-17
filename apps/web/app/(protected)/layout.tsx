@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireUsuario } from "@/lib/auth/session";
 import { logout } from "@/lib/auth/actions";
 import { Button } from "@/components/ui/button";
+import { EwahLogo } from "@/components/ewah-logo";
 
 export default async function ProtectedLayout({
   children,
@@ -14,8 +15,10 @@ export default async function ProtectedLayout({
     <div className="min-h-screen flex flex-col">
       <header className="border-b">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-          <nav className="flex items-center gap-4 text-sm font-medium">
-            <Link href="/dashboard">EWAH Tech</Link>
+          <nav className="flex items-center gap-6 text-sm font-medium">
+            <Link href="/dashboard">
+              <EwahLogo variant="dark" />
+            </Link>
             <Link href="/pacientes" className="text-muted-foreground hover:text-foreground">
               Pacientes
             </Link>

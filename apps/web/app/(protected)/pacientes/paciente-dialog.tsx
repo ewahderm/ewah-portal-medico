@@ -35,7 +35,7 @@ type Paciente = {
   genero_id: string | null;
   nacionalidad_id: string | null;
   pais_residencia_id: string | null;
-  medio_contacto_id: string | null;
+  canal_captacion_id: string | null;
   eps_id: string | null;
   email: string | null;
   telefono1: string | null;
@@ -46,7 +46,7 @@ type Catalogos = {
   tiposIdentificacion: Opcion[];
   generos: Opcion[];
   paises: Opcion[];
-  mediosContacto: Opcion[];
+  canalesCaptacion: Opcion[];
   eps: Opcion[];
 };
 
@@ -224,16 +224,16 @@ export function PacienteDialog({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="medioContactoId">Medio de contacto preferido</Label>
+              <Label htmlFor="canalCaptacionId">¿Cómo nos conoció?</Label>
               <Select
-                name="medioContactoId"
-                defaultValue={paciente?.medio_contacto_id ?? undefined}
+                name="canalCaptacionId"
+                defaultValue={paciente?.canal_captacion_id ?? undefined}
               >
-                <SelectTrigger id="medioContactoId" className="w-full">
+                <SelectTrigger id="canalCaptacionId" className="w-full">
                   <SelectValue placeholder="Selecciona" />
                 </SelectTrigger>
                 <SelectContent>
-                  {catalogos.mediosContacto.map((op) => (
+                  {catalogos.canalesCaptacion.map((op) => (
                     <SelectItem key={op.id} value={op.id}>
                       {op.nombre}
                     </SelectItem>

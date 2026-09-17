@@ -44,7 +44,7 @@ export function LoginForm() {
 
       <Button
         type="submit"
-        className="w-full bg-gradient-to-r from-indigo-600 to-blue-600 text-white hover:from-indigo-500 hover:to-blue-500"
+        className="w-full bg-gradient-to-r from-[#00c9ec] to-[#0097b7] text-[#0d1825] font-semibold hover:from-[#1fd3f0] hover:to-[#00a9cc]"
         disabled={pending}
       >
         {pending ? "Ingresando..." : "Iniciar sesión"}

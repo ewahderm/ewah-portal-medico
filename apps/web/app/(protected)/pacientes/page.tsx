@@ -44,14 +44,14 @@ export default async function PacientesPage({
     { data: tiposIdentificacion },
     { data: generos },
     { data: paises },
-    { data: mediosContacto },
+    { data: canalesCaptacion },
     { data: eps },
   ] = await Promise.all([
     supabase.rpc("has_permission", { modulo_code: "pacientes", permiso_code: "CREATE" }),
     supabase.from("tipos_identificacion").select("id, nombre").eq("activo", true).order("orden"),
     supabase.from("generos").select("id, nombre").eq("activo", true).order("orden"),
     supabase.from("paises").select("id, nombre").eq("activo", true).order("orden"),
-    supabase.from("medios_contacto").select("id, nombre").eq("activo", true).order("orden"),
+    supabase.from("canales_captacion").select("id, nombre").eq("activo", true).order("orden"),
     supabase.from("eps").select("id, nombre").eq("activo", true).order("orden"),
   ]);
 
@@ -59,14 +59,14 @@ export default async function PacientesPage({
     tiposIdentificacion: tiposIdentificacion ?? [],
     generos: generos ?? [],
     paises: paises ?? [],
-    mediosContacto: mediosContacto ?? [],
+    canalesCaptacion: canalesCaptacion ?? [],
     eps: eps ?? [],
   };
 
   let query = supabase
     .from("pacientes")
     .select(
-      "id, tipo_identificacion_id, numero_identificacion, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, fecha_nacimiento, genero_id, nacionalidad_id, pais_residencia_id, medio_contacto_id, eps_id, email, telefono1, telefono2, activo",
+      "id, tipo_identificacion_id, numero_identificacion, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, fecha_nacimiento, genero_id, nacionalidad_id, pais_residencia_id, canal_captacion_id, eps_id, email, telefono1, telefono2, activo",
     )
     .order("primer_apellido");
 

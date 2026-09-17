@@ -35,9 +35,9 @@ export const CATALOGOS: CatalogoConfig[] = [
     esGlobal: true,
   },
   {
-    tabla: "medios_contacto",
-    nombre: "Medios de contacto",
-    descripcion: "Cómo prefiere ser contactado un paciente.",
+    tabla: "canales_captacion",
+    nombre: "Canales de captación",
+    descripcion: "Cómo se enteró el paciente de la clínica (para atribución de marketing).",
     esGlobal: true,
   },
 ];
