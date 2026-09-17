@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { crearBloqueo } from "@/lib/citas/actions";
+import { opcionesHora, sumarMinutos } from "@/lib/citas/horarios";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,6 +25,8 @@ import {
 
 type Opcion = { id: string; nombre: string };
 
+const OPCIONES_HORA = opcionesHora();
+
 function toItems(opciones: Opcion[]) {
   return opciones.map((o) => ({ value: o.id, label: o.nombre }));
 }
@@ -41,6 +44,8 @@ export function BloqueoDialog({
 }) {
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState(crearBloqueo, null);
+  const [horaInicio, setHoraInicio] = useState("09:00");
+  const [horaFin, setHoraFin] = useState(sumarMinutos("09:00", 60));
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -110,11 +115,49 @@ export function BloqueoDialog({
             </div>
             <div className="space-y-2">
               <Label htmlFor="horaInicio">Hora inicio</Label>
-              <Input id="horaInicio" name="horaInicio" type="time" required />
+              <Select
+                name="horaInicio"
+                required
+                items={OPCIONES_HORA}
+                value={horaInicio}
+                onValueChange={(valor) => {
+                  const nuevaHoraInicio = String(valor);
+                  setHoraInicio(nuevaHoraInicio);
+                  setHoraFin(sumarMinutos(nuevaHoraInicio, 60));
+                }}
+              >
+                <SelectTrigger id="horaInicio" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {OPCIONES_HORA.map((op) => (
+                    <SelectItem key={op.value} value={op.value}>
+                      {op.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="horaFin">Hora fin</Label>
-              <Input id="horaFin" name="horaFin" type="time" required />
+              <Select
+                name="horaFin"
+                required
+                items={OPCIONES_HORA}
+                value={horaFin}
+                onValueChange={(valor) => setHoraFin(String(valor))}
+              >
+                <SelectTrigger id="horaFin" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {OPCIONES_HORA.map((op) => (
+                    <SelectItem key={op.value} value={op.value}>
+                      {op.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

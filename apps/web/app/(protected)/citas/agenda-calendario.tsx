@@ -2,12 +2,14 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Calendar, dateFnsLocalizer, Views, type View } from "react-big-calendar";
+import { Calendar, dateFnsLocalizer, Views, type View, type SlotInfo } from "react-big-calendar";
 import { format, parse, startOfWeek, getDay } from "date-fns";
 import { es } from "date-fns/locale";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import "./agenda-calendario.css";
 import { CitaDetalleDialog } from "./cita-detalle-dialog";
+import { CitaDialog } from "./cita-dialog";
+import { redondearA15 } from "@/lib/citas/horarios";
 import type { CitaRow } from "./tipos";
 
 const localizer = dateFnsLocalizer({
@@ -84,24 +86,29 @@ export function AgendaCalendario({
   vista,
   fecha,
   puedeEditar,
+  puedeCrear,
   puedeCrearTratamiento,
   pacientes,
   tiposTratamiento,
   profesionales,
+  consultorios,
   usuarioActualId,
 }: {
   citas: CitaRow[];
   vista: "day" | "week" | "month";
   fecha: Date;
   puedeEditar: boolean;
+  puedeCrear: boolean;
   puedeCrearTratamiento: boolean;
   pacientes: { id: string; nombre: string }[];
   tiposTratamiento: { id: string; nombre: string }[];
   profesionales: { id: string; nombre: string }[];
+  consultorios: { id: string; nombre: string }[];
   usuarioActualId: string;
 }) {
   const router = useRouter();
   const [citaSeleccionada, setCitaSeleccionada] = useState<CitaRow | null>(null);
+  const [nuevaCita, setNuevaCita] = useState<{ fecha: string; horaInicio?: string } | null>(null);
 
   const eventos = useMemo<EventoCita[]>(
     () =>
@@ -126,6 +133,16 @@ export function AgendaCalendario({
     router.push(`/citas?${params.toString()}`);
   }
 
+  function handleSelectSlot(slotInfo: SlotInfo) {
+    if (!puedeCrear) return;
+    // En vista mes, un clic en el día completo no trae una hora útil
+    // (cubre 00:00–24:00) — se deja que el usuario elija la hora en el
+    // formulario. En día/semana sí trae la hora exacta del bloque clicado.
+    const horaInicio =
+      vista === "month" ? undefined : redondearA15(format(slotInfo.start, "HH:mm"));
+    setNuevaCita({ fecha: format(slotInfo.start, "yyyy-MM-dd"), horaInicio });
+  }
+
   return (
     <div className="ewah-agenda" style={{ height: "70vh" }}>
       <Calendar
@@ -138,9 +155,13 @@ export function AgendaCalendario({
         views={[Views.DAY, Views.WEEK, Views.MONTH]}
         min={new Date(1970, 0, 1, 6, 0)}
         max={new Date(1970, 0, 1, 21, 0)}
+        step={15}
+        timeslots={4}
+        selectable={puedeCrear}
         popup
         onNavigate={(nuevaFecha) => navegarUrl(nuevaFecha, vista)}
         onView={(nuevaVista) => navegarUrl(fecha, RBC_A_VISTA[nuevaVista] ?? vista)}
+        onSelectSlot={handleSelectSlot}
         onSelectEvent={(evento) => setCitaSeleccionada((evento as EventoCita).resource)}
         eventPropGetter={(evento) => {
           const cita = (evento as EventoCita).resource;
@@ -162,6 +183,22 @@ export function AgendaCalendario({
           tiposTratamiento={tiposTratamiento}
           profesionales={profesionales}
           usuarioActualId={usuarioActualId}
+        />
+      ) : null}
+
+      {nuevaCita ? (
+        <CitaDialog
+          key={`${nuevaCita.fecha}-${nuevaCita.horaInicio ?? ""}`}
+          pacientes={pacientes}
+          profesionales={profesionales}
+          consultorios={consultorios}
+          tiposTratamiento={tiposTratamiento}
+          fechaSeleccionada={nuevaCita.fecha}
+          horaInicioSeleccionada={nuevaCita.horaInicio}
+          open={!!nuevaCita}
+          onOpenChange={(open) => {
+            if (!open) setNuevaCita(null);
+          }}
         />
       ) : null}
     </div>

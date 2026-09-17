@@ -162,10 +162,12 @@ export default async function CitasPage({
         vista={vista}
         fecha={fecha}
         puedeEditar={!!puedeEditar}
+        puedeCrear={!!puedeCrear}
         puedeCrearTratamiento={!!puedeCrearTratamiento}
         pacientes={pacientes}
         tiposTratamiento={tiposTratamiento}
         profesionales={profesionales}
+        consultorios={consultorios}
         usuarioActualId={usuario.id}
       />
     </div>
