@@ -25,11 +25,12 @@ Reconstrucción módulo por módulo, con confirmación en cada decisión grande.
 - [x] Módulo Tratamientos (núcleo clínico): registro append-only — un tratamiento nunca se edita in-place (`fn_tratamientos_solo_anular` lo impide a nivel de base de datos), solo se anula con motivo y, si fue un error, se corrige creando un registro nuevo (`corrige_a`) desde el botón "Corregir". Edad del paciente al momento del tratamiento calculada automáticamente por trigger (`fn_calcular_edad_tratamiento`, nunca a mano). Incluye costo, notas clínicas y fotos antes/después (bucket privado de Storage `tratamiento-fotos` con aislamiento por clínica). "Tipos de tratamiento" es el primer catálogo *por clínica* de Parámetros (motor genérico extendido para soportar `clinica_id` además de catálogos globales). Hereda auditoría (0007) y el estándar de diálogos — `supabase/migrations/0008_tratamientos.sql`, `apps/web/lib/tratamientos/`, `apps/web/app/(protected)/tratamientos/`.
 
 - [x] Catálogo de Países completo (~198 países, antes solo 25 + Otro) — reordenado alfabéticamente, "Otro" siempre al final — `supabase/migrations/0009_paises_completos.sql`
+- [x] Módulo Agenda (Citas): vista de agenda por día con navegación (día anterior/hoy/siguiente), citas con paciente+profesional+consultorio+tipo de tratamiento+horario. Choques de horario (mismo profesional o mismo consultorio) se advierten pero no bloquean el guardado (decisión explícita). Estados: agendada/confirmada/atendida/cancelada/no_asistio, más "bloqueo de horario" (vacaciones, almuerzo) en la misma tabla sin paciente asociado. Marcar una cita como "Atendida" abre el diálogo de Tratamientos pre-llenado y enlaza `citas.tratamiento_id` al guardar, evitando doble captura. "Consultorios" es el segundo catálogo *por clínica* de Parámetros. Hereda auditoría y el estándar de diálogos — `supabase/migrations/0010_citas.sql`, `apps/web/lib/citas/`, `apps/web/app/(protected)/citas/`.
 
 ## En progreso / próximo
 
-- [ ] Correr `supabase/migrations/0004_parametros.sql`, `0005_pacientes.sql`, `0006_canal_captacion.sql`, `0007_auditoria.sql`, `0008_tratamientos.sql` y `0009_paises_completos.sql` en el SQL Editor (en ese orden)
-- [ ] Configurar tus propios "Tipos de tratamiento" en `/parametros` si los que se sembraron por defecto (Botox, Ácido hialurónico, Limpieza facial, Peeling, Otro) no coinciden con lo que ofrece la clínica
+- [ ] Correr `supabase/migrations/0004_parametros.sql`, `0005_pacientes.sql`, `0006_canal_captacion.sql`, `0007_auditoria.sql`, `0008_tratamientos.sql`, `0009_paises_completos.sql` y `0010_citas.sql` en el SQL Editor (en ese orden)
+- [ ] Configurar tus propios "Tipos de tratamiento" y "Consultorios" en `/parametros` si los sembrados por defecto (Botox/Ácido hialurónico/Limpieza facial/Peeling/Otro y "Consultorio 1") no coinciden con la clínica real
 - [ ] Probar `/parametros` y `/pacientes` con sesión real (no se pudo verificar en navegador más allá del login — no hay credenciales de prueba en este entorno)
 - [ ] Confirmar que agregaste en Supabase → Authentication → URL Configuration → Redirect URLs: `https://ewah-portal-medico.vercel.app/**`, `https://*-ewah.vercel.app/**`, `http://localhost:3000/**`
 - [ ] Configurar Resend como SMTP personalizado en Supabase Auth (dashboard) cuando haya dominio verificado — hoy usa el mailer por defecto de Supabase y Resend en modo sandbox (solo a tu propio correo)
@@ -61,8 +62,8 @@ Revisadas antes de construir Tratamientos. Auditoría, historia clínica append-
 ## Backlog (por módulo, ver docs/spec-ewah-app.md)
 
 - [ ] Wizard de personalización de Parámetros por clínica (ya desbloqueado — Pacientes es el caso real que consume los catálogos) — cada clínica activa/desactiva valores del catálogo global (ej. de las 15 EPS o 26 países, solo marca las relevantes para ella) sin borrarlos del sistema, y puede agregar valores propios que no están en la lista global. Se integra al flujo de registro de clínica (`/signup` → onboarding) para configurar desde el inicio. Diseño: tabla de selección `clinica_catalogo_valores (clinica_id, tabla, valor_id, activo)` + extender los catálogos existentes para aceptar valores custom por clínica.
-- [ ] Agenda: Citas, BloqueoHorario, integración Google Calendar
-- [ ] Inventario: Insumos, Lotes, Movimientos, Consumo
+- [ ] Agenda: integración con Google Calendar (Citas y BloqueoHorario ya están hechos, ver arriba)
+- [ ] Inventario: Insumos, Lotes, Movimientos, Consumo — desbloquea el import pausado de `ControlPacientes - ConsumoInsumos` (ver memoria `import_datos_legado.md`)
 - [ ] Financiero: Gastos, Cuentas por Pagar/Cobrar
 - [ ] Activos fijos e Instalaciones
 - [ ] Control ambiental

@@ -1,11 +1,10 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { crearTratamiento } from "@/lib/tratamientos/actions";
+import { crearCita } from "@/lib/citas/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Dialog,
@@ -24,96 +23,53 @@ import {
 
 type Opcion = { id: string; nombre: string };
 
-type Correccion = {
-  id: string;
-  paciente_id: string;
-  tipo_tratamiento_id: string;
-  profesional_id: string;
-  fecha: string;
-  costo: number | null;
-  notas: string | null;
-};
-
-type DesdeCita = {
-  id: string;
-  paciente_id: string;
-  profesional_id: string;
-  tipo_tratamiento_id: string | null;
-  fecha: string;
-};
-
 function toItems(opciones: Opcion[]) {
   return opciones.map((o) => ({ value: o.id, label: o.nombre }));
 }
 
-function hoy() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-export function TratamientoDialog({
+export function CitaDialog({
   pacientes,
-  tiposTratamiento,
   profesionales,
-  usuarioActualId,
-  corrigiendo,
-  desdeCita,
+  consultorios,
+  tiposTratamiento,
+  fechaSeleccionada,
   trigger,
 }: {
   pacientes: Opcion[];
-  tiposTratamiento: Opcion[];
   profesionales: Opcion[];
-  usuarioActualId: string;
-  corrigiendo?: Correccion;
-  desdeCita?: DesdeCita;
+  consultorios: Opcion[];
+  tiposTratamiento: Opcion[];
+  fechaSeleccionada: string;
   trigger: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
-  const [state, formAction, pending] = useActionState(crearTratamiento, null);
+  const [state, formAction, pending] = useActionState(crearCita, null);
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(next) => {
-        setOpen(next);
-      }}
-    >
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={trigger as React.ReactElement} />
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>
-            {corrigiendo ? "Corregir tratamiento" : desdeCita ? "Atender cita" : "Nuevo tratamiento"}
-          </DialogTitle>
+          <DialogTitle>Nueva cita</DialogTitle>
         </DialogHeader>
 
         <form action={formAction} className="space-y-5">
-          {corrigiendo ? (
-            <input type="hidden" name="corrigeA" value={corrigiendo.id} />
-          ) : null}
-          {desdeCita ? <input type="hidden" name="citaId" value={desdeCita.id} /> : null}
-
-          {corrigiendo ? (
-            <Alert>
-              <AlertDescription>
-                Este registro anulado no se modifica. Al guardar se crea un tratamiento
-                nuevo que lo corrige.
-              </AlertDescription>
-            </Alert>
-          ) : null}
-
           {state?.error ? (
             <Alert variant="destructive">
               <AlertDescription>{state.error}</AlertDescription>
             </Alert>
           ) : null}
+          {state?.warning ? (
+            <Alert>
+              <AlertDescription>
+                Cita agendada, pero: {state.warning}
+              </AlertDescription>
+            </Alert>
+          ) : null}
 
           <div className="space-y-2">
             <Label htmlFor="pacienteId">Paciente</Label>
-            <Select
-              name="pacienteId"
-              required
-              items={toItems(pacientes)}
-              defaultValue={corrigiendo?.paciente_id ?? desdeCita?.paciente_id}
-            >
+            <Select name="pacienteId" required items={toItems(pacientes)}>
               <SelectTrigger id="pacienteId" className="w-full">
                 <SelectValue placeholder="Selecciona un paciente" />
               </SelectTrigger>
@@ -129,12 +85,7 @@ export function TratamientoDialog({
 
           <div className="space-y-2">
             <Label htmlFor="tipoTratamientoId">Tipo de tratamiento</Label>
-            <Select
-              name="tipoTratamientoId"
-              required
-              items={toItems(tiposTratamiento)}
-              defaultValue={corrigiendo?.tipo_tratamiento_id ?? desdeCita?.tipo_tratamiento_id ?? undefined}
-            >
+            <Select name="tipoTratamientoId" required items={toItems(tiposTratamiento)}>
               <SelectTrigger id="tipoTratamientoId" className="w-full">
                 <SelectValue placeholder="Selecciona un tratamiento" />
               </SelectTrigger>
@@ -151,12 +102,7 @@ export function TratamientoDialog({
           <div className="grid grid-cols-2 gap-6">
             <div className="space-y-2">
               <Label htmlFor="profesionalId">Profesional</Label>
-              <Select
-                name="profesionalId"
-                required
-                items={toItems(profesionales)}
-                defaultValue={corrigiendo?.profesional_id ?? desdeCita?.profesional_id ?? usuarioActualId}
-              >
+              <Select name="profesionalId" required items={toItems(profesionales)}>
                 <SelectTrigger id="profesionalId" className="w-full">
                   <SelectValue placeholder="Selecciona" />
                 </SelectTrigger>
@@ -170,49 +116,45 @@ export function TratamientoDialog({
               </Select>
             </div>
             <div className="space-y-2">
+              <Label htmlFor="consultorioId">Consultorio</Label>
+              <Select name="consultorioId" required items={toItems(consultorios)}>
+                <SelectTrigger id="consultorioId" className="w-full">
+                  <SelectValue placeholder="Selecciona" />
+                </SelectTrigger>
+                <SelectContent>
+                  {consultorios.map((op) => (
+                    <SelectItem key={op.id} value={op.id}>
+                      {op.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-6">
+            <div className="space-y-2">
               <Label htmlFor="fecha">Fecha</Label>
               <Input
                 id="fecha"
                 name="fecha"
                 type="date"
                 required
-                defaultValue={corrigiendo?.fecha ?? desdeCita?.fecha ?? hoy()}
+                defaultValue={fechaSeleccionada}
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="horaInicio">Hora inicio</Label>
+              <Input id="horaInicio" name="horaInicio" type="time" required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="horaFin">Hora fin</Label>
+              <Input id="horaFin" name="horaFin" type="time" required />
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="costo">Costo (opcional)</Label>
-            <Input
-              id="costo"
-              name="costo"
-              type="number"
-              min="0"
-              step="1000"
-              placeholder="0"
-              defaultValue={corrigiendo?.costo ?? ""}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="notas">Notas clínicas (opcional)</Label>
-            <Textarea
-              id="notas"
-              name="notas"
-              rows={4}
-              placeholder="Evolución, indicaciones, reacciones..."
-              defaultValue={corrigiendo?.notas ?? ""}
-            />
-          </div>
-
           <Button type="submit" className="w-full" disabled={pending}>
-            {pending
-              ? "Guardando..."
-              : corrigiendo
-                ? "Guardar corrección"
-                : desdeCita
-                  ? "Registrar y marcar como atendida"
-                  : "Registrar tratamiento"}
+            {pending ? "Agendando..." : "Agendar cita"}
           </Button>
         </form>
       </DialogContent>

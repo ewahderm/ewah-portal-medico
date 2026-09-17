@@ -40,6 +40,7 @@ export async function crearTratamiento(
   const costoTexto = campoOpcional(formData, "costo");
   const notas = campoOpcional(formData, "notas");
   const corrigeA = campoOpcional(formData, "corrigeA");
+  const citaId = campoOpcional(formData, "citaId");
 
   if (!pacienteId || !tipoTratamientoId || !profesionalId || !fecha) {
     return { error: "Paciente, tipo de tratamiento, profesional y fecha son obligatorios." };
@@ -54,19 +55,31 @@ export async function crearTratamiento(
   if (!check.ok) return { error: check.error };
 
   const supabase = await createClient();
-  const { error } = await supabase.from("tratamientos").insert({
-    clinica_id: check.usuario.clinica_id,
-    paciente_id: pacienteId,
-    tipo_tratamiento_id: tipoTratamientoId,
-    profesional_id: profesionalId,
-    fecha,
-    costo,
-    notas,
-    corrige_a: corrigeA,
-    created_by: check.usuario.id,
-  });
+  const { data: tratamiento, error } = await supabase
+    .from("tratamientos")
+    .insert({
+      clinica_id: check.usuario.clinica_id,
+      paciente_id: pacienteId,
+      tipo_tratamiento_id: tipoTratamientoId,
+      profesional_id: profesionalId,
+      fecha,
+      costo,
+      notas,
+      corrige_a: corrigeA,
+      created_by: check.usuario.id,
+    })
+    .select("id")
+    .single();
 
-  if (error) return { error: "No se pudo registrar el tratamiento." };
+  if (error || !tratamiento) return { error: "No se pudo registrar el tratamiento." };
+
+  if (citaId) {
+    await supabase
+      .from("citas")
+      .update({ estado: "atendida", tratamiento_id: tratamiento.id })
+      .eq("id", citaId);
+    revalidatePath("/citas");
+  }
 
   revalidatePath("/tratamientos");
   return null;
