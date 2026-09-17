@@ -39,6 +39,7 @@ Reconstrucción módulo por módulo, con confirmación en cada decisión grande.
 ## Backlog (por módulo, ver docs/spec-ewah-app.md)
 
 - [ ] Núcleo clínico: Pacientes, Tratamientos
+- [ ] **Después de Pacientes:** wizard de personalización de Parámetros por clínica — cada clínica activa/desactiva valores del catálogo global (ej. de las 15 EPS o 26 países, solo marca las relevantes para ella) sin borrarlos del sistema, y puede agregar valores propios que no están en la lista global. Se integra al flujo de registro de clínica (`/signup` → onboarding) para configurar desde el inicio. Diseño: tabla de selección `clinica_catalogo_valores (clinica_id, tabla, valor_id, activo)` + extender los catálogos existentes para aceptar valores custom por clínica.
 - [ ] Agenda: Citas, BloqueoHorario, integración Google Calendar
 - [ ] Inventario: Insumos, Lotes, Movimientos, Consumo
 - [ ] Financiero: Gastos, Cuentas por Pagar/Cobrar
