@@ -23,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { SIN_SELECCION } from "@/lib/forms/opcional";
 
 type Opcion = { id: string; nombre: string };
 
@@ -30,6 +31,10 @@ const OPCIONES_HORA = opcionesHora();
 
 function toItems(opciones: Opcion[]) {
   return opciones.map((o) => ({ value: o.id, label: o.nombre }));
+}
+
+function toItemsOpcional(opciones: Opcion[]) {
+  return [{ value: SIN_SELECCION, label: "Sin consultorio específico" }, ...toItems(opciones)];
 }
 
 export function BloqueoDialog({
@@ -117,11 +122,16 @@ export function BloqueoDialog({
 
           <div className="space-y-2">
             <Label htmlFor="consultorioId">Consultorio (opcional)</Label>
-            <Select name="consultorioId" items={toItems(consultorios)}>
+            <Select
+              name="consultorioId"
+              items={toItemsOpcional(consultorios)}
+              defaultValue={SIN_SELECCION}
+            >
               <SelectTrigger id="consultorioId" className="w-full">
-                <SelectValue placeholder="Sin consultorio específico" />
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value={SIN_SELECCION}>Sin consultorio específico</SelectItem>
                 {consultorios.map((op) => (
                   <SelectItem key={op.id} value={op.id}>
                     {op.nombre}

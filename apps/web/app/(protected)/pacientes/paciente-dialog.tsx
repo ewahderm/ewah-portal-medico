@@ -20,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { SIN_SELECCION } from "@/lib/forms/opcional";
 
 type Opcion = { id: string; nombre: string };
 
@@ -56,6 +57,13 @@ const COLOMBIA_NOMBRE = "Colombia";
 // le pase `items` para poder resolver la etiqueta a mostrar.
 function toItems(opciones: Opcion[]) {
   return opciones.map((o) => ({ value: o.id, label: o.nombre }));
+}
+
+// Selects opcionales: agrega "Selecciona una opción" como primer ítem
+// para poder volver a dejar el campo en blanco después de elegir algo
+// (Base UI no permite SelectItem value="", ver lib/forms/opcional.ts).
+function toItemsOpcional(opciones: Opcion[]) {
+  return [{ value: SIN_SELECCION, label: "Selecciona una opción" }, ...toItems(opciones)];
 }
 
 export function PacienteDialog({
@@ -177,13 +185,14 @@ export function PacienteDialog({
               <Label htmlFor="generoId">Género</Label>
               <Select
                 name="generoId"
-                items={toItems(catalogos.generos)}
-                defaultValue={paciente?.genero_id ?? undefined}
+                items={toItemsOpcional(catalogos.generos)}
+                defaultValue={paciente?.genero_id ?? SIN_SELECCION}
               >
                 <SelectTrigger id="generoId" className="w-full">
                   <SelectValue placeholder="Selecciona" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value={SIN_SELECCION}>Selecciona una opción</SelectItem>
                   {catalogos.generos.map((op) => (
                     <SelectItem key={op.id} value={op.id}>
                       {op.nombre}
@@ -199,13 +208,14 @@ export function PacienteDialog({
               <Label htmlFor="nacionalidadId">Nacionalidad</Label>
               <Select
                 name="nacionalidadId"
-                items={toItems(catalogos.paises)}
-                defaultValue={paciente?.nacionalidad_id ?? colombiaId}
+                items={toItemsOpcional(catalogos.paises)}
+                defaultValue={paciente?.nacionalidad_id ?? colombiaId ?? SIN_SELECCION}
               >
                 <SelectTrigger id="nacionalidadId" className="w-full">
                   <SelectValue placeholder="Selecciona" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value={SIN_SELECCION}>Selecciona una opción</SelectItem>
                   {catalogos.paises.map((op) => (
                     <SelectItem key={op.id} value={op.id}>
                       {op.nombre}
@@ -218,13 +228,14 @@ export function PacienteDialog({
               <Label htmlFor="paisResidenciaId">País de residencia</Label>
               <Select
                 name="paisResidenciaId"
-                items={toItems(catalogos.paises)}
-                defaultValue={paciente?.pais_residencia_id ?? colombiaId}
+                items={toItemsOpcional(catalogos.paises)}
+                defaultValue={paciente?.pais_residencia_id ?? colombiaId ?? SIN_SELECCION}
               >
                 <SelectTrigger id="paisResidenciaId" className="w-full">
                   <SelectValue placeholder="Selecciona" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value={SIN_SELECCION}>Selecciona una opción</SelectItem>
                   {catalogos.paises.map((op) => (
                     <SelectItem key={op.id} value={op.id}>
                       {op.nombre}
@@ -239,13 +250,14 @@ export function PacienteDialog({
             <Label htmlFor="canalCaptacionId">¿Cómo nos conoció?</Label>
             <Select
               name="canalCaptacionId"
-              items={toItems(catalogos.canalesCaptacion)}
-              defaultValue={paciente?.canal_captacion_id ?? undefined}
+              items={toItemsOpcional(catalogos.canalesCaptacion)}
+              defaultValue={paciente?.canal_captacion_id ?? SIN_SELECCION}
             >
               <SelectTrigger id="canalCaptacionId" className="w-full">
                 <SelectValue placeholder="Selecciona" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value={SIN_SELECCION}>Selecciona una opción</SelectItem>
                 {catalogos.canalesCaptacion.map((op) => (
                   <SelectItem key={op.id} value={op.id}>
                     {op.nombre}
@@ -259,13 +271,14 @@ export function PacienteDialog({
             <Label htmlFor="epsId">EPS</Label>
             <Select
               name="epsId"
-              items={toItems(catalogos.eps)}
-              defaultValue={paciente?.eps_id ?? undefined}
+              items={toItemsOpcional(catalogos.eps)}
+              defaultValue={paciente?.eps_id ?? SIN_SELECCION}
             >
               <SelectTrigger id="epsId" className="w-full">
                 <SelectValue placeholder="Selecciona" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value={SIN_SELECCION}>Selecciona una opción</SelectItem>
                 {catalogos.eps.map((op) => (
                   <SelectItem key={op.id} value={op.id}>
                     {op.nombre}

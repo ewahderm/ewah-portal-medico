@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUsuario } from "@/lib/auth/session";
 import type { ActionState } from "@/lib/auth/actions";
+import { valorOpcionalSelect } from "@/lib/forms/opcional";
 
 function campoOpcional(formData: FormData, campo: string): string | null {
   const valor = String(formData.get(campo) ?? "").trim();
@@ -35,11 +36,11 @@ function datosPacienteDesdeForm(formData: FormData) {
     primer_apellido: String(formData.get("primerApellido") ?? "").trim(),
     segundo_apellido: campoOpcional(formData, "segundoApellido"),
     fecha_nacimiento: campoOpcional(formData, "fechaNacimiento"),
-    genero_id: campoOpcional(formData, "generoId"),
-    nacionalidad_id: campoOpcional(formData, "nacionalidadId"),
-    pais_residencia_id: campoOpcional(formData, "paisResidenciaId"),
-    canal_captacion_id: campoOpcional(formData, "canalCaptacionId"),
-    eps_id: campoOpcional(formData, "epsId"),
+    genero_id: valorOpcionalSelect(formData, "generoId"),
+    nacionalidad_id: valorOpcionalSelect(formData, "nacionalidadId"),
+    pais_residencia_id: valorOpcionalSelect(formData, "paisResidenciaId"),
+    canal_captacion_id: valorOpcionalSelect(formData, "canalCaptacionId"),
+    eps_id: valorOpcionalSelect(formData, "epsId"),
     email: campoOpcional(formData, "email"),
     telefono1: campoOpcional(formData, "telefono1"),
     telefono2: campoOpcional(formData, "telefono2"),

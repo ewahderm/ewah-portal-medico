@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUsuario } from "@/lib/auth/session";
+import { valorOpcionalSelect } from "@/lib/forms/opcional";
 
 export type CitaActionState = { error?: string; warning?: string } | null;
 
@@ -120,7 +121,7 @@ export async function crearBloqueo(
   formData: FormData,
 ): Promise<CitaActionState> {
   const profesionalIds = formData.getAll("profesionalIds").map(String).filter(Boolean);
-  const consultorioId = campoOpcional(formData, "consultorioId");
+  const consultorioId = valorOpcionalSelect(formData, "consultorioId");
   const fecha = String(formData.get("fecha") ?? "").trim();
   const todoElDia = formData.get("todoElDia") === "on";
   const motivo = campoOpcional(formData, "motivo");
