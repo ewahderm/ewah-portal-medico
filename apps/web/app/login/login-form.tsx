@@ -19,8 +19,15 @@ export function LoginForm() {
       ) : null}
 
       <div className="space-y-2">
-        <Label htmlFor="email">Correo</Label>
-        <Input id="email" name="email" type="email" required autoComplete="email" />
+        <Label htmlFor="email">Correo electrónico</Label>
+        <Input
+          id="email"
+          name="email"
+          type="email"
+          placeholder="usuario@ejemplo.com"
+          required
+          autoComplete="email"
+        />
       </div>
 
       <div className="space-y-2">
@@ -29,13 +36,18 @@ export function LoginForm() {
           id="password"
           name="password"
           type="password"
+          placeholder="••••••••"
           required
           autoComplete="current-password"
         />
       </div>
 
-      <Button type="submit" className="w-full" disabled={pending}>
-        {pending ? "Ingresando..." : "Entrar"}
+      <Button
+        type="submit"
+        className="w-full bg-gradient-to-r from-indigo-600 to-blue-600 text-white hover:from-indigo-500 hover:to-blue-500"
+        disabled={pending}
+      >
+        {pending ? "Ingresando..." : "Iniciar sesión"}
       </Button>
     </form>
   );

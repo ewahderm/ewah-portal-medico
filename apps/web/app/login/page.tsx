@@ -1,24 +1,33 @@
 import Link from "next/link";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AuthHero } from "@/components/auth-hero";
 import { LoginForm } from "./login-form";
 
 export default function LoginPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center px-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle>EWAH Tech</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <LoginForm />
-          <p className="text-center text-sm text-muted-foreground">
+    <div className="grid min-h-screen lg:grid-cols-2">
+      <AuthHero />
+
+      <div className="flex flex-col items-center justify-center gap-8 bg-muted/30 px-4 py-12">
+        <span className="text-lg font-extrabold tracking-tight lg:hidden">EWAH Tech</span>
+
+        <div className="w-full max-w-sm rounded-2xl border bg-card p-8 shadow-xl">
+          <h2 className="text-2xl font-bold tracking-tight">Bienvenido</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Ingresa tus credenciales para continuar
+          </p>
+
+          <div className="mt-6">
+            <LoginForm />
+          </div>
+
+          <p className="mt-6 text-center text-sm text-muted-foreground">
             ¿Tu clínica no tiene cuenta todavía?{" "}
-            <Link href="/signup" className="underline">
+            <Link href="/signup" className="font-medium text-foreground underline underline-offset-4">
               Regístrala
             </Link>
           </p>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }

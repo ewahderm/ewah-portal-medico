@@ -20,22 +20,29 @@ export function SignupForm() {
 
       <div className="space-y-2">
         <Label htmlFor="nombreClinica">Nombre de la clínica</Label>
-        <Input id="nombreClinica" name="nombreClinica" required />
+        <Input id="nombreClinica" name="nombreClinica" placeholder="Clínica Ejemplo S.A.S." required />
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="nit">NIT</Label>
-        <Input id="nit" name="nit" required />
+        <Input id="nit" name="nit" placeholder="900123456" required />
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="nombreAdmin">Tu nombre</Label>
-        <Input id="nombreAdmin" name="nombreAdmin" required />
+        <Input id="nombreAdmin" name="nombreAdmin" placeholder="Nombre completo" required />
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="email">Tu correo</Label>
-        <Input id="email" name="email" type="email" required autoComplete="email" />
+        <Input
+          id="email"
+          name="email"
+          type="email"
+          placeholder="usuario@ejemplo.com"
+          required
+          autoComplete="email"
+        />
       </div>
 
       <div className="space-y-2">
@@ -44,13 +51,18 @@ export function SignupForm() {
           id="password"
           name="password"
           type="password"
+          placeholder="Mínimo 8 caracteres"
           required
           minLength={8}
           autoComplete="new-password"
         />
       </div>
 
-      <Button type="submit" className="w-full" disabled={pending}>
+      <Button
+        type="submit"
+        className="w-full bg-gradient-to-r from-indigo-600 to-blue-600 text-white hover:from-indigo-500 hover:to-blue-500"
+        disabled={pending}
+      >
         {pending ? "Creando cuenta..." : "Crear clínica"}
       </Button>
     </form>
