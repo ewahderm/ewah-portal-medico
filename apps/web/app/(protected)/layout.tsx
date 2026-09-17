@@ -16,6 +16,9 @@ export default async function ProtectedLayout({
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
           <nav className="flex items-center gap-4 text-sm font-medium">
             <Link href="/dashboard">EWAH Tech</Link>
+            <Link href="/pacientes" className="text-muted-foreground hover:text-foreground">
+              Pacientes
+            </Link>
             <Link href="/usuarios" className="text-muted-foreground hover:text-foreground">
               Usuarios
             </Link>

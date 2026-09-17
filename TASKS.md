@@ -18,11 +18,12 @@ Reconstrucción módulo por módulo, con confirmación en cada decisión grande.
 - [x] CLI de Vercel instalado y logueado (`vercel login`, `vercel link`) — se usa para todo lo de deploy/env vars ya que el MCP remoto de Vercel no logró autorizar el team `ewah` (ver nota abajo)
 - [x] Rediseño de login/signup con identidad visual EWAH Tech (hero oscuro degradado violeta-fucsia + card de acción), corregido bug de fuente (`--font-sans` circular en globals.css)
 - [x] Módulo Parámetros (datos maestros / tablas de referencia): motor genérico reutilizable (registro + acciones + UI con tabs) + 5 catálogos globales para Pacientes (Tipos de Identificación, Géneros, Países, EPS, Medios de Contacto), con datos reales sembrados — `supabase/migrations/0004_parametros.sql`, `apps/web/lib/parametros/`, `apps/web/app/(protected)/parametros/`. Catálogos futuros por-clínica (Sede, Consultorio...) reusan la misma infraestructura, solo agregando `clinica_id` + `esGlobal: false` en el registro.
+- [x] Módulo Pacientes: listar/buscar (búsqueda indexada con pg_trgm + unaccent, mejora sobre el escaneo en memoria del legado), crear, editar, desactivar (nunca se borra — retención de historia clínica). Sin columnas de Edad/RangoEdad en el paciente (decisión: se calculan y guardan como dato histórico inmutable en Tratamientos, para análisis por edad) — `supabase/migrations/0005_pacientes.sql`, `apps/web/lib/pacientes/`, `apps/web/app/(protected)/pacientes/`.
 
 ## En progreso / próximo
 
-- [ ] Correr `supabase/migrations/0004_parametros.sql` en el SQL Editor
-- [ ] Probar `/parametros` con sesión real (no se pudo verificar en navegador más allá del login — no hay credenciales de prueba en este entorno)
+- [ ] Correr `supabase/migrations/0004_parametros.sql` y `0005_pacientes.sql` en el SQL Editor (en ese orden)
+- [ ] Probar `/parametros` y `/pacientes` con sesión real (no se pudo verificar en navegador más allá del login — no hay credenciales de prueba en este entorno)
 - [ ] Confirmar que agregaste en Supabase → Authentication → URL Configuration → Redirect URLs: `https://ewah-portal-medico.vercel.app/**`, `https://*-ewah.vercel.app/**`, `http://localhost:3000/**`
 - [ ] Configurar Resend como SMTP personalizado en Supabase Auth (dashboard) cuando haya dominio verificado — hoy usa el mailer por defecto de Supabase y Resend en modo sandbox (solo a tu propio correo)
 - [ ] Actualizar las plantillas de email de Supabase (Confirm signup, Invite user, Reset password) para usar el formato `/auth/confirm?token_hash=...&type=...&next=...`
@@ -38,8 +39,8 @@ Reconstrucción módulo por módulo, con confirmación en cada decisión grande.
 
 ## Backlog (por módulo, ver docs/spec-ewah-app.md)
 
-- [ ] Núcleo clínico: Pacientes, Tratamientos
-- [ ] **Después de Pacientes:** wizard de personalización de Parámetros por clínica — cada clínica activa/desactiva valores del catálogo global (ej. de las 15 EPS o 26 países, solo marca las relevantes para ella) sin borrarlos del sistema, y puede agregar valores propios que no están en la lista global. Se integra al flujo de registro de clínica (`/signup` → onboarding) para configurar desde el inicio. Diseño: tabla de selección `clinica_catalogo_valores (clinica_id, tabla, valor_id, activo)` + extender los catálogos existentes para aceptar valores custom por clínica.
+- [ ] Núcleo clínico: Tratamientos (Pacientes ya está hecho, ver arriba) — incluye calcular y guardar edad/rango de edad del paciente al momento de cada tratamiento
+- [ ] Wizard de personalización de Parámetros por clínica (ya desbloqueado — Pacientes es el caso real que consume los catálogos) — cada clínica activa/desactiva valores del catálogo global (ej. de las 15 EPS o 26 países, solo marca las relevantes para ella) sin borrarlos del sistema, y puede agregar valores propios que no están en la lista global. Se integra al flujo de registro de clínica (`/signup` → onboarding) para configurar desde el inicio. Diseño: tabla de selección `clinica_catalogo_valores (clinica_id, tabla, valor_id, activo)` + extender los catálogos existentes para aceptar valores custom por clínica.
 - [ ] Agenda: Citas, BloqueoHorario, integración Google Calendar
 - [ ] Inventario: Insumos, Lotes, Movimientos, Consumo
 - [ ] Financiero: Gastos, Cuentas por Pagar/Cobrar
