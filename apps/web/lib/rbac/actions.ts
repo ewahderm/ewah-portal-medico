@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentUsuario, esAdministrador } from "@/lib/auth/session";
 import type { ActionState } from "@/lib/auth/actions";
+import { siteUrl } from "@/lib/site-url";
 
 export async function inviteStaff(
   _prevState: ActionState,
@@ -42,7 +43,7 @@ export async function inviteStaff(
     email,
     {
       data: { nombre },
-      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/set-password`,
+      redirectTo: `${siteUrl()}/set-password`,
     },
   );
 
