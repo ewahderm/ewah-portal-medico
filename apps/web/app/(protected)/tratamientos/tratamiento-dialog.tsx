@@ -29,9 +29,12 @@ type Correccion = {
   paciente_id: string;
   tipo_tratamiento_id: string;
   profesional_id: string;
+  sede_id: string;
+  medio_pago_id: string;
   fecha: string;
   costo: number | null;
   notas: string | null;
+  cufe: string | null;
 };
 
 type DesdeCita = {
@@ -39,6 +42,7 @@ type DesdeCita = {
   paciente_id: string;
   profesional_id: string;
   tipo_tratamiento_id: string | null;
+  sede_id?: string;
   fecha: string;
 };
 
@@ -54,6 +58,8 @@ export function TratamientoDialog({
   pacientes,
   tiposTratamiento,
   profesionales,
+  sedes,
+  mediosPago,
   usuarioActualId,
   corrigiendo,
   desdeCita,
@@ -62,6 +68,8 @@ export function TratamientoDialog({
   pacientes: Opcion[];
   tiposTratamiento: Opcion[];
   profesionales: Opcion[];
+  sedes: Opcion[];
+  mediosPago: Opcion[];
   usuarioActualId: string;
   corrigiendo?: Correccion;
   desdeCita?: DesdeCita;
@@ -181,8 +189,51 @@ export function TratamientoDialog({
             </div>
           </div>
 
+          <div className="grid grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="sedeId">Sede</Label>
+              <Select
+                name="sedeId"
+                required
+                items={toItems(sedes)}
+                defaultValue={corrigiendo?.sede_id ?? desdeCita?.sede_id}
+              >
+                <SelectTrigger id="sedeId" className="w-full">
+                  <SelectValue placeholder="Selecciona" />
+                </SelectTrigger>
+                <SelectContent>
+                  {sedes.map((op) => (
+                    <SelectItem key={op.id} value={op.id}>
+                      {op.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="medioPagoId">Medio de pago</Label>
+              <Select
+                name="medioPagoId"
+                required
+                items={toItems(mediosPago)}
+                defaultValue={corrigiendo?.medio_pago_id}
+              >
+                <SelectTrigger id="medioPagoId" className="w-full">
+                  <SelectValue placeholder="Selecciona" />
+                </SelectTrigger>
+                <SelectContent>
+                  {mediosPago.map((op) => (
+                    <SelectItem key={op.id} value={op.id}>
+                      {op.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
           <div className="space-y-2">
-            <Label htmlFor="costo">Costo (opcional)</Label>
+            <Label htmlFor="costo">Valor</Label>
             <Input
               id="costo"
               name="costo"
@@ -190,18 +241,29 @@ export function TratamientoDialog({
               min="0"
               step="1000"
               placeholder="0"
+              required
               defaultValue={corrigiendo?.costo ?? ""}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="notas">Notas clínicas (opcional)</Label>
+            <Label htmlFor="notas">Observaciones (opcional)</Label>
             <Textarea
               id="notas"
               name="notas"
               rows={4}
               placeholder="Evolución, indicaciones, reacciones..."
               defaultValue={corrigiendo?.notas ?? ""}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="cufe">CUFE (opcional)</Label>
+            <Input
+              id="cufe"
+              name="cufe"
+              placeholder="Código Único de Facturación Electrónica"
+              defaultValue={corrigiendo?.cufe ?? ""}
             />
           </div>
 

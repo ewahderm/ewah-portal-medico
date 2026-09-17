@@ -75,6 +75,7 @@ export default async function CitasPage({
     { data: consultoriosData },
     { data: sedesData },
     { data: tiposTratamientoData },
+    { data: mediosPagoData },
   ] = await Promise.all([
     supabase.rpc("has_permission", { modulo_code: "citas", permiso_code: "CREATE" }),
     supabase.rpc("has_permission", { modulo_code: "citas", permiso_code: "EDIT" }),
@@ -96,6 +97,7 @@ export default async function CitasPage({
       .select("id, nombre")
       .eq("activo", true)
       .order("orden"),
+    supabase.from("medios_pago").select("id, nombre").eq("activo", true).order("orden"),
   ]);
 
   // consultorio_id es opcional en un bloqueo de día completo (no depende
@@ -103,8 +105,8 @@ export default async function CitasPage({
   // que no se esté filtrando por sede, así que solo se usa cuando hace
   // falta para poder filtrar por consultorios.sede_id.
   const embedConsultorio = sedeId
-    ? "consultorios!inner(nombre, sedes(nombre))"
-    : "consultorios(nombre, sedes(nombre))";
+    ? "consultorios!inner(nombre, sede_id, sedes(nombre))"
+    : "consultorios(nombre, sede_id, sedes(nombre))";
 
   let query = supabase
     .from("citas")
@@ -130,6 +132,7 @@ export default async function CitasPage({
   const consultorios = consultoriosData ?? [];
   const sedes = sedesData ?? [];
   const tiposTratamiento = tiposTratamientoData ?? [];
+  const mediosPago = mediosPagoData ?? [];
   const citas = (citasData ?? []) as unknown as CitaRow[];
 
   return (
@@ -176,6 +179,8 @@ export default async function CitasPage({
         tiposTratamiento={tiposTratamiento}
         profesionales={profesionales}
         consultorios={consultorios}
+        sedes={sedes}
+        mediosPago={mediosPago}
         usuarioActualId={usuario.id}
       />
     </div>

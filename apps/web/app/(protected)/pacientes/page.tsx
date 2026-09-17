@@ -14,6 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import Link from "next/link";
 import { PacienteDialog } from "./paciente-dialog";
 import { ToggleActivoButton } from "./toggle-activo-button";
 
@@ -140,6 +141,9 @@ export default async function PacientesPage({
                     </Badge>
                   </TableCell>
                   <TableCell className="flex justify-end gap-2 text-right">
+                    <Button variant="outline" size="sm" render={<Link href={`/pacientes/${p.id}`} />}>
+                      Ver
+                    </Button>
                     <PacienteDialog
                       catalogos={catalogos}
                       paciente={p}

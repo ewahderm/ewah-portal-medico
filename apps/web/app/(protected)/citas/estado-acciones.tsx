@@ -15,6 +15,8 @@ export function EstadoAcciones({
   pacientes,
   tiposTratamiento,
   profesionales,
+  sedes,
+  mediosPago,
   usuarioActualId,
 }: {
   cita: {
@@ -24,12 +26,15 @@ export function EstadoAcciones({
     profesional_id: string;
     tipo_tratamiento_id: string | null;
     fecha: string;
+    consultorios?: { sede_id: string | null } | null;
   };
   puedeEditar: boolean;
   puedeCrearTratamiento: boolean;
   pacientes: Opcion[];
   tiposTratamiento: Opcion[];
   profesionales: Opcion[];
+  sedes: Opcion[];
+  mediosPago: Opcion[];
   usuarioActualId: string;
 }) {
   const [error, setError] = useState<string | null>(null);
@@ -74,12 +79,15 @@ export function EstadoAcciones({
             pacientes={pacientes}
             tiposTratamiento={tiposTratamiento}
             profesionales={profesionales}
+            sedes={sedes}
+            mediosPago={mediosPago}
             usuarioActualId={usuarioActualId}
             desdeCita={{
               id: cita.id,
               paciente_id: cita.paciente_id,
               profesional_id: cita.profesional_id,
               tipo_tratamiento_id: cita.tipo_tratamiento_id,
+              sede_id: cita.consultorios?.sede_id ?? undefined,
               fecha: cita.fecha,
             }}
             trigger={

@@ -36,19 +36,32 @@ export async function crearTratamiento(
   const pacienteId = String(formData.get("pacienteId") ?? "");
   const tipoTratamientoId = String(formData.get("tipoTratamientoId") ?? "");
   const profesionalId = String(formData.get("profesionalId") ?? "");
+  const sedeId = String(formData.get("sedeId") ?? "");
+  const medioPagoId = String(formData.get("medioPagoId") ?? "");
   const fecha = String(formData.get("fecha") ?? "").trim();
-  const costoTexto = campoOpcional(formData, "costo");
+  const costoTexto = String(formData.get("costo") ?? "").trim();
   const notas = campoOpcional(formData, "notas");
+  const cufe = campoOpcional(formData, "cufe");
   const corrigeA = campoOpcional(formData, "corrigeA");
   const citaId = campoOpcional(formData, "citaId");
 
-  if (!pacienteId || !tipoTratamientoId || !profesionalId || !fecha) {
-    return { error: "Paciente, tipo de tratamiento, profesional y fecha son obligatorios." };
+  if (
+    !pacienteId ||
+    !tipoTratamientoId ||
+    !profesionalId ||
+    !sedeId ||
+    !medioPagoId ||
+    !fecha ||
+    !costoTexto
+  ) {
+    return {
+      error: "Paciente, tratamiento, profesional, sede, medio de pago, fecha y valor son obligatorios.",
+    };
   }
 
-  const costo = costoTexto ? Number(costoTexto) : null;
-  if (costoTexto && (Number.isNaN(costo) || (costo ?? 0) < 0)) {
-    return { error: "El costo debe ser un número válido." };
+  const costo = Number(costoTexto);
+  if (Number.isNaN(costo) || costo < 0) {
+    return { error: "El valor debe ser un número válido." };
   }
 
   const check = await requirePermiso("CREATE");
@@ -62,9 +75,12 @@ export async function crearTratamiento(
       paciente_id: pacienteId,
       tipo_tratamiento_id: tipoTratamientoId,
       profesional_id: profesionalId,
+      sede_id: sedeId,
+      medio_pago_id: medioPagoId,
       fecha,
       costo,
       notas,
+      cufe,
       corrige_a: corrigeA,
       created_by: check.usuario.id,
     })

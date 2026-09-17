@@ -17,7 +17,7 @@ export type CitaRow = {
     segundo_apellido: string | null;
   } | null;
   tipos_tratamiento: { nombre: string } | null;
-  consultorios: { nombre: string; sedes: { nombre: string } | null } | null;
+  consultorios: { nombre: string; sede_id: string | null; sedes: { nombre: string } | null } | null;
   profesional: { nombre: string } | null;
 };
 

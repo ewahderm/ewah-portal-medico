@@ -33,12 +33,15 @@ type TratamientoRow = {
   edad_paciente: number | null;
   costo: number | null;
   notas: string | null;
+  cufe: string | null;
   anulado: boolean;
   anulado_motivo: string | null;
   corrige_a: string | null;
   paciente_id: string;
   tipo_tratamiento_id: string;
   profesional_id: string;
+  sede_id: string;
+  medio_pago_id: string;
   pacientes: {
     primer_nombre: string;
     segundo_nombre: string | null;
@@ -47,6 +50,7 @@ type TratamientoRow = {
   } | null;
   tipos_tratamiento: { nombre: string } | null;
   profesional: { nombre: string } | null;
+  sedes: { nombre: string } | null;
 };
 
 function formatoMoneda(valor: number | null) {
@@ -81,6 +85,8 @@ export default async function TratamientosPage() {
     { data: pacientesData },
     { data: tiposTratamiento },
     { data: profesionales },
+    { data: sedes },
+    { data: mediosPago },
     { data: tratamientos },
   ] = await Promise.all([
     supabase.rpc("has_permission", { modulo_code: "tratamientos", permiso_code: "CREATE" }),
@@ -96,13 +102,16 @@ export default async function TratamientosPage() {
       .eq("activo", true)
       .order("orden"),
     supabase.from("usuarios").select("id, nombre").eq("activo", true).order("nombre"),
+    supabase.from("sedes").select("id, nombre").eq("activo", true).order("orden"),
+    supabase.from("medios_pago").select("id, nombre").eq("activo", true).order("orden"),
     supabase
       .from("tratamientos")
       .select(
-        `id, fecha, edad_paciente, costo, notas, anulado, anulado_motivo, corrige_a,
-         paciente_id, tipo_tratamiento_id, profesional_id,
+        `id, fecha, edad_paciente, costo, notas, cufe, anulado, anulado_motivo, corrige_a,
+         paciente_id, tipo_tratamiento_id, profesional_id, sede_id, medio_pago_id,
          pacientes(primer_nombre, segundo_nombre, primer_apellido, segundo_apellido),
          tipos_tratamiento(nombre),
+         sedes(nombre),
          profesional:usuarios!tratamientos_profesional_id_fkey(nombre)`,
       )
       .order("fecha", { ascending: false })
@@ -127,6 +136,8 @@ export default async function TratamientosPage() {
             pacientes={pacientes}
             tiposTratamiento={tiposTratamiento ?? []}
             profesionales={profesionales ?? []}
+            sedes={sedes ?? []}
+            mediosPago={mediosPago ?? []}
             usuarioActualId={usuario.id}
             trigger={<Button>Nuevo tratamiento</Button>}
           />
@@ -144,9 +155,10 @@ export default async function TratamientosPage() {
                 <TableHead>Fecha</TableHead>
                 <TableHead>Paciente</TableHead>
                 <TableHead>Tratamiento</TableHead>
+                <TableHead>Sede</TableHead>
                 <TableHead>Profesional</TableHead>
                 <TableHead>Edad</TableHead>
-                <TableHead>Costo</TableHead>
+                <TableHead>Valor</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead />
               </TableRow>
@@ -159,6 +171,7 @@ export default async function TratamientosPage() {
                     {t.pacientes ? nombreCompleto(t.pacientes) : "—"}
                   </TableCell>
                   <TableCell>{t.tipos_tratamiento?.nombre ?? "—"}</TableCell>
+                  <TableCell className="text-muted-foreground">{t.sedes?.nombre ?? "—"}</TableCell>
                   <TableCell className="text-muted-foreground">
                     {t.profesional?.nombre ?? "—"}
                   </TableCell>
@@ -192,15 +205,20 @@ export default async function TratamientosPage() {
                         pacientes={pacientes}
                         tiposTratamiento={tiposTratamiento ?? []}
                         profesionales={profesionales ?? []}
+                        sedes={sedes ?? []}
+                        mediosPago={mediosPago ?? []}
                         usuarioActualId={usuario.id}
                         corrigiendo={{
                           id: t.id,
                           paciente_id: t.paciente_id,
                           tipo_tratamiento_id: t.tipo_tratamiento_id,
                           profesional_id: t.profesional_id,
+                          sede_id: t.sede_id,
+                          medio_pago_id: t.medio_pago_id,
                           fecha: t.fecha,
                           costo: t.costo,
                           notas: t.notas,
+                          cufe: t.cufe,
                         }}
                         trigger={
                           <Button variant="outline" size="sm">
@@ -214,7 +232,7 @@ export default async function TratamientosPage() {
               ))}
               {historial.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center text-muted-foreground">
+                  <TableCell colSpan={9} className="text-center text-muted-foreground">
                     Todavía no hay tratamientos registrados.
                   </TableCell>
                 </TableRow>

@@ -92,6 +92,8 @@ export function AgendaCalendario({
   tiposTratamiento,
   profesionales,
   consultorios,
+  sedes,
+  mediosPago,
   usuarioActualId,
 }: {
   citas: CitaRow[];
@@ -104,6 +106,8 @@ export function AgendaCalendario({
   tiposTratamiento: { id: string; nombre: string }[];
   profesionales: { id: string; nombre: string }[];
   consultorios: { id: string; nombre: string }[];
+  sedes: { id: string; nombre: string }[];
+  mediosPago: { id: string; nombre: string }[];
   usuarioActualId: string;
 }) {
   const router = useRouter();
@@ -182,6 +186,8 @@ export function AgendaCalendario({
           pacientes={pacientes}
           tiposTratamiento={tiposTratamiento}
           profesionales={profesionales}
+          sedes={sedes}
+          mediosPago={mediosPago}
           usuarioActualId={usuarioActualId}
         />
       ) : null}

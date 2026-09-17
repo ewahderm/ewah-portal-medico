@@ -58,6 +58,12 @@ export const CATALOGOS: CatalogoConfig[] = [
     descripcion: "Sucursales físicas de tu clínica.",
     esGlobal: false,
   },
+  {
+    tabla: "medios_pago",
+    nombre: "Medios de pago",
+    descripcion: "Formas de pago que acepta tu clínica (efectivo, tarjeta, transferencia...).",
+    esGlobal: false,
+  },
 ];
 
 export function getCatalogo(tabla: string): CatalogoConfig | undefined {

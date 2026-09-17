@@ -19,6 +19,8 @@ export function CitaDetalleDialog({
   pacientes,
   tiposTratamiento,
   profesionales,
+  sedes,
+  mediosPago,
   usuarioActualId,
 }: {
   cita: CitaRow;
@@ -29,6 +31,8 @@ export function CitaDetalleDialog({
   pacientes: { id: string; nombre: string }[];
   tiposTratamiento: { id: string; nombre: string }[];
   profesionales: { id: string; nombre: string }[];
+  sedes: { id: string; nombre: string }[];
+  mediosPago: { id: string; nombre: string }[];
   usuarioActualId: string;
 }) {
   return (
@@ -100,6 +104,8 @@ export function CitaDetalleDialog({
               pacientes={pacientes}
               tiposTratamiento={tiposTratamiento}
               profesionales={profesionales}
+              sedes={sedes}
+              mediosPago={mediosPago}
               usuarioActualId={usuarioActualId}
             />
           </div>
