@@ -1,36 +1,34 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# EWAH Tech Platform
 
-## Getting Started
+Plataforma SaaS médica — monorepo Turborepo con app web (Next.js) y app móvil (Expo, próximamente).
 
-First, run the development server:
+## Estructura
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+```
+apps/
+  web/      Next.js 16 — portal médico (Supabase, Stripe, IA)
+  mobile/   Expo — app iOS/Android (se agrega en la fase móvil)
+packages/   Código compartido entre apps (se agrega cuando haga falta)
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Requisitos
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- Node.js 20+
+- pnpm (`npm install -g pnpm`)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Comandos
 
-## Learn More
+```bash
+pnpm install       # instala dependencias de todo el monorepo
+pnpm dev           # levanta apps/web en modo desarrollo
+pnpm build         # build de producción de todas las apps
+pnpm lint          # lint de todas las apps
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Variables de entorno
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Cada app tiene su propio `.env.local` (ver `apps/web/.env.example` cuando se agregue). Nunca se commitean — están en `.gitignore`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Documentación
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Ver el Manual de Configuración de EWAH Tech (Supabase, Vercel, Cloudflare, Stripe, Resend, Redis, Gemini, EndlessMedical, Expo, Firebase, Apple, Google Play) para el detalle de cada servicio.
