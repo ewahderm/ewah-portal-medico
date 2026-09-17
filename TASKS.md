@@ -29,7 +29,6 @@ Reconstrucción módulo por módulo, con confirmación en cada decisión grande.
 ## En progreso / próximo
 
 - [ ] Correr `supabase/migrations/0004_parametros.sql`, `0005_pacientes.sql`, `0006_canal_captacion.sql`, `0007_auditoria.sql`, `0008_tratamientos.sql` y `0009_paises_completos.sql` en el SQL Editor (en ese orden)
-- [ ] Autorizar el conector de Google Drive en claude.ai (ver nota abajo) para poder importar más adelante pacientes/tratamientos/consumo de insumos/tablas de referencia desde los spreadsheets del sistema legado
 - [ ] Configurar tus propios "Tipos de tratamiento" en `/parametros` si los que se sembraron por defecto (Botox, Ácido hialurónico, Limpieza facial, Peeling, Otro) no coinciden con lo que ofrece la clínica
 - [ ] Probar `/parametros` y `/pacientes` con sesión real (no se pudo verificar en navegador más allá del login — no hay credenciales de prueba en este entorno)
 - [ ] Confirmar que agregaste en Supabase → Authentication → URL Configuration → Redirect URLs: `https://ewah-portal-medico.vercel.app/**`, `https://*-ewah.vercel.app/**`, `http://localhost:3000/**`
@@ -37,9 +36,11 @@ Reconstrucción módulo por módulo, con confirmación en cada decisión grande.
 - [ ] Actualizar las plantillas de email de Supabase (Confirm signup, Invite user, Reset password) para usar el formato `/auth/confirm?token_hash=...&type=...&next=...`
 - [ ] Considerar generar una skill de proyecto para `run` (arranque del dev server + verificación visual) vía `/run-skill-generator`, ya que hubo que resolver arranque/puerto/parada y el método de navegador manualmente
 
-### Nota: Google Drive sin autorizar (necesario para importar datos del legado)
+### Nota: import de datos del legado — pausado a propósito
 
-El usuario tiene en Google Sheets las tablas de referencia y los datos actuales de pacientes/tratamientos/consumo de insumos del sistema legado, y en algún momento hay que importarlos. El conector de Google Drive no está autorizado en esta sesión de Claude Code (esto no se resuelve por chat: el usuario debe conectarlo desde la configuración de conectores en claude.ai, o vía `/mcp` en una sesión interactiva). Sin esto no puedo leer los spreadsheets. Una vez autorizado, retomar: mapear cada hoja a su tabla destino (pacientes, tratamientos, catálogos de Parámetros, insumos aún no construido) y decidir el proceso de import (script puntual vs. UI de import).
+Google Drive ya está autorizado. El usuario compartió muestras reales (`Referencias - Usuario.csv`, `ControlPacientes - ConsumoInsumos.csv`) el 2026-09-17, pero decidió explícitamente seguir el roadmap original (Agenda/Citas) antes de construir Inventario e importar los datos del legado — no se retoma hasta que se llegue a ese punto del backlog.
+
+**Hallazgo de seguridad:** la tabla `Usuario` del legado guarda contraseñas en texto plano. Esa columna nunca se importa ni se guarda en el repo — al migrar usuarios se reutiliza el flujo de invitación por correo ya existente (`inviteStaff`) para que cada quien cree su propia contraseña. Detalle completo y pendientes (mapeo de `IdRol` legado, qué cuentas migrar, tablas de Insumos/Lotes que faltan) en memoria (`import_datos_legado.md`), no en este archivo, para no dejar datos sensibles de referencia aquí.
 
 ### Nota: MCP de Vercel sin autorizar
 
