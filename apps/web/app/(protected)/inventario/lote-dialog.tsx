@@ -13,13 +13,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 
 type Opcion = { id: string; nombre: string };
 
@@ -57,33 +51,11 @@ export function LoteDialog({
           <div className="grid grid-cols-2 gap-6">
             <div className="space-y-2">
               <Label htmlFor="insumoId">Insumo</Label>
-              <Select name="insumoId" required items={toItems(insumos)}>
-                <SelectTrigger id="insumoId" className="w-full">
-                  <SelectValue placeholder="Selecciona" />
-                </SelectTrigger>
-                <SelectContent>
-                  {insumos.map((op) => (
-                    <SelectItem key={op.id} value={op.id}>
-                      {op.nombre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Combobox id="insumoId" name="insumoId" required items={toItems(insumos)} placeholder="Selecciona" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="sedeId">Sede</Label>
-              <Select name="sedeId" required items={toItems(sedes)}>
-                <SelectTrigger id="sedeId" className="w-full">
-                  <SelectValue placeholder="Selecciona" />
-                </SelectTrigger>
-                <SelectContent>
-                  {sedes.map((op) => (
-                    <SelectItem key={op.id} value={op.id}>
-                      {op.nombre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Combobox id="sedeId" name="sedeId" required items={toItems(sedes)} placeholder="Selecciona" />
             </div>
           </div>
 

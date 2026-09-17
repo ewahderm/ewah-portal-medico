@@ -13,13 +13,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { SIN_SELECCION } from "@/lib/forms/opcional";
 
 type Opcion = { id: string; nombre: string };
@@ -53,15 +47,13 @@ type Catalogos = {
 
 const COLOMBIA_NOMBRE = "Colombia";
 
-// Base UI's <Select.Value> muestra el valor crudo (el uuid) salvo que se
-// le pase `items` para poder resolver la etiqueta a mostrar.
 function toItems(opciones: Opcion[]) {
   return opciones.map((o) => ({ value: o.id, label: o.nombre }));
 }
 
 // Selects opcionales: agrega "Selecciona una opción" como primer ítem
 // para poder volver a dejar el campo en blanco después de elegir algo
-// (Base UI no permite SelectItem value="", ver lib/forms/opcional.ts).
+// (Base UI no permite un ítem con value="", ver lib/forms/opcional.ts).
 function toItemsOpcional(opciones: Opcion[]) {
   return [{ value: SIN_SELECCION, label: "Selecciona una opción" }, ...toItems(opciones)];
 }
@@ -101,23 +93,14 @@ export function PacienteDialog({
           <div className="grid grid-cols-2 gap-6">
             <div className="space-y-2">
               <Label htmlFor="tipoIdentificacionId">Tipo de identificación</Label>
-              <Select
+              <Combobox
+                id="tipoIdentificacionId"
                 name="tipoIdentificacionId"
                 required
                 items={toItems(catalogos.tiposIdentificacion)}
                 defaultValue={paciente?.tipo_identificacion_id}
-              >
-                <SelectTrigger id="tipoIdentificacionId" className="w-full">
-                  <SelectValue placeholder="Selecciona" />
-                </SelectTrigger>
-                <SelectContent>
-                  {catalogos.tiposIdentificacion.map((op) => (
-                    <SelectItem key={op.id} value={op.id}>
-                      {op.nombre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                placeholder="Selecciona"
+              />
             </div>
 
             <div className="space-y-2">
@@ -183,109 +166,59 @@ export function PacienteDialog({
             </div>
             <div className="space-y-2">
               <Label htmlFor="generoId">Género</Label>
-              <Select
+              <Combobox
+                id="generoId"
                 name="generoId"
                 items={toItemsOpcional(catalogos.generos)}
                 defaultValue={paciente?.genero_id ?? SIN_SELECCION}
-              >
-                <SelectTrigger id="generoId" className="w-full">
-                  <SelectValue placeholder="Selecciona" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={SIN_SELECCION}>Selecciona una opción</SelectItem>
-                  {catalogos.generos.map((op) => (
-                    <SelectItem key={op.id} value={op.id}>
-                      {op.nombre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                placeholder="Selecciona"
+              />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-6">
             <div className="space-y-2">
               <Label htmlFor="nacionalidadId">Nacionalidad</Label>
-              <Select
+              <Combobox
+                id="nacionalidadId"
                 name="nacionalidadId"
                 items={toItemsOpcional(catalogos.paises)}
                 defaultValue={paciente?.nacionalidad_id ?? colombiaId ?? SIN_SELECCION}
-              >
-                <SelectTrigger id="nacionalidadId" className="w-full">
-                  <SelectValue placeholder="Selecciona" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={SIN_SELECCION}>Selecciona una opción</SelectItem>
-                  {catalogos.paises.map((op) => (
-                    <SelectItem key={op.id} value={op.id}>
-                      {op.nombre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                placeholder="Selecciona"
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="paisResidenciaId">País de residencia</Label>
-              <Select
+              <Combobox
+                id="paisResidenciaId"
                 name="paisResidenciaId"
                 items={toItemsOpcional(catalogos.paises)}
                 defaultValue={paciente?.pais_residencia_id ?? colombiaId ?? SIN_SELECCION}
-              >
-                <SelectTrigger id="paisResidenciaId" className="w-full">
-                  <SelectValue placeholder="Selecciona" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={SIN_SELECCION}>Selecciona una opción</SelectItem>
-                  {catalogos.paises.map((op) => (
-                    <SelectItem key={op.id} value={op.id}>
-                      {op.nombre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                placeholder="Selecciona"
+              />
             </div>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="canalCaptacionId">¿Cómo nos conoció?</Label>
-            <Select
+            <Combobox
+              id="canalCaptacionId"
               name="canalCaptacionId"
               items={toItemsOpcional(catalogos.canalesCaptacion)}
               defaultValue={paciente?.canal_captacion_id ?? SIN_SELECCION}
-            >
-              <SelectTrigger id="canalCaptacionId" className="w-full">
-                <SelectValue placeholder="Selecciona" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={SIN_SELECCION}>Selecciona una opción</SelectItem>
-                {catalogos.canalesCaptacion.map((op) => (
-                  <SelectItem key={op.id} value={op.id}>
-                    {op.nombre}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              placeholder="Selecciona"
+            />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="epsId">EPS</Label>
-            <Select
+            <Combobox
+              id="epsId"
               name="epsId"
               items={toItemsOpcional(catalogos.eps)}
               defaultValue={paciente?.eps_id ?? SIN_SELECCION}
-            >
-              <SelectTrigger id="epsId" className="w-full">
-                <SelectValue placeholder="Selecciona" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={SIN_SELECCION}>Selecciona una opción</SelectItem>
-                {catalogos.eps.map((op) => (
-                  <SelectItem key={op.id} value={op.id}>
-                    {op.nombre}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              placeholder="Selecciona"
+            />
           </div>
 
           <div className="space-y-2">

@@ -15,13 +15,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 
 const TIPOS = [
   { value: "llamada", label: "Llamada" },
@@ -67,18 +61,7 @@ export function ContactoDialog({ pacienteId }: { pacienteId: string }) {
           <div className="grid grid-cols-2 gap-6">
             <div className="space-y-2">
               <Label htmlFor="tipo">Tipo de contacto</Label>
-              <Select name="tipo" required items={TIPOS}>
-                <SelectTrigger id="tipo" className="w-full">
-                  <SelectValue placeholder="Selecciona" />
-                </SelectTrigger>
-                <SelectContent>
-                  {TIPOS.map((op) => (
-                    <SelectItem key={op.value} value={op.value}>
-                      {op.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Combobox id="tipo" name="tipo" required items={TIPOS} placeholder="Selecciona" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="fecha">Fecha</Label>
@@ -99,18 +82,7 @@ export function ContactoDialog({ pacienteId }: { pacienteId: string }) {
 
           <div className="space-y-2">
             <Label htmlFor="resultado">Resultado (opcional)</Label>
-            <Select name="resultado" items={RESULTADOS} defaultValue={SIN_SELECCION}>
-              <SelectTrigger id="resultado" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {RESULTADOS.map((op) => (
-                  <SelectItem key={op.value} value={op.value}>
-                    {op.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Combobox id="resultado" name="resultado" items={RESULTADOS} defaultValue={SIN_SELECCION} />
           </div>
 
           <div className="grid grid-cols-2 gap-6">

@@ -13,13 +13,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 
 type Rol = { id: string; nombre: string };
 
@@ -53,18 +47,13 @@ export function InviteDialog({ roles }: { roles: Rol[] }) {
 
           <div className="space-y-2">
             <Label htmlFor="rolId">Rol</Label>
-            <Select name="rolId" required>
-              <SelectTrigger id="rolId">
-                <SelectValue placeholder="Selecciona un rol" />
-              </SelectTrigger>
-              <SelectContent>
-                {roles.map((rol) => (
-                  <SelectItem key={rol.id} value={rol.id}>
-                    {rol.nombre}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Combobox
+              id="rolId"
+              name="rolId"
+              required
+              items={roles.map((rol) => ({ value: rol.id, label: rol.nombre }))}
+              placeholder="Selecciona un rol"
+            />
           </div>
 
           <Button type="submit" className="w-full" disabled={pending}>

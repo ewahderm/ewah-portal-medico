@@ -14,13 +14,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 
 type Opcion = { id: string; nombre: string };
 
@@ -116,66 +110,39 @@ export function TratamientoDialog({
 
           <div className="space-y-2">
             <Label htmlFor="pacienteId">Paciente</Label>
-            <Select
+            <Combobox
+              id="pacienteId"
               name="pacienteId"
               required
               items={toItems(pacientes)}
               defaultValue={corrigiendo?.paciente_id ?? desdeCita?.paciente_id}
-            >
-              <SelectTrigger id="pacienteId" className="w-full">
-                <SelectValue placeholder="Selecciona un paciente" />
-              </SelectTrigger>
-              <SelectContent>
-                {pacientes.map((op) => (
-                  <SelectItem key={op.id} value={op.id}>
-                    {op.nombre}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              placeholder="Selecciona un paciente"
+            />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="tipoTratamientoId">Tipo de tratamiento</Label>
-            <Select
+            <Combobox
+              id="tipoTratamientoId"
               name="tipoTratamientoId"
               required
               items={toItems(tiposTratamiento)}
               defaultValue={corrigiendo?.tipo_tratamiento_id ?? desdeCita?.tipo_tratamiento_id ?? undefined}
-            >
-              <SelectTrigger id="tipoTratamientoId" className="w-full">
-                <SelectValue placeholder="Selecciona un tratamiento" />
-              </SelectTrigger>
-              <SelectContent>
-                {tiposTratamiento.map((op) => (
-                  <SelectItem key={op.id} value={op.id}>
-                    {op.nombre}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              placeholder="Selecciona un tratamiento"
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-6">
             <div className="space-y-2">
               <Label htmlFor="profesionalId">Profesional</Label>
-              <Select
+              <Combobox
+                id="profesionalId"
                 name="profesionalId"
                 required
                 items={toItems(profesionales)}
                 defaultValue={corrigiendo?.profesional_id ?? desdeCita?.profesional_id ?? usuarioActualId}
-              >
-                <SelectTrigger id="profesionalId" className="w-full">
-                  <SelectValue placeholder="Selecciona" />
-                </SelectTrigger>
-                <SelectContent>
-                  {profesionales.map((op) => (
-                    <SelectItem key={op.id} value={op.id}>
-                      {op.nombre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                placeholder="Selecciona"
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="fecha">Fecha</Label>
@@ -192,43 +159,25 @@ export function TratamientoDialog({
           <div className="grid grid-cols-2 gap-6">
             <div className="space-y-2">
               <Label htmlFor="sedeId">Sede</Label>
-              <Select
+              <Combobox
+                id="sedeId"
                 name="sedeId"
                 required
                 items={toItems(sedes)}
                 defaultValue={corrigiendo?.sede_id ?? desdeCita?.sede_id}
-              >
-                <SelectTrigger id="sedeId" className="w-full">
-                  <SelectValue placeholder="Selecciona" />
-                </SelectTrigger>
-                <SelectContent>
-                  {sedes.map((op) => (
-                    <SelectItem key={op.id} value={op.id}>
-                      {op.nombre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                placeholder="Selecciona"
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="medioPagoId">Medio de pago</Label>
-              <Select
+              <Combobox
+                id="medioPagoId"
                 name="medioPagoId"
                 required
                 items={toItems(mediosPago)}
                 defaultValue={corrigiendo?.medio_pago_id}
-              >
-                <SelectTrigger id="medioPagoId" className="w-full">
-                  <SelectValue placeholder="Selecciona" />
-                </SelectTrigger>
-                <SelectContent>
-                  {mediosPago.map((op) => (
-                    <SelectItem key={op.id} value={op.id}>
-                      {op.nombre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                placeholder="Selecciona"
+              />
             </div>
           </div>
 

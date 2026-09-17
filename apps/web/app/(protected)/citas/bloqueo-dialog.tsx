@@ -16,13 +16,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { SIN_SELECCION } from "@/lib/forms/opcional";
 
 type Opcion = { id: string; nombre: string };
@@ -122,23 +116,12 @@ export function BloqueoDialog({
 
           <div className="space-y-2">
             <Label htmlFor="consultorioId">Consultorio (opcional)</Label>
-            <Select
+            <Combobox
+              id="consultorioId"
               name="consultorioId"
               items={toItemsOpcional(consultorios)}
               defaultValue={SIN_SELECCION}
-            >
-              <SelectTrigger id="consultorioId" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={SIN_SELECCION}>Sin consultorio específico</SelectItem>
-                {consultorios.map((op) => (
-                  <SelectItem key={op.id} value={op.id}>
-                    {op.nombre}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            />
           </div>
 
           <div className="space-y-2">
@@ -165,49 +148,29 @@ export function BloqueoDialog({
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label htmlFor="horaInicio">Hora inicio</Label>
-                <Select
+                <Combobox
+                  id="horaInicio"
                   name="horaInicio"
                   required
                   items={OPCIONES_HORA}
                   value={horaInicio}
                   onValueChange={(valor) => {
-                    const nuevaHoraInicio = String(valor);
+                    const nuevaHoraInicio = String(valor ?? "");
                     setHoraInicio(nuevaHoraInicio);
                     setHoraFin(sumarMinutos(nuevaHoraInicio, 60));
                   }}
-                >
-                  <SelectTrigger id="horaInicio" className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {OPCIONES_HORA.map((op) => (
-                      <SelectItem key={op.value} value={op.value}>
-                        {op.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="horaFin">Hora fin</Label>
-                <Select
+                <Combobox
+                  id="horaFin"
                   name="horaFin"
                   required
                   items={OPCIONES_HORA}
                   value={horaFin}
-                  onValueChange={(valor) => setHoraFin(String(valor))}
-                >
-                  <SelectTrigger id="horaFin" className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {OPCIONES_HORA.map((op) => (
-                      <SelectItem key={op.value} value={op.value}>
-                        {op.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  onValueChange={(valor) => setHoraFin(String(valor ?? ""))}
+                />
               </div>
             </div>
           ) : null}

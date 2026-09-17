@@ -14,13 +14,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import {
   Table,
   TableBody,
@@ -162,27 +156,19 @@ export function InsumosDialog({
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label htmlFor="insumoIdConsumo">Insumo</Label>
-                <Select
+                <Combobox
+                  id="insumoIdConsumo"
                   items={insumos.map((i) => ({ value: i.id, label: i.nombre }))}
                   value={insumoId}
-                  onValueChange={(valor) => setInsumoId(String(valor))}
-                >
-                  <SelectTrigger id="insumoIdConsumo" className="w-full">
-                    <SelectValue placeholder="Selecciona" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {insumos.map((i) => (
-                      <SelectItem key={i.id} value={i.id}>
-                        {i.nombre}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  onValueChange={(valor) => setInsumoId(String(valor ?? ""))}
+                  placeholder="Selecciona"
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="loteId">Lote</Label>
-                <Select
+                <Combobox
                   key={insumoId}
+                  id="loteId"
                   name="loteId"
                   required
                   disabled={lotesDelInsumo.length === 0}
@@ -190,26 +176,14 @@ export function InsumosDialog({
                     value: l.id,
                     label: `${l.numero_lote ?? "Sin número"} (stock: ${l.cantidad_actual})`,
                   }))}
-                >
-                  <SelectTrigger id="loteId" className="w-full">
-                    <SelectValue
-                      placeholder={
-                        !insumoId
-                          ? "Elige un insumo primero"
-                          : lotesDelInsumo.length === 0
-                            ? "Sin lotes en esta sede"
-                            : "Selecciona"
-                      }
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {lotesDelInsumo.map((l) => (
-                      <SelectItem key={l.id} value={l.id}>
-                        {l.numero_lote ?? "Sin número"} (stock: {l.cantidad_actual})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  placeholder={
+                    !insumoId
+                      ? "Elige un insumo primero"
+                      : lotesDelInsumo.length === 0
+                        ? "Sin lotes en esta sede"
+                        : "Selecciona"
+                  }
+                />
               </div>
             </div>
 

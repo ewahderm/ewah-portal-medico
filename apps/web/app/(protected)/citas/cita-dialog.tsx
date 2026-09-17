@@ -14,13 +14,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 
 type Opcion = { id: string; nombre: string };
 
@@ -82,66 +76,46 @@ export function CitaDialog({
 
           <div className="space-y-2">
             <Label htmlFor="pacienteId">Paciente</Label>
-            <Select name="pacienteId" required items={toItems(pacientes)}>
-              <SelectTrigger id="pacienteId" className="w-full">
-                <SelectValue placeholder="Selecciona un paciente" />
-              </SelectTrigger>
-              <SelectContent>
-                {pacientes.map((op) => (
-                  <SelectItem key={op.id} value={op.id}>
-                    {op.nombre}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Combobox
+              id="pacienteId"
+              name="pacienteId"
+              required
+              items={toItems(pacientes)}
+              placeholder="Selecciona un paciente"
+            />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="tipoTratamientoId">Tipo de tratamiento</Label>
-            <Select name="tipoTratamientoId" required items={toItems(tiposTratamiento)}>
-              <SelectTrigger id="tipoTratamientoId" className="w-full">
-                <SelectValue placeholder="Selecciona un tratamiento" />
-              </SelectTrigger>
-              <SelectContent>
-                {tiposTratamiento.map((op) => (
-                  <SelectItem key={op.id} value={op.id}>
-                    {op.nombre}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Combobox
+              id="tipoTratamientoId"
+              name="tipoTratamientoId"
+              required
+              items={toItems(tiposTratamiento)}
+              placeholder="Selecciona un tratamiento"
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-6">
             <div className="space-y-2">
               <Label htmlFor="profesionalId">Profesional</Label>
-              <Select name="profesionalId" required items={toItems(profesionales)}>
-                <SelectTrigger id="profesionalId" className="w-full">
-                  <SelectValue placeholder="Selecciona" />
-                </SelectTrigger>
-                <SelectContent>
-                  {profesionales.map((op) => (
-                    <SelectItem key={op.id} value={op.id}>
-                      {op.nombre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Combobox
+                id="profesionalId"
+                name="profesionalId"
+                required
+                items={toItems(profesionales)}
+                placeholder="Selecciona"
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="consultorioId">Consultorio</Label>
-              <Select name="consultorioId" required items={toItems(consultorios)}>
-                <SelectTrigger id="consultorioId" className="w-full">
-                  <SelectValue placeholder="Selecciona" />
-                </SelectTrigger>
-                <SelectContent>
-                  {consultorios.map((op) => (
-                    <SelectItem key={op.id} value={op.id}>
-                      {op.nombre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Combobox
+                id="consultorioId"
+                name="consultorioId"
+                required
+                items={toItems(consultorios)}
+                placeholder="Selecciona"
+              />
             </div>
           </div>
 
@@ -158,49 +132,29 @@ export function CitaDialog({
             </div>
             <div className="space-y-2">
               <Label htmlFor="horaInicio">Hora inicio</Label>
-              <Select
+              <Combobox
+                id="horaInicio"
                 name="horaInicio"
                 required
                 items={OPCIONES_HORA}
                 value={horaInicio}
                 onValueChange={(valor) => {
-                  const nuevaHoraInicio = String(valor);
+                  const nuevaHoraInicio = String(valor ?? "");
                   setHoraInicio(nuevaHoraInicio);
                   setHoraFin(sumarMinutos(nuevaHoraInicio, 60));
                 }}
-              >
-                <SelectTrigger id="horaInicio" className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {OPCIONES_HORA.map((op) => (
-                    <SelectItem key={op.value} value={op.value}>
-                      {op.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="horaFin">Hora fin</Label>
-              <Select
+              <Combobox
+                id="horaFin"
                 name="horaFin"
                 required
                 items={OPCIONES_HORA}
                 value={horaFin}
-                onValueChange={(valor) => setHoraFin(String(valor))}
-              >
-                <SelectTrigger id="horaFin" className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {OPCIONES_HORA.map((op) => (
-                    <SelectItem key={op.value} value={op.value}>
-                      {op.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                onValueChange={(valor) => setHoraFin(String(valor ?? ""))}
+              />
             </div>
           </div>
 
