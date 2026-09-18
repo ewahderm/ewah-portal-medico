@@ -1,5 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import {
+  StethoscopeIcon,
+  CalendarDaysIcon,
+  SyringeIcon,
+  PhoneCallIcon,
+} from "lucide-react";
 import { requireUsuario } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -165,7 +171,7 @@ export default async function PacienteDetallePage({
          tratamientos!inner(paciente_id, fecha)`,
       )
       .eq("tratamientos.paciente_id", id)
-      .eq("tipo", "salida_consumo")
+      .eq("motivo_movimiento", "consumo_tratamiento")
       .order("created_at", { ascending: false }),
   ]);
 
@@ -195,11 +201,19 @@ export default async function PacienteDetallePage({
       </div>
 
       <Tabs defaultValue="tratamientos">
-        <TabsList>
-          <TabsTrigger value="tratamientos">Tratamientos</TabsTrigger>
-          <TabsTrigger value="citas">Citas</TabsTrigger>
-          <TabsTrigger value="insumos">Insumos</TabsTrigger>
-          <TabsTrigger value="contactos">Contactos</TabsTrigger>
+        <TabsList className="w-full sm:w-fit">
+          <TabsTrigger value="tratamientos">
+            <StethoscopeIcon /> Tratamientos
+          </TabsTrigger>
+          <TabsTrigger value="citas">
+            <CalendarDaysIcon /> Citas
+          </TabsTrigger>
+          <TabsTrigger value="insumos">
+            <SyringeIcon /> Insumos
+          </TabsTrigger>
+          <TabsTrigger value="contactos">
+            <PhoneCallIcon /> Contactos
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="tratamientos">

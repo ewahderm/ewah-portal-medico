@@ -1,47 +1,22 @@
+import { PackageIcon } from "lucide-react";
 import { requireUsuario } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { LoteDialog } from "./lote-dialog";
-import { AjusteDialog } from "./ajuste-dialog";
-import { MovimientosDialog } from "./movimientos-dialog";
+import { InventarioTabs } from "./inventario-tabs";
 
 type LoteRow = {
   id: string;
-  numero_lote: string | null;
+  numero_lote: string;
   fecha_vencimiento: string | null;
   cantidad_actual: number;
   costo_unitario: number | null;
   proveedor: string | null;
+  sede_id: string;
+  insumo_id: string;
   activo: boolean;
   insumos: { nombre: string; unidad_medida: string } | null;
   sedes: { nombre: string } | null;
 };
-
-function formatoMoneda(valor: number | null) {
-  if (valor === null) return "—";
-  return new Intl.NumberFormat("es-CO", {
-    style: "currency",
-    currency: "COP",
-    maximumFractionDigits: 0,
-  }).format(valor);
-}
-
-function porVencer(fecha: string | null) {
-  if (!fecha) return false;
-  const dias = (new Date(fecha).getTime() - Date.now()) / (1000 * 60 * 60 * 24);
-  return dias <= 30;
-}
 
 export default async function InventarioPage() {
   await requireUsuario();
@@ -74,7 +49,7 @@ export default async function InventarioPage() {
     supabase
       .from("lotes")
       .select(
-        `id, numero_lote, fecha_vencimiento, cantidad_actual, costo_unitario, proveedor, activo,
+        `id, numero_lote, fecha_vencimiento, cantidad_actual, costo_unitario, proveedor, activo, sede_id, insumo_id,
          insumos(nombre, unidad_medida), sedes(nombre)`,
       )
       .eq("activo", true)
@@ -87,79 +62,25 @@ export default async function InventarioPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between">
+      <div className="flex items-start gap-3">
+        <div className="flex size-11 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+          <PackageIcon className="size-6" />
+        </div>
         <div>
           <h1 className="text-2xl font-semibold">Inventario</h1>
           <p className="text-sm text-muted-foreground">
-            Lotes de insumos por sede. El consumo se registra desde cada tratamiento.
+            Control de existencias y movimientos de insumos por sede y de toda la clínica.
           </p>
         </div>
-        {puedeCrear ? (
-          <LoteDialog insumos={insumos} sedes={sedes} trigger={<Button>Nuevo lote</Button>} />
-        ) : null}
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base font-medium">Lotes activos</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Insumo</TableHead>
-                <TableHead>Sede</TableHead>
-                <TableHead>Lote</TableHead>
-                <TableHead>Vencimiento</TableHead>
-                <TableHead>Stock actual</TableHead>
-                <TableHead>Costo unitario</TableHead>
-                <TableHead />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {lotes.map((l) => (
-                <TableRow key={l.id}>
-                  <TableCell className="font-medium">
-                    {l.insumos?.nombre ?? "—"}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {l.sedes?.nombre ?? "—"}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {l.numero_lote ?? "—"}
-                  </TableCell>
-                  <TableCell>
-                    {l.fecha_vencimiento ? (
-                      <Badge variant={porVencer(l.fecha_vencimiento) ? "outline" : "secondary"}>
-                        {l.fecha_vencimiento}
-                      </Badge>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell className={l.cantidad_actual < 0 ? "text-destructive" : ""}>
-                    {l.cantidad_actual} {l.insumos?.unidad_medida ?? ""}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {formatoMoneda(l.costo_unitario)}
-                  </TableCell>
-                  <TableCell className="flex justify-end gap-2 text-right">
-                    <MovimientosDialog loteId={l.id} />
-                    {puedeAjustar ? <AjusteDialog loteId={l.id} /> : null}
-                  </TableCell>
-                </TableRow>
-              ))}
-              {lotes.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground">
-                    Todavía no hay lotes registrados.
-                  </TableCell>
-                </TableRow>
-              ) : null}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      <InventarioTabs
+        insumos={insumos}
+        sedes={sedes}
+        lotes={lotes}
+        puedeCrear={!!puedeCrear}
+        puedeAjustar={!!puedeAjustar}
+      />
     </div>
   );
 }
