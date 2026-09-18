@@ -169,8 +169,8 @@ export default async function TratamientosPage() {
                 <TableHead>Tratamiento</TableHead>
                 <TableHead>Sede</TableHead>
                 <TableHead>Profesional</TableHead>
-                <TableHead>Edad</TableHead>
                 <TableHead>Valor</TableHead>
+                <TableHead>Observaciones</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead />
               </TableRow>
@@ -188,10 +188,10 @@ export default async function TratamientosPage() {
                     {t.profesional?.nombre ?? "—"}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
-                    {t.edad_paciente ?? "—"}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
                     {formatoMoneda(t.costo)}
+                  </TableCell>
+                  <TableCell className="max-w-xs text-muted-foreground">
+                    {t.notas ?? "—"}
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-col gap-1">
