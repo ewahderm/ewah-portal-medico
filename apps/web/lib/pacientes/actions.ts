@@ -23,6 +23,7 @@ function datosPacienteDesdeForm(formData: FormData) {
     nacionalidad_id: valorOpcionalSelect(formData, "nacionalidadId"),
     pais_residencia_id: valorOpcionalSelect(formData, "paisResidenciaId"),
     canal_captacion_id: valorOpcionalSelect(formData, "canalCaptacionId"),
+    campana_id: valorOpcionalSelect(formData, "campanaId"),
     eps_id: valorOpcionalSelect(formData, "epsId"),
     email: campoOpcional(formData, "email"),
     telefono1: campoOpcional(formData, "telefono1"),

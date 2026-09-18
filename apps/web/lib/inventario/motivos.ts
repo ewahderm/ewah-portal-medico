@@ -9,4 +9,5 @@ export const MOTIVO_LABEL: Record<string, string> = {
   desecho: "Desecho",
   obsequio_paciente: "Obsequio a paciente",
   traslado: "Traslado entre sedes",
+  reverso_consumo: "Reversa de consumo",
 };

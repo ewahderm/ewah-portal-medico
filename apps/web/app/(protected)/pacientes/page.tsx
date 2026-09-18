@@ -1,6 +1,7 @@
 import { requireUsuario } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { normalizarBusqueda } from "@/lib/pacientes/normalizar";
+import { nombreCompleto } from "@/lib/pacientes/nombre";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -46,6 +47,7 @@ export default async function PacientesPage({
     { data: generos },
     { data: paises },
     { data: canalesCaptacion },
+    { data: campanas },
     { data: eps },
   ] = await Promise.all([
     supabase.rpc("has_permission", { modulo_code: "pacientes", permiso_code: "CREATE" }),
@@ -53,6 +55,7 @@ export default async function PacientesPage({
     supabase.from("generos").select("id, nombre").eq("activo", true).order("orden"),
     supabase.from("paises").select("id, nombre").eq("activo", true).order("orden"),
     supabase.from("canales_captacion").select("id, nombre").eq("activo", true).order("orden"),
+    supabase.from("campanas").select("id, nombre").eq("activo", true).order("created_at", { ascending: false }),
     supabase.from("eps").select("id, nombre").eq("activo", true).order("orden"),
   ]);
 
@@ -61,13 +64,14 @@ export default async function PacientesPage({
     generos: generos ?? [],
     paises: paises ?? [],
     canalesCaptacion: canalesCaptacion ?? [],
+    campanas: campanas ?? [],
     eps: eps ?? [],
   };
 
   let query = supabase
     .from("pacientes")
     .select(
-      "id, tipo_identificacion_id, numero_identificacion, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, fecha_nacimiento, genero_id, nacionalidad_id, pais_residencia_id, canal_captacion_id, eps_id, email, telefono1, telefono2, activo",
+      "id, tipo_identificacion_id, numero_identificacion, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, fecha_nacimiento, genero_id, nacionalidad_id, pais_residencia_id, canal_captacion_id, campana_id, eps_id, email, telefono1, telefono2, activo",
     )
     .order("primer_apellido");
 
@@ -124,11 +128,7 @@ export default async function PacientesPage({
             <TableBody>
               {(pacientes ?? []).map((p) => (
                 <TableRow key={p.id}>
-                  <TableCell className="font-medium">
-                    {[p.primer_nombre, p.segundo_nombre, p.primer_apellido, p.segundo_apellido]
-                      .filter(Boolean)
-                      .join(" ")}
-                  </TableCell>
+                  <TableCell className="font-medium">{nombreCompleto(p)}</TableCell>
                   <TableCell className="text-muted-foreground">
                     {p.numero_identificacion}
                   </TableCell>

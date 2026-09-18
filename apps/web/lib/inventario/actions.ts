@@ -356,14 +356,52 @@ export async function listarConsumoTratamiento(tratamientoId: string) {
   const { data } = await supabase
     .from("movimientos_insumos")
     .select(
-      `id, cantidad, cantidad_invima, sitio_anatomico, motivo, created_at,
+      `id, cantidad, cantidad_invima, sitio_anatomico, motivo, motivo_movimiento, revierte_movimiento_id, created_at,
        lotes(numero_lote, insumos(nombre, unidad_medida))`,
     )
     .eq("tratamiento_id", tratamientoId)
-    .eq("motivo_movimiento", "consumo_tratamiento")
+    .in("motivo_movimiento", ["consumo_tratamiento", "reverso_consumo"])
     .order("created_at", { ascending: false });
 
   return data ?? [];
+}
+
+export async function revertirConsumo(movimientoId: string) {
+  const check = await requirePermiso("CREATE");
+  if (!check.ok) throw new Error(check.error);
+
+  const supabase = await createClient();
+  const { data: original } = await supabase
+    .from("movimientos_insumos")
+    .select("id, lote_id, cantidad, tratamiento_id, motivo_movimiento")
+    .eq("id", movimientoId)
+    .maybeSingle();
+
+  if (!original || original.motivo_movimiento !== "consumo_tratamiento") {
+    throw new Error("Ese movimiento no es un consumo válido para revertir.");
+  }
+
+  const { data: yaRevertido } = await supabase
+    .from("movimientos_insumos")
+    .select("id")
+    .eq("revierte_movimiento_id", movimientoId)
+    .maybeSingle();
+  if (yaRevertido) throw new Error("Este consumo ya fue revertido.");
+
+  const { error } = await supabase.from("movimientos_insumos").insert({
+    clinica_id: check.usuario.clinica_id,
+    lote_id: original.lote_id,
+    tipo: "entrada",
+    motivo_movimiento: "reverso_consumo",
+    cantidad: original.cantidad,
+    tratamiento_id: original.tratamiento_id,
+    revierte_movimiento_id: original.id,
+    created_by: check.usuario.id,
+  });
+  if (error) throw new Error("No se pudo revertir el consumo.");
+
+  revalidatePath("/tratamientos");
+  revalidatePath("/inventario");
 }
 
 export type CorteInventarioFila = {

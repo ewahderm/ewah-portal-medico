@@ -1,4 +1,4 @@
-import { CameraIcon } from "lucide-react";
+import { CameraIcon, PaperclipIcon } from "lucide-react";
 import { requireUsuario } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { nombreCompleto } from "@/lib/pacientes/nombre";
@@ -18,6 +18,7 @@ import {
 import { TratamientoDialog } from "./tratamiento-dialog";
 import { AnularDialog } from "./anular-dialog";
 import { FotosDialog } from "./fotos-dialog";
+import { AnexosDialog } from "./anexos-dialog";
 import { InsumosDialog } from "./insumos-dialog";
 
 type TratamientoRow = {
@@ -75,6 +76,7 @@ export default async function TratamientosPage() {
     { data: insumosData },
     { data: lotesData },
     { data: fotosData },
+    { data: anexosData },
     { data: tratamientos },
   ] = await Promise.all([
     supabase.rpc("has_permission", { modulo_code: "tratamientos", permiso_code: "CREATE" }),
@@ -99,6 +101,7 @@ export default async function TratamientosPage() {
       .select("id, insumo_id, sede_id, numero_lote, cantidad_actual")
       .eq("activo", true),
     supabase.from("tratamiento_fotos").select("tratamiento_id"),
+    supabase.from("tratamiento_anexos").select("tratamiento_id"),
     supabase
       .from("tratamientos")
       .select(
@@ -118,6 +121,7 @@ export default async function TratamientosPage() {
   const insumos = insumosData ?? [];
   const lotes = lotesData ?? [];
   const tratamientosConFotos = new Set((fotosData ?? []).map((f) => f.tratamiento_id));
+  const tratamientosConAnexos = new Set((anexosData ?? []).map((a) => a.tratamiento_id));
 
   return (
     <div className="space-y-6">
@@ -177,6 +181,12 @@ export default async function TratamientosPage() {
                           aria-label="Tiene fotos"
                         />
                       ) : null}
+                      {tratamientosConAnexos.has(t.id) ? (
+                        <PaperclipIcon
+                          className="size-3.5 text-muted-foreground"
+                          aria-label="Tiene anexos"
+                        />
+                      ) : null}
                     </span>
                   </TableCell>
                   <TableCell className="text-muted-foreground">{t.sedes?.nombre ?? "—"}</TableCell>
@@ -210,6 +220,11 @@ export default async function TratamientosPage() {
                       puedeRegistrar={!!puedeRegistrarConsumo}
                     />
                     <FotosDialog
+                      tratamientoId={t.id}
+                      puedeSubir={!!puedeCrear}
+                      puedeEliminar={!!usuario.roles && usuario.roles.nivel === 1}
+                    />
+                    <AnexosDialog
                       tratamientoId={t.id}
                       puedeSubir={!!puedeCrear}
                       puedeEliminar={!!usuario.roles && usuario.roles.nivel === 1}

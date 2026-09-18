@@ -30,6 +30,7 @@ type Paciente = {
   nacionalidad_id: string | null;
   pais_residencia_id: string | null;
   canal_captacion_id: string | null;
+  campana_id: string | null;
   eps_id: string | null;
   email: string | null;
   telefono1: string | null;
@@ -41,6 +42,7 @@ type Catalogos = {
   generos: Opcion[];
   paises: Opcion[];
   canalesCaptacion: Opcion[];
+  campanas: Opcion[];
   eps: Opcion[];
 };
 
@@ -194,15 +196,27 @@ export function PacienteDialog({
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="canalCaptacionId">¿Cómo nos conoció?</Label>
-            <Combobox
-              id="canalCaptacionId"
-              name="canalCaptacionId"
-              items={opcional(catalogos.canalesCaptacion)}
-              defaultValue={paciente?.canal_captacion_id ?? SIN_SELECCION}
-              placeholder="Selecciona"
-            />
+          <div className="grid grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="canalCaptacionId">¿Cómo nos conoció?</Label>
+              <Combobox
+                id="canalCaptacionId"
+                name="canalCaptacionId"
+                items={opcional(catalogos.canalesCaptacion)}
+                defaultValue={paciente?.canal_captacion_id ?? SIN_SELECCION}
+                placeholder="Selecciona"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="campanaId">Campaña (opcional)</Label>
+              <Combobox
+                id="campanaId"
+                name="campanaId"
+                items={opcional(catalogos.campanas)}
+                defaultValue={paciente?.campana_id ?? SIN_SELECCION}
+                placeholder="Selecciona"
+              />
+            </div>
           </div>
 
           <div className="space-y-2">

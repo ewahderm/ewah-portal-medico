@@ -5,10 +5,14 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentUsuario } from "@/lib/auth/session";
 import { requirePermiso as requirePermisoBase } from "@/lib/auth/requirePermiso";
 import { campoOpcional } from "@/lib/forms/opcional";
+import { CATEGORIAS_ANEXO } from "./anexos";
 import type { ActionState } from "@/lib/auth/actions";
 
 const MAX_FOTO_BYTES = 8 * 1024 * 1024;
 const TIPOS_FOTO_PERMITIDOS = ["image/jpeg", "image/png", "image/webp"];
+
+const MAX_ANEXO_BYTES = 15 * 1024 * 1024;
+const TIPOS_ANEXO_PERMITIDOS = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
 
 function requirePermiso(permiso: "CREATE" | "VOID") {
   return requirePermisoBase("tratamientos", permiso);
@@ -185,6 +189,93 @@ export async function listarFotosTratamiento(tratamientoId: string) {
     (data ?? []).map(async (foto) => ({
       ...foto,
       url: await urlFirmadaFoto(foto.storage_path),
+    })),
+  );
+}
+
+export async function subirAnexoTratamiento(
+  tratamientoId: string,
+  categoria: string,
+  formData: FormData,
+) {
+  if (!(CATEGORIAS_ANEXO as readonly string[]).includes(categoria)) {
+    throw new Error("Categoría inválida.");
+  }
+
+  const check = await requirePermiso("CREATE");
+  if (!check.ok) throw new Error(check.error);
+
+  const archivo = formData.get("archivo");
+  if (!(archivo instanceof File) || archivo.size === 0) {
+    throw new Error("Selecciona un archivo.");
+  }
+  if (archivo.size > MAX_ANEXO_BYTES) {
+    throw new Error("El archivo no puede pesar más de 15 MB.");
+  }
+  if (!TIPOS_ANEXO_PERMITIDOS.includes(archivo.type)) {
+    throw new Error("Formato no soportado. Usa JPG, PNG, WEBP o PDF.");
+  }
+
+  const supabase = await createClient();
+  const extension = archivo.name.split(".").pop() ?? "pdf";
+  const path = `${check.usuario.clinica_id}/${tratamientoId}/${categoria}-${Date.now()}.${extension}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from("tratamiento-anexos")
+    .upload(path, archivo, { contentType: archivo.type });
+  if (uploadError) throw new Error("No se pudo subir el archivo.");
+
+  const { error: insertError } = await supabase.from("tratamiento_anexos").insert({
+    clinica_id: check.usuario.clinica_id,
+    tratamiento_id: tratamientoId,
+    storage_path: path,
+    nombre_archivo: archivo.name,
+    content_type: archivo.type,
+    categoria,
+    created_by: check.usuario.id,
+  });
+  if (insertError) throw new Error("No se pudo registrar el anexo.");
+
+  revalidatePath("/tratamientos");
+}
+
+export async function eliminarAnexoTratamiento(id: string, storagePath: string) {
+  const usuario = await getCurrentUsuario();
+  if (!usuario) throw new Error("Sesión inválida.");
+
+  const supabase = await createClient();
+  const { error: storageError } = await supabase.storage
+    .from("tratamiento-anexos")
+    .remove([storagePath]);
+  if (storageError) throw new Error("No se pudo eliminar el archivo.");
+
+  const { error } = await supabase.from("tratamiento_anexos").delete().eq("id", id);
+  if (error) throw new Error("No se pudo eliminar el anexo.");
+
+  revalidatePath("/tratamientos");
+}
+
+export async function urlFirmadaAnexo(storagePath: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase.storage
+    .from("tratamiento-anexos")
+    .createSignedUrl(storagePath, 60 * 10);
+  if (error || !data) return null;
+  return data.signedUrl;
+}
+
+export async function listarAnexosTratamiento(tratamientoId: string) {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("tratamiento_anexos")
+    .select("id, storage_path, nombre_archivo, content_type, categoria, created_at")
+    .eq("tratamiento_id", tratamientoId)
+    .order("created_at", { ascending: false });
+
+  return Promise.all(
+    (data ?? []).map(async (anexo) => ({
+      ...anexo,
+      url: await urlFirmadaAnexo(anexo.storage_path),
     })),
   );
 }

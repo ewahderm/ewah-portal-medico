@@ -1,8 +1,13 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { registrarConsumo, listarConsumoTratamiento } from "@/lib/inventario/actions";
+import {
+  registrarConsumo,
+  listarConsumoTratamiento,
+  revertirConsumo,
+} from "@/lib/inventario/actions";
 import type { InventarioActionState } from "@/lib/inventario/actions";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,6 +43,8 @@ type Consumo = {
   cantidad_invima: number | null;
   sitio_anatomico: string | null;
   motivo: string | null;
+  motivo_movimiento: string | null;
+  revierte_movimiento_id: string | null;
   created_at: string;
   lotes: { numero_lote: string | null; insumos: { nombre: string; unidad_medida: string } | null } | null;
 };
@@ -59,6 +66,7 @@ export function InsumosDialog({
   const [consumos, setConsumos] = useState<Consumo[]>([]);
   const [insumoId, setInsumoId] = useState("");
   const [state, setState] = useState<InventarioActionState>(null);
+  const [errorReversa, setErrorReversa] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   const lotesDelInsumo = useMemo(
@@ -66,10 +74,37 @@ export function InsumosDialog({
     [lotes, insumoId, sedeId],
   );
 
+  const consumosRegistrados = useMemo(
+    () => consumos.filter((c) => c.motivo_movimiento === "consumo_tratamiento"),
+    [consumos],
+  );
+  const idsRevertidos = useMemo(
+    () =>
+      new Set(
+        consumos
+          .filter((c) => c.motivo_movimiento === "reverso_consumo" && c.revierte_movimiento_id)
+          .map((c) => c.revierte_movimiento_id as string),
+      ),
+    [consumos],
+  );
+
   function cargar() {
     startTransition(async () => {
       const data = await listarConsumoTratamiento(tratamientoId);
       setConsumos(data as unknown as Consumo[]);
+    });
+  }
+
+  function handleRevertir(id: string) {
+    setErrorReversa(null);
+    startTransition(async () => {
+      try {
+        await revertirConsumo(id);
+        const data = await listarConsumoTratamiento(tratamientoId);
+        setConsumos(data as unknown as Consumo[]);
+      } catch (e) {
+        setErrorReversa(e instanceof Error ? e.message : "No se pudo revertir el consumo.");
+      }
     });
   }
 
@@ -106,6 +141,12 @@ export function InsumosDialog({
           <DialogTitle>Insumos usados en este tratamiento</DialogTitle>
         </DialogHeader>
 
+        {errorReversa ? (
+          <Alert variant="destructive">
+            <AlertDescription>{errorReversa}</AlertDescription>
+          </Alert>
+        ) : null}
+
         <Table>
           <TableHeader>
             <TableRow>
@@ -113,26 +154,46 @@ export function InsumosDialog({
               <TableHead>Lote</TableHead>
               <TableHead>Cantidad</TableHead>
               <TableHead>Sitio</TableHead>
+              <TableHead />
             </TableRow>
           </TableHeader>
           <TableBody>
-            {consumos.map((c) => (
-              <TableRow key={c.id}>
-                <TableCell>{c.lotes?.insumos?.nombre ?? "—"}</TableCell>
-                <TableCell className="text-muted-foreground">
-                  {c.lotes?.numero_lote ?? "—"}
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {c.cantidad} {c.lotes?.insumos?.unidad_medida ?? ""}
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {c.sitio_anatomico ?? "—"}
-                </TableCell>
-              </TableRow>
-            ))}
-            {consumos.length === 0 ? (
+            {consumosRegistrados.map((c) => {
+              const revertido = idsRevertidos.has(c.id);
+              return (
+                <TableRow key={c.id}>
+                  <TableCell className={revertido ? "text-muted-foreground line-through" : ""}>
+                    {c.lotes?.insumos?.nombre ?? "—"}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {c.lotes?.numero_lote ?? "—"}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {c.cantidad} {c.lotes?.insumos?.unidad_medida ?? ""}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {c.sitio_anatomico ?? "—"}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {revertido ? (
+                      <Badge variant="outline">Revertido</Badge>
+                    ) : puedeRegistrar ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={pending}
+                        onClick={() => handleRevertir(c.id)}
+                      >
+                        Eliminar
+                      </Button>
+                    ) : null}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+            {consumosRegistrados.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center text-muted-foreground">
+                <TableCell colSpan={5} className="text-center text-muted-foreground">
                   Sin insumos registrados todavía.
                 </TableCell>
               </TableRow>
