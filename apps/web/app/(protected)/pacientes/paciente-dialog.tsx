@@ -15,8 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { Combobox } from "@/components/ui/combobox";
 import { SIN_SELECCION } from "@/lib/forms/opcional";
-
-type Opcion = { id: string; nombre: string };
+import { toItems, toItemsOpcional, type Opcion } from "@/lib/forms/opciones";
 
 type Paciente = {
   id: string;
@@ -47,15 +46,11 @@ type Catalogos = {
 
 const COLOMBIA_NOMBRE = "Colombia";
 
-function toItems(opciones: Opcion[]) {
-  return opciones.map((o) => ({ value: o.id, label: o.nombre }));
-}
-
-// Selects opcionales: agrega "Selecciona una opción" como primer ítem
-// para poder volver a dejar el campo en blanco después de elegir algo
-// (Base UI no permite un ítem con value="", ver lib/forms/opcional.ts).
-function toItemsOpcional(opciones: Opcion[]) {
-  return [{ value: SIN_SELECCION, label: "Selecciona una opción" }, ...toItems(opciones)];
+// Selects opcionales de este diálogo: agrega "Selecciona una opción" como
+// primer ítem para poder volver a dejar el campo en blanco después de
+// elegir algo (Base UI no permite un ítem con value="", ver lib/forms/opcional.ts).
+function opcional(opciones: Opcion[]) {
+  return toItemsOpcional(opciones, SIN_SELECCION, "Selecciona una opción");
 }
 
 export function PacienteDialog({
@@ -169,7 +164,7 @@ export function PacienteDialog({
               <Combobox
                 id="generoId"
                 name="generoId"
-                items={toItemsOpcional(catalogos.generos)}
+                items={opcional(catalogos.generos)}
                 defaultValue={paciente?.genero_id ?? SIN_SELECCION}
                 placeholder="Selecciona"
               />
@@ -182,7 +177,7 @@ export function PacienteDialog({
               <Combobox
                 id="nacionalidadId"
                 name="nacionalidadId"
-                items={toItemsOpcional(catalogos.paises)}
+                items={opcional(catalogos.paises)}
                 defaultValue={paciente?.nacionalidad_id ?? colombiaId ?? SIN_SELECCION}
                 placeholder="Selecciona"
               />
@@ -192,7 +187,7 @@ export function PacienteDialog({
               <Combobox
                 id="paisResidenciaId"
                 name="paisResidenciaId"
-                items={toItemsOpcional(catalogos.paises)}
+                items={opcional(catalogos.paises)}
                 defaultValue={paciente?.pais_residencia_id ?? colombiaId ?? SIN_SELECCION}
                 placeholder="Selecciona"
               />
@@ -204,7 +199,7 @@ export function PacienteDialog({
             <Combobox
               id="canalCaptacionId"
               name="canalCaptacionId"
-              items={toItemsOpcional(catalogos.canalesCaptacion)}
+              items={opcional(catalogos.canalesCaptacion)}
               defaultValue={paciente?.canal_captacion_id ?? SIN_SELECCION}
               placeholder="Selecciona"
             />
@@ -215,7 +210,7 @@ export function PacienteDialog({
             <Combobox
               id="epsId"
               name="epsId"
-              items={toItemsOpcional(catalogos.eps)}
+              items={opcional(catalogos.eps)}
               defaultValue={paciente?.eps_id ?? SIN_SELECCION}
               placeholder="Selecciona"
             />

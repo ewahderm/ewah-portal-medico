@@ -10,7 +10,7 @@ import "./agenda-calendario.css";
 import { CitaDetalleDialog } from "./cita-detalle-dialog";
 import { CitaDialog } from "./cita-dialog";
 import { redondearA15 } from "@/lib/citas/horarios";
-import type { CitaRow } from "./tipos";
+import { nombreCompleto, type CitaRow } from "./tipos";
 
 const localizer = dateFnsLocalizer({
   format,
@@ -49,17 +49,6 @@ function combinarFechaHora(fecha: string, hora: string) {
   const [y, m, d] = fecha.split("-").map(Number);
   const [hh, mm] = hora.split(":").map(Number);
   return new Date(y, m - 1, d, hh, mm);
-}
-
-function nombreCompleto(p: {
-  primer_nombre: string;
-  segundo_nombre: string | null;
-  primer_apellido: string;
-  segundo_apellido: string | null;
-}) {
-  return [p.primer_nombre, p.segundo_nombre, p.primer_apellido, p.segundo_apellido]
-    .filter(Boolean)
-    .join(" ");
 }
 
 type EventoCita = {

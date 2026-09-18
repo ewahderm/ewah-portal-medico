@@ -8,6 +8,8 @@ import {
 } from "lucide-react";
 import { requireUsuario } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
+import { nombreCompleto } from "@/lib/pacientes/nombre";
+import { formatoMoneda } from "@/lib/format";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,26 +23,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ContactoDialog } from "./contacto-dialog";
-
-function nombreCompleto(p: {
-  primer_nombre: string;
-  segundo_nombre: string | null;
-  primer_apellido: string;
-  segundo_apellido: string | null;
-}) {
-  return [p.primer_nombre, p.segundo_nombre, p.primer_apellido, p.segundo_apellido]
-    .filter(Boolean)
-    .join(" ");
-}
-
-function formatoMoneda(valor: number | null) {
-  if (valor === null) return "—";
-  return new Intl.NumberFormat("es-CO", {
-    style: "currency",
-    currency: "COP",
-    maximumFractionDigits: 0,
-  }).format(valor);
-}
 
 const TIPO_CONTACTO_LABEL: Record<string, string> = {
   llamada: "Llamada",

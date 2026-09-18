@@ -3,30 +3,15 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUsuario } from "@/lib/auth/session";
+import { requirePermiso as requirePermisoBase } from "@/lib/auth/requirePermiso";
+import { campoOpcional } from "@/lib/forms/opcional";
 import type { ActionState } from "@/lib/auth/actions";
 
 const MAX_FOTO_BYTES = 8 * 1024 * 1024;
 const TIPOS_FOTO_PERMITIDOS = ["image/jpeg", "image/png", "image/webp"];
 
-async function requirePermiso(permiso: "CREATE" | "VOID") {
-  const usuario = await getCurrentUsuario();
-  if (!usuario) return { ok: false as const, error: "Sesión inválida." };
-
-  const supabase = await createClient();
-  const { data: tienePermiso } = await supabase.rpc("has_permission", {
-    modulo_code: "tratamientos",
-    permiso_code: permiso,
-  });
-
-  if (!tienePermiso) {
-    return { ok: false as const, error: "No tienes permiso para esta acción." };
-  }
-  return { ok: true as const, usuario };
-}
-
-function campoOpcional(formData: FormData, campo: string): string | null {
-  const valor = String(formData.get(campo) ?? "").trim();
-  return valor || null;
+function requirePermiso(permiso: "CREATE" | "VOID") {
+  return requirePermisoBase("tratamientos", permiso);
 }
 
 export async function crearTratamiento(

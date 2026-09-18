@@ -1,5 +1,7 @@
 import { requireUsuario } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
+import { nombreCompleto } from "@/lib/pacientes/nombre";
+import { formatoMoneda } from "@/lib/format";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,17 +18,6 @@ import { TratamientoDialog } from "./tratamiento-dialog";
 import { AnularDialog } from "./anular-dialog";
 import { FotosDialog } from "./fotos-dialog";
 import { InsumosDialog } from "./insumos-dialog";
-
-function nombreCompleto(p: {
-  primer_nombre: string;
-  segundo_nombre: string | null;
-  primer_apellido: string;
-  segundo_apellido: string | null;
-}) {
-  return [p.primer_nombre, p.segundo_nombre, p.primer_apellido, p.segundo_apellido]
-    .filter(Boolean)
-    .join(" ");
-}
 
 type TratamientoRow = {
   id: string;
@@ -53,15 +44,6 @@ type TratamientoRow = {
   profesional: { nombre: string } | null;
   sedes: { nombre: string } | null;
 };
-
-function formatoMoneda(valor: number | null) {
-  if (valor === null) return "—";
-  return new Intl.NumberFormat("es-CO", {
-    style: "currency",
-    currency: "COP",
-    maximumFractionDigits: 0,
-  }).format(valor);
-}
 
 export default async function TratamientosPage() {
   const usuario = await requireUsuario();

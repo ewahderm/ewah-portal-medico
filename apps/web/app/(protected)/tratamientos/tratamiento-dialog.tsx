@@ -15,8 +15,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Combobox } from "@/components/ui/combobox";
-
-type Opcion = { id: string; nombre: string };
+import { toItems, type Opcion } from "@/lib/forms/opciones";
 
 type Correccion = {
   id: string;
@@ -39,10 +38,6 @@ type DesdeCita = {
   sede_id?: string;
   fecha: string;
 };
-
-function toItems(opciones: Opcion[]) {
-  return opciones.map((o) => ({ value: o.id, label: o.nombre }));
-}
 
 function hoy() {
   return new Date().toISOString().slice(0, 10);

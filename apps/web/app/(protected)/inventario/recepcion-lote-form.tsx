@@ -10,12 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Combobox } from "@/components/ui/combobox";
-
-type Opcion = { id: string; nombre: string };
-
-function toItems(opciones: Opcion[]) {
-  return opciones.map((o) => ({ value: o.id, label: o.nombre }));
-}
+import { toItems, type Opcion } from "@/lib/forms/opciones";
 
 const ITEMS_MOTIVO_ENTRADA = MOTIVOS_ENTRADA.map((m) => ({ value: m, label: MOTIVO_LABEL[m] }));
 

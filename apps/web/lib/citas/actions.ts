@@ -2,30 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentUsuario } from "@/lib/auth/session";
-import { valorOpcionalSelect } from "@/lib/forms/opcional";
+import { requirePermiso as requirePermisoBase } from "@/lib/auth/requirePermiso";
+import { valorOpcionalSelect, campoOpcional } from "@/lib/forms/opcional";
 
 export type CitaActionState = { error?: string; warning?: string } | null;
 
-async function requirePermiso(permiso: "CREATE" | "EDIT") {
-  const usuario = await getCurrentUsuario();
-  if (!usuario) return { ok: false as const, error: "Sesión inválida." };
-
-  const supabase = await createClient();
-  const { data: tienePermiso } = await supabase.rpc("has_permission", {
-    modulo_code: "citas",
-    permiso_code: permiso,
-  });
-
-  if (!tienePermiso) {
-    return { ok: false as const, error: "No tienes permiso para esta acción." };
-  }
-  return { ok: true as const, usuario };
-}
-
-function campoOpcional(formData: FormData, campo: string): string | null {
-  const valor = String(formData.get(campo) ?? "").trim();
-  return valor || null;
+function requirePermiso(permiso: "CREATE" | "EDIT") {
+  return requirePermisoBase("citas", permiso);
 }
 
 async function detectarChoque(params: {

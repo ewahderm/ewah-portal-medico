@@ -5,8 +5,7 @@ import { confirmarCita, marcarNoAsistio } from "@/lib/citas/actions";
 import { Button } from "@/components/ui/button";
 import { CancelarDialog } from "./cancelar-dialog";
 import { TratamientoDialog } from "../tratamientos/tratamiento-dialog";
-
-type Opcion = { id: string; nombre: string };
+import type { Opcion } from "@/lib/forms/opciones";
 
 export function EstadoAcciones({
   cita,

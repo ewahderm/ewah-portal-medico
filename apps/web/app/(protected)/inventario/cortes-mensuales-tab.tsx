@@ -16,8 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-
-type Opcion = { id: string; nombre: string };
+import type { Opcion } from "@/lib/forms/opciones";
 
 const TODAS = "__todas__";
 

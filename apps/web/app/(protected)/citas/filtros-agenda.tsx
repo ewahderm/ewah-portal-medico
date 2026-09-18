@@ -3,8 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { Label } from "@/components/ui/label";
 import { Combobox } from "@/components/ui/combobox";
-
-type Opcion = { id: string; nombre: string };
+import type { Opcion } from "@/lib/forms/opciones";
 
 const TODAS = "__todas__";
 

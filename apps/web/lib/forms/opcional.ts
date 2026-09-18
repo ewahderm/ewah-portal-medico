@@ -11,3 +11,8 @@ export function valorOpcionalSelect(formData: FormData, campo: string): string |
   const valor = String(formData.get(campo) ?? "").trim();
   return valor && valor !== SIN_SELECCION ? valor : null;
 }
+
+export function campoOpcional(formData: FormData, campo: string): string | null {
+  const valor = String(formData.get(campo) ?? "").trim();
+  return valor || null;
+}

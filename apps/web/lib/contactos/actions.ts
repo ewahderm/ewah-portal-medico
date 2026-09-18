@@ -2,24 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentUsuario } from "@/lib/auth/session";
+import { requirePermiso as requirePermisoBase } from "@/lib/auth/requirePermiso";
 import { valorOpcionalSelect } from "@/lib/forms/opcional";
 import type { ActionState } from "@/lib/auth/actions";
 
-async function requirePermiso() {
-  const usuario = await getCurrentUsuario();
-  if (!usuario) return { ok: false as const, error: "Sesión inválida." };
-
-  const supabase = await createClient();
-  const { data: tienePermiso } = await supabase.rpc("has_permission", {
-    modulo_code: "pacientes",
-    permiso_code: "CREATE",
-  });
-
-  if (!tienePermiso) {
-    return { ok: false as const, error: "No tienes permiso para esta acción." };
-  }
-  return { ok: true as const, usuario };
+function requirePermiso() {
+  return requirePermisoBase("pacientes", "CREATE");
 }
 
 export async function crearContacto(

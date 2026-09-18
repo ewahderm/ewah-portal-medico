@@ -6,8 +6,8 @@ import { InventarioActualTab } from "./inventario-actual-tab";
 import { RecepcionLoteForm } from "./recepcion-lote-form";
 import { MovimientosTab } from "./movimientos-tab";
 import { CortesMensualesTab } from "./cortes-mensuales-tab";
+import type { Opcion } from "@/lib/forms/opciones";
 
-type Opcion = { id: string; nombre: string };
 type LoteRow = {
   id: string;
   numero_lote: string;

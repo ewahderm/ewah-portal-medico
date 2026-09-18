@@ -18,19 +18,15 @@ import {
 } from "@/components/ui/dialog";
 import { Combobox } from "@/components/ui/combobox";
 import { SIN_SELECCION } from "@/lib/forms/opcional";
+import { toItems, toItemsOpcional, type Opcion } from "@/lib/forms/opciones";
 
-type Opcion = { id: string; nombre: string };
 type Consultorio = { id: string; nombre: string; sede_id: string };
 
 const OPCIONES_HORA = opcionesHora();
 const TODAS_LAS_SEDES = "__todas_las_sedes__";
 
-function toItems(opciones: Opcion[]) {
-  return opciones.map((o) => ({ value: o.id, label: o.nombre }));
-}
-
-function toItemsOpcional(opciones: Opcion[]) {
-  return [{ value: SIN_SELECCION, label: "Sin consultorio específico" }, ...toItems(opciones)];
+function consultoriosOpcionales(opciones: Opcion[]) {
+  return toItemsOpcional(opciones, SIN_SELECCION, "Sin consultorio específico");
 }
 
 export function BloqueoDialog({
@@ -140,7 +136,7 @@ export function BloqueoDialog({
                 key={sedeId}
                 id="consultorioId"
                 name="consultorioId"
-                items={toItemsOpcional(consultoriosDisponibles)}
+                items={consultoriosOpcionales(consultoriosDisponibles)}
                 defaultValue={SIN_SELECCION}
               />
             </div>

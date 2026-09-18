@@ -15,15 +15,11 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Combobox } from "@/components/ui/combobox";
+import { toItems, type Opcion } from "@/lib/forms/opciones";
 
-type Opcion = { id: string; nombre: string };
 type Consultorio = { id: string; nombre: string; sede_id: string };
 
 const OPCIONES_HORA = opcionesHora();
-
-function toItems(opciones: Opcion[]) {
-  return opciones.map((o) => ({ value: o.id, label: o.nombre }));
-}
 
 export function CitaDialog({
   pacientes,

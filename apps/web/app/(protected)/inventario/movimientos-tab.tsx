@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { SearchIcon, XIcon } from "lucide-react";
 import { listarMovimientos } from "@/lib/inventario/actions";
 import { MOTIVOS_ENTRADA, MOTIVOS_SALIDA, MOTIVO_LABEL } from "@/lib/inventario/motivos";
@@ -19,9 +19,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { NuevoMovimientoDialog } from "./nuevo-movimiento-dialog";
+import type { Opcion } from "@/lib/forms/opciones";
 
 type Insumo = { id: string; nombre: string };
-type Opcion = { id: string; nombre: string };
 type LoteResumen = {
   id: string;
   insumo_id: string;

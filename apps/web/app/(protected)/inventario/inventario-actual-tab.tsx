@@ -16,8 +16,9 @@ import {
 } from "@/components/ui/table";
 import { AjusteDialog } from "./ajuste-dialog";
 import { TrasladoDialog } from "./traslado-dialog";
+import type { Opcion } from "@/lib/forms/opciones";
+import { formatoMoneda } from "@/lib/format";
 
-type Opcion = { id: string; nombre: string };
 type LoteRow = {
   id: string;
   numero_lote: string;
@@ -32,15 +33,6 @@ type LoteRow = {
 };
 
 const TODAS = "__todas__";
-
-function formatoMoneda(valor: number | null) {
-  if (valor === null) return "—";
-  return new Intl.NumberFormat("es-CO", {
-    style: "currency",
-    currency: "COP",
-    maximumFractionDigits: 0,
-  }).format(valor);
-}
 
 function diasParaVencer(fecha: string | null) {
   if (!fecha) return null;

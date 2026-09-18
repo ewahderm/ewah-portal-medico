@@ -3,31 +3,15 @@
 import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentUsuario } from "@/lib/auth/session";
+import { requirePermiso as requirePermisoBase } from "@/lib/auth/requirePermiso";
+import { campoOpcional } from "@/lib/forms/opcional";
 import type { ActionState } from "@/lib/auth/actions";
 import { MOTIVOS_ENTRADA, MOTIVOS_SALIDA } from "./motivos";
 
 export type InventarioActionState = { error?: string; warning?: string } | null;
 
-function campoOpcional(formData: FormData, campo: string): string | null {
-  const valor = String(formData.get(campo) ?? "").trim();
-  return valor || null;
-}
-
-async function requirePermiso(permiso: "CREATE" | "VOID") {
-  const usuario = await getCurrentUsuario();
-  if (!usuario) return { ok: false as const, error: "Sesión inválida." };
-
-  const supabase = await createClient();
-  const { data: tienePermiso } = await supabase.rpc("has_permission", {
-    modulo_code: "inventario",
-    permiso_code: permiso,
-  });
-
-  if (!tienePermiso) {
-    return { ok: false as const, error: "No tienes permiso para esta acción." };
-  }
-  return { ok: true as const, usuario };
+function requirePermiso(permiso: "CREATE" | "VOID") {
+  return requirePermisoBase("inventario", permiso);
 }
 
 export async function crearLote(
