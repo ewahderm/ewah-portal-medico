@@ -23,6 +23,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ContactoDialog } from "./contacto-dialog";
+import { TratamientoDialog } from "../../tratamientos/tratamiento-dialog";
+import { Button } from "@/components/ui/button";
 
 const TIPO_CONTACTO_LABEL: Record<string, string> = {
   llamada: "Llamada",
@@ -85,7 +87,7 @@ export default async function PacienteDetallePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  await requireUsuario();
+  const usuario = await requireUsuario();
   const supabase = await createClient();
 
   const { data: puedeVer } = await supabase.rpc("has_permission", {
@@ -113,12 +115,22 @@ export default async function PacienteDetallePage({
 
   const [
     { data: puedeCrearContacto },
+    { data: puedeCrearTratamiento },
+    { data: tiposTratamientoData },
+    { data: profesionalesData },
+    { data: sedesData },
+    { data: mediosPagoData },
     { data: tratamientosData },
     { data: citasData },
     { data: contactosData },
     { data: consumosData },
   ] = await Promise.all([
     supabase.rpc("has_permission", { modulo_code: "pacientes", permiso_code: "CREATE" }),
+    supabase.rpc("has_permission", { modulo_code: "tratamientos", permiso_code: "CREATE" }),
+    supabase.from("tipos_tratamiento").select("id, nombre").eq("activo", true).order("orden"),
+    supabase.from("usuarios").select("id, nombre").eq("activo", true).order("nombre"),
+    supabase.from("sedes").select("id, nombre").eq("activo", true).order("orden"),
+    supabase.from("medios_pago").select("id, nombre").eq("activo", true).order("orden"),
     supabase
       .from("tratamientos")
       .select(
@@ -161,6 +173,10 @@ export default async function PacienteDetallePage({
   const citas = (citasData ?? []) as unknown as CitaRow[];
   const contactos = (contactosData ?? []) as unknown as ContactoRow[];
   const consumos = (consumosData ?? []) as unknown as ConsumoRow[];
+  const tiposTratamiento = tiposTratamientoData ?? [];
+  const profesionales = profesionalesData ?? [];
+  const sedes = sedesData ?? [];
+  const mediosPago = mediosPagoData ?? [];
 
   return (
     <div className="space-y-6">
@@ -200,10 +216,22 @@ export default async function PacienteDetallePage({
 
         <TabsContent value="tratamientos">
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-base font-medium">
                 Tratamientos realizados
               </CardTitle>
+              {puedeCrearTratamiento ? (
+                <TratamientoDialog
+                  pacientes={[{ id: paciente.id, nombre: nombreCompleto(paciente) }]}
+                  tiposTratamiento={tiposTratamiento}
+                  profesionales={profesionales}
+                  sedes={sedes}
+                  mediosPago={mediosPago}
+                  usuarioActualId={usuario.id}
+                  desdePaciente={{ id: paciente.id }}
+                  trigger={<Button size="sm">Nuevo tratamiento</Button>}
+                />
+              ) : null}
             </CardHeader>
             <CardContent>
               <Table>

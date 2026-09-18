@@ -57,7 +57,10 @@ type EventoCita = {
   start: Date;
   end: Date;
   resource: CitaRow;
+  resourceId: string;
 };
+
+const SIN_SEDE_ID = "__sin_sede__";
 
 const VISTA_A_RBC: Record<string, View> = {
   day: Views.DAY,
@@ -101,7 +104,11 @@ export function AgendaCalendario({
 }) {
   const router = useRouter();
   const [citaSeleccionada, setCitaSeleccionada] = useState<CitaRow | null>(null);
-  const [nuevaCita, setNuevaCita] = useState<{ fecha: string; horaInicio?: string } | null>(null);
+  const [nuevaCita, setNuevaCita] = useState<{
+    fecha: string;
+    horaInicio?: string;
+    sedeId?: string;
+  } | null>(null);
 
   const eventos = useMemo<EventoCita[]>(
     () =>
@@ -115,9 +122,24 @@ export function AgendaCalendario({
         start: combinarFechaHora(c.fecha, c.hora_inicio),
         end: combinarFechaHora(c.fecha, c.hora_fin),
         resource: c,
+        resourceId: c.consultorios?.sede_id ?? SIN_SEDE_ID,
       })),
     [citas],
   );
+
+  // Vista día: una columna por sede (react-big-calendar "resources"). Los
+  // bloqueos sin consultorio (de día completo, sin sala fija) caen en una
+  // columna "Sin sede" que solo aparece si ese día hay alguno — no tiene
+  // sentido mostrarla vacía todos los días.
+  const recursosDia = useMemo(() => {
+    if (vista !== "day" || sedes.length === 0) return undefined;
+    const hayBloqueoSinSede = citas.some(
+      (c) => c.es_bloqueo && !c.consultorios?.sede_id,
+    );
+    return hayBloqueoSinSede
+      ? [...sedes, { id: SIN_SEDE_ID, nombre: "Sin sede (todo el día)" }]
+      : sedes;
+  }, [vista, sedes, citas]);
 
   function navegarUrl(nuevaFecha: Date, nuevaVista: string) {
     const params = new URLSearchParams(window.location.search);
@@ -133,7 +155,14 @@ export function AgendaCalendario({
     // formulario. En día/semana sí trae la hora exacta del bloque clicado.
     const horaInicio =
       vista === "month" ? undefined : redondearA15(format(slotInfo.start, "HH:mm"));
-    setNuevaCita({ fecha: format(slotInfo.start, "yyyy-MM-dd"), horaInicio });
+    // En vista día, cada columna es una sede — si el clic vino de una
+    // columna real (no la de "Sin sede"), se preselecciona esa sede.
+    const resourceId = (slotInfo as SlotInfo & { resourceId?: string | number }).resourceId;
+    const sedeId =
+      resourceId !== undefined && String(resourceId) !== SIN_SEDE_ID
+        ? String(resourceId)
+        : undefined;
+    setNuevaCita({ fecha: format(slotInfo.start, "yyyy-MM-dd"), horaInicio, sedeId });
   }
 
   return (
@@ -152,6 +181,9 @@ export function AgendaCalendario({
         timeslots={4}
         selectable={puedeCrear}
         popup
+        resources={recursosDia}
+        resourceIdAccessor="id"
+        resourceTitleAccessor="nombre"
         onNavigate={(nuevaFecha) => navegarUrl(nuevaFecha, vista)}
         onView={(nuevaVista) => navegarUrl(fecha, RBC_A_VISTA[nuevaVista] ?? vista)}
         onSelectSlot={handleSelectSlot}
@@ -183,7 +215,7 @@ export function AgendaCalendario({
 
       {nuevaCita ? (
         <CitaDialog
-          key={`${nuevaCita.fecha}-${nuevaCita.horaInicio ?? ""}`}
+          key={`${nuevaCita.fecha}-${nuevaCita.horaInicio ?? ""}-${nuevaCita.sedeId ?? ""}`}
           pacientes={pacientes}
           profesionales={profesionales}
           consultorios={consultorios}
@@ -191,6 +223,7 @@ export function AgendaCalendario({
           tiposTratamiento={tiposTratamiento}
           fechaSeleccionada={nuevaCita.fecha}
           horaInicioSeleccionada={nuevaCita.horaInicio}
+          sedeInicial={nuevaCita.sedeId}
           open={!!nuevaCita}
           onOpenChange={(open) => {
             if (!open) setNuevaCita(null);

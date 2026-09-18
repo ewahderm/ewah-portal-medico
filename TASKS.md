@@ -46,6 +46,13 @@ Reconstrucción módulo por módulo, con confirmación en cada decisión grande.
   - Se retiró el diálogo "Movimientos" por lote (`movimientos-dialog.tsx`, eliminado) — la nueva pestaña "Movimientos" lo reemplaza con filtros por insumo/sede/tipo/fecha sobre todo el inventario, más un diálogo "Nuevo Movimiento" genérico para ingresos/salidas manuales (compra, obsequio, desecho...). "Ajustar" se mantuvo como acción rápida por lote (gateada por VOID, sin cambios).
   - Mejora de diseño reutilizable: `components/ui/tabs.tsx` pasó de un subrayado delgado a pestañas tipo píldora con fondo cyan sólido en la activa — corrige de paso que las pestañas de la ficha de paciente (`/pacientes/[id]`) parecían una sola línea de texto, sin tocar esa página más que agregarle íconos.
   - Archivos: `apps/web/lib/inventario/{actions,motivos}.ts`, `apps/web/app/(protected)/inventario/{page,inventario-tabs,inventario-actual-tab,recepcion-lote-form,movimientos-tab,cortes-mensuales-tab,nuevo-movimiento-dialog,traslado-dialog,ajuste-dialog}.tsx`.
+- [x] Auditoría de reuso de código (agente de calidad): confirmó 4 patrones copiados en varios archivos y verificó que 2 ya estaban bien centralizados. Se extrajeron a un solo lugar: `requirePermiso(modulo, permiso)` (6 copias) → `lib/auth/requirePermiso.ts`; `campoOpcional()` (4 copias) → `lib/forms/opcional.ts`; `toItems()`/`toItemsOpcional()` + el tipo `Opcion` (redeclarado en 12 archivos) → `lib/forms/opciones.ts`; `formatoMoneda()` (3 copias) → `lib/format.ts`; `nombreCompleto()` (4 copias) → `lib/pacientes/nombre.ts`. De paso corrigió que Parámetros volvía a consultar el usuario por separado en vez de reusar el que ya resolvía el permiso. Sin cambios de comportamiento — build + eslint limpios.
+- [x] Tratamientos ↔ Pacientes ↔ Agenda, ronda de ajustes de uso real:
+  - Tratamientos: el listado ahora muestra Observaciones (antes solo se veían abriendo cada registro) y ya no muestra Edad (no aportaba al vistazo rápido). Marcador visual (ícono de cámara junto al nombre del tratamiento) cuando tiene fotos registradas — primer paso de "saber si un tratamiento tiene fotos/anexos sin abrirlo"; falta el mismo marcador para anexos cuando ese módulo exista.
+  - Pacientes: la pestaña "Tratamientos" de la ficha del paciente (`/pacientes/[id]`) ahora tiene un botón "Nuevo tratamiento" que reutiliza el mismo `TratamientoDialog`/`crearTratamiento()` de Tratamientos (nuevo prop `desdePaciente`, mismo patrón ya usado para `desdeCita`) — cero lógica duplicada.
+  - Agenda: la vista de Día ahora muestra una columna por Sede (`react-big-calendar` "resources"), en vez de una sola columna mezclando todas las sedes. Un bloqueo de día completo sin consultorio específico cae en una columna "Sin sede" que solo aparece si ese día hay alguno. Clic en una columna de sede pre-selecciona esa sede en "Nueva cita" (nuevo prop `sedeInicial` en `CitaDialog`). Semana y Mes no cambian (solo se pidió para Día).
+  - Estándar de app: `components/ui/tabs.tsx` ahora envuelve `TabsList` en un contenedor con scroll horizontal en vez de dejar que la lista de pestañas rompa el ancho de la página — aplica automáticamente a Parámetros, ficha de paciente e Inventario sin tocar esas páginas.
+  - Verificado: `AnularDialog` (Tratamientos) YA pedía motivo de anulación desde antes — no hizo falta cambio, el usuario probablemente no lo había visto.
 
 ## En progreso / próximo
 
@@ -102,7 +109,10 @@ Revisadas antes de construir Tratamientos. Auditoría, historia clínica append-
 - [ ] Habilitación
 - [ ] Actas corporativas
 - [ ] Calendario regulatorio
-- [ ] Marketing
+- [ ] Marketing: módulo de Campañas (crear y hacer seguimiento a un funnel) — pedido 2026-09-18, pendiente de definir alcance con el usuario (¿campaña como capa sobre `canal_captacion_id` existente, con sus propias etapas de funnel y vínculo a Pacientes/Contactos? ¿o algo más ligero?) antes de diseñar el esquema.
+- [ ] Tratamientos: anexos (exámenes diagnósticos, ecografías, radiografías, doppler) — pedido 2026-09-18, pendiente definir categorías/tipos de archivo antes de crear la tabla (¿mismo patrón que `tratamiento_fotos` con Storage privado, con un campo `categoria`?). Una vez exista, agregar el mismo marcador visual que ya tienen las fotos.
+- [ ] Tratamientos: poder eliminar/revertir un insumo ya registrado en un tratamiento, actualizando el stock — pedido 2026-09-18, pendiente confirmar el mecanismo: `movimientos_insumos` es append-only (sin UPDATE/DELETE), así que "eliminar" debe ser una reversa (nuevo movimiento de entrada que compensa el consumo, no un borrado real) — falta decidir cómo se enlaza visualmente el consumo original con su reversa.
+- [ ] Tratamientos: fotos antes/después por zona/perspectiva (hoy `tratamiento_fotos` solo tiene `etiqueta: antes|despues`, ya soporta varias fotos por etiqueta pero no un campo de zona) — agregar columna `zona` (texto libre, ej. "Tercio superior", "Perfil derecho") y agrupar la galería por zona además de por etiqueta.
 - [ ] Reportes + reporte INVIMA
 - [ ] Asistente IA (Gemini/Anthropic)
 - [ ] Deploy: Vercel, Cloudflare, Stripe, Resend, Redis

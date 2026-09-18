@@ -1,3 +1,4 @@
+import { CameraIcon } from "lucide-react";
 import { requireUsuario } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { nombreCompleto } from "@/lib/pacientes/nombre";
@@ -73,6 +74,7 @@ export default async function TratamientosPage() {
     { data: mediosPago },
     { data: insumosData },
     { data: lotesData },
+    { data: fotosData },
     { data: tratamientos },
   ] = await Promise.all([
     supabase.rpc("has_permission", { modulo_code: "tratamientos", permiso_code: "CREATE" }),
@@ -96,6 +98,7 @@ export default async function TratamientosPage() {
       .from("lotes")
       .select("id, insumo_id, sede_id, numero_lote, cantidad_actual")
       .eq("activo", true),
+    supabase.from("tratamiento_fotos").select("tratamiento_id"),
     supabase
       .from("tratamientos")
       .select(
@@ -114,6 +117,7 @@ export default async function TratamientosPage() {
   const pacientes = (pacientesData ?? []).map((p) => ({ id: p.id, nombre: nombreCompleto(p) }));
   const insumos = insumosData ?? [];
   const lotes = lotesData ?? [];
+  const tratamientosConFotos = new Set((fotosData ?? []).map((f) => f.tratamiento_id));
 
   return (
     <div className="space-y-6">
@@ -164,7 +168,17 @@ export default async function TratamientosPage() {
                   <TableCell className="font-medium">
                     {t.pacientes ? nombreCompleto(t.pacientes) : "—"}
                   </TableCell>
-                  <TableCell>{t.tipos_tratamiento?.nombre ?? "—"}</TableCell>
+                  <TableCell>
+                    <span className="inline-flex items-center gap-1.5">
+                      {t.tipos_tratamiento?.nombre ?? "—"}
+                      {tratamientosConFotos.has(t.id) ? (
+                        <CameraIcon
+                          className="size-3.5 text-muted-foreground"
+                          aria-label="Tiene fotos"
+                        />
+                      ) : null}
+                    </span>
+                  </TableCell>
                   <TableCell className="text-muted-foreground">{t.sedes?.nombre ?? "—"}</TableCell>
                   <TableCell className="text-muted-foreground">
                     {t.profesional?.nombre ?? "—"}

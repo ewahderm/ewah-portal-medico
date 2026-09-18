@@ -39,6 +39,10 @@ type DesdeCita = {
   fecha: string;
 };
 
+type DesdePaciente = {
+  id: string;
+};
+
 function hoy() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -52,6 +56,7 @@ export function TratamientoDialog({
   usuarioActualId,
   corrigiendo,
   desdeCita,
+  desdePaciente,
   trigger,
 }: {
   pacientes: Opcion[];
@@ -62,6 +67,7 @@ export function TratamientoDialog({
   usuarioActualId: string;
   corrigiendo?: Correccion;
   desdeCita?: DesdeCita;
+  desdePaciente?: DesdePaciente;
   trigger: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -110,7 +116,7 @@ export function TratamientoDialog({
               name="pacienteId"
               required
               items={toItems(pacientes)}
-              defaultValue={corrigiendo?.paciente_id ?? desdeCita?.paciente_id}
+              defaultValue={corrigiendo?.paciente_id ?? desdeCita?.paciente_id ?? desdePaciente?.id}
               placeholder="Selecciona un paciente"
             />
           </div>

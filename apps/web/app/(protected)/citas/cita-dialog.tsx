@@ -29,6 +29,7 @@ export function CitaDialog({
   tiposTratamiento,
   fechaSeleccionada,
   horaInicioSeleccionada,
+  sedeInicial,
   trigger,
   open: openControlado,
   onOpenChange: onOpenChangeControlado,
@@ -40,6 +41,7 @@ export function CitaDialog({
   tiposTratamiento: Opcion[];
   fechaSeleccionada: string;
   horaInicioSeleccionada?: string;
+  sedeInicial?: string;
   trigger?: React.ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -50,7 +52,7 @@ export function CitaDialog({
   const [state, formAction, pending] = useActionState(crearCita, null);
   const [horaInicio, setHoraInicio] = useState(horaInicioSeleccionada ?? "09:00");
   const [horaFin, setHoraFin] = useState(sumarMinutos(horaInicioSeleccionada ?? "09:00", 60));
-  const [sedeId, setSedeId] = useState("");
+  const [sedeId, setSedeId] = useState(sedeInicial ?? "");
 
   const consultoriosDeLaSede = useMemo(
     () => consultorios.filter((c) => c.sede_id === sedeId),
