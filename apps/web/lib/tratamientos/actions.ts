@@ -281,6 +281,34 @@ export async function revertirAnulacionTratamiento(id: string) {
 
   if (error) throw new Error("No se pudo revertir la anulación.");
 
+  // Si este tratamiento se había anulado al "Editarlo" o al "Corregirlo"
+  // (ambos flujos crean un registro nuevo que apunta a este vía corrige_a),
+  // reactivarlo sin anular también ese reemplazo deja los dos activos a la
+  // vez — el mismo evento clínico duplicado, ya reportado como bug real.
+  const { data: corregido } = await supabase
+    .from("tratamientos")
+    .select("id")
+    .eq("corrige_a", id)
+    .eq("anulado", false)
+    .maybeSingle();
+
+  if (corregido) {
+    const { error: anularCorregidoError } = await supabase
+      .from("tratamientos")
+      .update({
+        anulado: true,
+        anulado_motivo: "Anulado automáticamente al revertir la anulación del registro que corregía.",
+        anulado_por: usuario.id,
+        anulado_en: new Date().toISOString(),
+      })
+      .eq("id", corregido.id);
+    if (anularCorregidoError) {
+      throw new Error(
+        "Se revirtió la anulación, pero no se pudo anular el registro corregido que lo había reemplazado — quedaron los dos activos, anúlalo manualmente.",
+      );
+    }
+  }
+
   revalidatePath("/tratamientos");
 }
 
