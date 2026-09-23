@@ -21,6 +21,10 @@ export type CitaRow = {
   tipos_tratamiento: { nombre: string } | null;
   consultorios: { nombre: string; sede_id: string | null; sedes: { nombre: string } | null } | null;
   profesional: { nombre: string } | null;
+  /** Cuántos tratamientos tiene ya esta cita (0 en la mayoría) — para
+   * mostrarlo antes de abrir el detalle y evitar registros duplicados
+   * por no saber que ya se atendió algo. */
+  tratamientos_count: number;
 };
 
 export const ESTADO_LABEL: Record<string, string> = {

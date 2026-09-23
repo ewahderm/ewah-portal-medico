@@ -121,6 +121,7 @@ type CitaRow = {
   tipos_tratamiento: { nombre: string } | null;
   profesional: { nombre: string } | null;
   consultorios: { sede_id: string | null } | null;
+  tratamientos_count: number;
 };
 
 type Consultorio = { id: string; nombre: string; sede_id: string };
@@ -264,7 +265,8 @@ export default async function PacienteDetallePage({
         `id, fecha, hora_inicio, hora_fin, estado, paciente_id, profesional_id, tipo_tratamiento_id,
          tipos_tratamiento(nombre),
          profesional:usuarios!citas_profesional_id_fkey(nombre),
-         consultorios(sede_id)`,
+         consultorios(sede_id),
+         tratamientos(count)`,
       )
       .eq("paciente_id", id)
       .order("fecha", { ascending: false }),
@@ -296,7 +298,10 @@ export default async function PacienteDetallePage({
   const tratamientos = puedeVerAnulados
     ? tratamientosCompletos
     : tratamientosCompletos.filter((t) => !t.anulado);
-  const citas = (citasData ?? []) as unknown as CitaRow[];
+  const citas = (citasData ?? []).map((c) => {
+    const fila = c as unknown as CitaRow & { tratamientos?: { count: number }[] };
+    return { ...fila, tratamientos_count: fila.tratamientos?.[0]?.count ?? 0 };
+  });
   const contactos = (contactosData ?? []) as unknown as ContactoRow[];
   const consumos = (consumosData ?? []) as unknown as ConsumoRow[];
   const profesionales = profesionalesData ?? [];

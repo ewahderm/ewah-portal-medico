@@ -92,6 +92,24 @@ export async function crearTratamiento(
     };
   }
 
+  // citaId viene de un campo oculto del formulario — no confiar en él tal
+  // cual. RLS ya excluye una cita de otra clínica de este select, pero
+  // además hay que confirmar que sea la cita de ESTE paciente: sin esto,
+  // cualquiera con permiso CREATE podría enlazar un tratamiento a una cita
+  // ajena si conociera su id, contaminando el ticket de esa cita.
+  let citaIdValidado: string | null = null;
+  if (!corrigeA && citaId) {
+    const { data: citaDestino } = await supabase
+      .from("citas")
+      .select("id, paciente_id")
+      .eq("id", citaId)
+      .maybeSingle();
+    if (!citaDestino || citaDestino.paciente_id !== datos.pacienteId) {
+      return { error: "La cita indicada no es válida para este paciente." };
+    }
+    citaIdValidado = citaId;
+  }
+
   const { data: tratamiento, error } = await supabase
     .from("tratamientos")
     .insert({
@@ -106,6 +124,7 @@ export async function crearTratamiento(
       notas: datos.notas,
       cufe: datos.cufe,
       corrige_a: corrigeA,
+      cita_id: corrigeA ? undefined : citaIdValidado,
       created_by: check.usuario.id,
     })
     .select("id")
@@ -113,11 +132,8 @@ export async function crearTratamiento(
 
   if (error || !tratamiento) return { error: "No se pudo registrar el tratamiento." };
 
-  if (citaId) {
-    await supabase
-      .from("citas")
-      .update({ estado: "atendida", tratamiento_id: tratamiento.id })
-      .eq("id", citaId);
+  if (citaIdValidado) {
+    await supabase.from("citas").update({ estado: "atendida" }).eq("id", citaIdValidado);
     revalidatePath("/citas");
   }
 
@@ -154,6 +170,15 @@ export async function editarTratamiento(
     };
   }
 
+  // El corregido hereda el cita_id del original, para no perder el enlace
+  // con la cita solo por haber corregido un error (el formulario no manda
+  // este campo, así que se consulta aparte).
+  const { data: original } = await supabase
+    .from("tratamientos")
+    .select("cita_id")
+    .eq("id", editaId)
+    .maybeSingle();
+
   const { data: tratamiento, error: insertError } = await supabase
     .from("tratamientos")
     .insert({
@@ -168,6 +193,7 @@ export async function editarTratamiento(
       notas: datos.notas,
       cufe: datos.cufe,
       corrige_a: editaId,
+      cita_id: original?.cita_id ?? null,
       created_by: checkCrear.usuario.id,
     })
     .select("id")
@@ -401,6 +427,30 @@ export async function urlFirmadaAnexo(storagePath: string) {
     .createSignedUrl(storagePath, 60 * 10);
   if (error || !data) return null;
   return data.signedUrl;
+}
+
+// Solo lectura de algo ya visible en la cita (mismo criterio que
+// listarFotosTratamiento/listarAnexosTratamiento) — no se exige un permiso
+// explícito, pero sí se filtra por clinica_id para no exponer tratamientos
+// de otra clínica.
+export async function listarTratamientosDeCita(citaId: string) {
+  const usuario = await getCurrentUsuario();
+  if (!usuario) return [];
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("tratamientos")
+    .select("id, costo, anulado, tipos_tratamiento(nombre)")
+    .eq("cita_id", citaId)
+    .eq("clinica_id", usuario.clinica_id)
+    .order("created_at");
+
+  return (data ?? []) as unknown as {
+    id: string;
+    costo: number | null;
+    anulado: boolean;
+    tipos_tratamiento: { nombre: string } | null;
+  }[];
 }
 
 export async function listarAnexosTratamiento(tratamientoId: string) {

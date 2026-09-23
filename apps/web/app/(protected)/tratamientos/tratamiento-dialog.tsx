@@ -40,6 +40,11 @@ type DesdeCita = {
   tipo_tratamiento_id: string | null;
   sede_id?: string;
   fecha: string;
+  // true cuando la cita ya está "atendida" y esto es un tratamiento
+  // adicional sobre la misma cita (una cita puede tener varios) — cambia el
+  // título/alerta/texto del botón para que quede claro que no es un error
+  // ni un duplicado accidental.
+  yaAtendida?: boolean;
 };
 
 type DesdePaciente = {
@@ -58,6 +63,7 @@ export function TratamientoDialog({
   desdeCita,
   desdePaciente,
   pacientesPendientes = new Set(),
+  onGuardado,
   trigger,
 }: {
   pacientes: Opcion[];
@@ -71,6 +77,10 @@ export function TratamientoDialog({
   desdeCita?: DesdeCita;
   desdePaciente?: DesdePaciente;
   pacientesPendientes?: Set<string>;
+  /** Se dispara además del toast, al guardar con éxito — para que quien
+   * embebe este diálogo (ej. el detalle de una cita) pueda refrescar su
+   * propia lista sin depender de que el usuario cierre/reabra. */
+  onGuardado?: () => void;
   trigger: React.ReactElement;
 }) {
   const [open, setOpen] = useState(false);
@@ -89,6 +99,7 @@ export function TratamientoDialog({
 
   useCerrarAlExito(pending, !state?.error, () => {
     setOpen(false);
+    onGuardado?.();
     toast.add({
       title: corrigiendo
         ? "Tratamiento corregido"
@@ -133,7 +144,9 @@ export function TratamientoDialog({
               : editando
                 ? "Editar tratamiento"
                 : desdeCita
-                  ? "Atender cita"
+                  ? desdeCita.yaAtendida
+                    ? "Registrar tratamiento adicional en esta cita"
+                    : "Atender cita"
                   : "Nuevo tratamiento"}
           </DialogTitle>
         </DialogHeader>
@@ -158,6 +171,14 @@ export function TratamientoDialog({
               <AlertDescription>
                 El registro actual se anulará y se creará uno nuevo con estos datos — un
                 tratamiento nunca se edita in-place.
+              </AlertDescription>
+            </Alert>
+          ) : null}
+          {desdeCita?.yaAtendida ? (
+            <Alert>
+              <AlertDescription>
+                Esta cita ya tiene al menos un tratamiento registrado. Esto agrega uno más
+                sobre la misma cita, no reemplaza el que ya existe.
               </AlertDescription>
             </Alert>
           ) : null}
@@ -293,7 +314,9 @@ export function TratamientoDialog({
                 : editando
                   ? "Guardar edición"
                   : desdeCita
-                    ? "Registrar y marcar como atendida"
+                    ? desdeCita.yaAtendida
+                      ? "Registrar tratamiento"
+                      : "Registrar y marcar como atendida"
                     : "Registrar tratamiento"}
           </Button>
         </form>

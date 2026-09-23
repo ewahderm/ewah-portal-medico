@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -9,6 +10,15 @@ import {
 } from "@/components/ui/dialog";
 import { EstadoAcciones } from "./estado-acciones";
 import { ESTADO_LABEL, nombreCompleto, type CitaRow } from "./tipos";
+import { listarTratamientosDeCita } from "@/lib/tratamientos/actions";
+import { formatoMoneda } from "@/lib/format";
+
+type TratamientoDeCita = {
+  id: string;
+  costo: number | null;
+  anulado: boolean;
+  tipos_tratamiento: { nombre: string } | null;
+};
 
 export function CitaDetalleDialog({
   cita,
@@ -37,6 +47,39 @@ export function CitaDetalleDialog({
   usuarioActualId: string;
   pacientesPendientes?: Set<string>;
 }) {
+  // null = todavía cargando (o sin abrir) — distinto de un array vacío, que
+  // significa "ya se consultó y de verdad no tiene tratamientos".
+  const [tratamientos, setTratamientos] = useState<TratamientoDeCita[] | null>(null);
+
+  // El diálogo se desmonta al cerrarse (Dialog de este proyecto solo
+  // cierra con el botón X, nunca cambia de cita en el sitio), así que
+  // cada apertura es un montaje fresco — el estado inicial `null` ya
+  // sirve de "cargando" sin necesidad de resetearlo a mano aquí.
+  useEffect(() => {
+    if (!open || cita.es_bloqueo) return;
+    let cancelado = false;
+    listarTratamientosDeCita(cita.id).then((data) => {
+      if (!cancelado) setTratamientos(data);
+    });
+    return () => {
+      cancelado = true;
+    };
+  }, [open, cita.id, cita.es_bloqueo]);
+
+  // Se pasa a EstadoAcciones para que, al guardar un tratamiento nuevo
+  // desde "Atender"/"Agregar tratamiento" (que vive dentro de este mismo
+  // diálogo), la lista se refresque sin que el usuario tenga que cerrar y
+  // volver a abrir el detalle para verlo reflejado.
+  function refrescarTratamientos() {
+    if (cita.es_bloqueo) return;
+    listarTratamientosDeCita(cita.id).then(setTratamientos);
+  }
+
+  const hayAnulados = (tratamientos ?? []).some((t) => t.anulado);
+  const totalTratamientos = (tratamientos ?? [])
+    .filter((t) => !t.anulado)
+    .reduce((suma, t) => suma + (t.costo ?? 0), 0);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -103,6 +146,48 @@ export function CitaDetalleDialog({
         </div>
 
         {!cita.es_bloqueo ? (
+          <div className="space-y-2 border-t pt-4">
+            <span className="text-sm font-medium">Tratamientos registrados en esta cita</span>
+            {tratamientos === null ? (
+              <p className="text-sm text-muted-foreground">Cargando...</p>
+            ) : tratamientos.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Todavía no hay tratamientos registrados en esta cita.
+              </p>
+            ) : (
+              <>
+                <div className="space-y-1">
+                  {tratamientos.map((t) => (
+                    <div key={t.id} className="flex items-center justify-between text-sm">
+                      <span className={t.anulado ? "text-muted-foreground line-through" : ""}>
+                        {t.tipos_tratamiento?.nombre ?? "—"}
+                        {t.anulado ? (
+                          <Badge variant="outline" className="ml-2 text-xs">
+                            Anulado
+                          </Badge>
+                        ) : null}
+                      </span>
+                      <span
+                        className={t.anulado ? "text-muted-foreground line-through" : "font-medium"}
+                      >
+                        {formatoMoneda(t.costo)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex items-center justify-between border-t pt-2 text-sm font-semibold">
+                  <span>Total</span>
+                  <span>{formatoMoneda(totalTratamientos)}</span>
+                </div>
+                {hayAnulados ? (
+                  <p className="text-xs text-muted-foreground">No incluye tratamientos anulados.</p>
+                ) : null}
+              </>
+            )}
+          </div>
+        ) : null}
+
+        {!cita.es_bloqueo ? (
           <div className="flex justify-end border-t pt-4">
             <EstadoAcciones
               cita={cita}
@@ -115,6 +200,7 @@ export function CitaDetalleDialog({
               mediosPago={mediosPago}
               usuarioActualId={usuarioActualId}
               pacientesPendientes={pacientesPendientes}
+              onTratamientoGuardado={refrescarTratamientos}
             />
           </div>
         ) : null}

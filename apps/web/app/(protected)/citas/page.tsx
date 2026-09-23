@@ -116,7 +116,8 @@ export default async function CitasPage({
        pacientes(primer_nombre, segundo_nombre, primer_apellido, segundo_apellido),
        tipos_tratamiento(nombre),
        ${embedConsultorio},
-       profesional:usuarios!citas_profesional_id_fkey(nombre)`,
+       profesional:usuarios!citas_profesional_id_fkey(nombre),
+       tratamientos(count)`,
     )
     .gte("fecha", format(desde, "yyyy-MM-dd"))
     .lte("fecha", format(hasta, "yyyy-MM-dd"))
@@ -136,7 +137,10 @@ export default async function CitasPage({
   const sedes = sedesData ?? [];
   const tiposTratamiento = tiposTratamientoData ?? [];
   const mediosPago = mediosPagoData ?? [];
-  const citas = (citasData ?? []) as unknown as CitaRow[];
+  const citas = (citasData ?? []).map((c) => {
+    const fila = c as unknown as CitaRow & { tratamientos?: { count: number }[] };
+    return { ...fila, tratamientos_count: fila.tratamientos?.[0]?.count ?? 0 };
+  });
 
   return (
     <div className="space-y-6">

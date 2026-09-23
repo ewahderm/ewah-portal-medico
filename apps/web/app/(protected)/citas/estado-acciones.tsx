@@ -25,6 +25,7 @@ export function EstadoAcciones({
   mediosPago,
   usuarioActualId,
   pacientesPendientes = new Set(),
+  onTratamientoGuardado,
 }: {
   cita: {
     id: string;
@@ -35,6 +36,7 @@ export function EstadoAcciones({
     fecha: string;
     hora_inicio?: string;
     consultorios?: { sede_id: string | null } | null;
+    tratamientos_count?: number;
   };
   puedeEditar: boolean;
   puedeCrearTratamiento: boolean;
@@ -45,6 +47,10 @@ export function EstadoAcciones({
   mediosPago: Opcion[];
   usuarioActualId: string;
   pacientesPendientes?: Set<string>;
+  /** Se dispara al guardar un tratamiento desde "Atender"/"Agregar
+   * tratamiento" — para que un detalle de cita abierto en ese momento
+   * pueda refrescar su lista sin que el usuario tenga que cerrar/reabrir. */
+  onTratamientoGuardado?: () => void;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [conflicto, setConflicto] = useState<string | null>(null);
@@ -100,12 +106,13 @@ export function EstadoAcciones({
     });
   }
 
-  if (
-    cita.estado === "cancelada" ||
-    cita.estado === "no_asistio" ||
-    cita.estado === "atendida" ||
-    cita.estado === "reprogramada"
-  ) {
+  // "atendida" ya NO es un estado terminal para esta lista de acciones: una
+  // cita puede tener varios tratamientos (esquema invertido en
+  // tratamientos.cita_id), así que "Atender"/"Agregar tratamiento" debe
+  // seguir disponible. Los demás sí siguen sin tener sentido una vez
+  // atendida — dejamos de mostrar Confirmar/No asistió/Reprogramar/Cancelar
+  // más abajo condicionando cada botón, no con un return temprano.
+  if (cita.estado === "cancelada" || cita.estado === "no_asistio" || cita.estado === "reprogramada") {
     return error ? <span className="text-xs text-destructive">{error}</span> : null;
   }
 
@@ -206,6 +213,7 @@ export function EstadoAcciones({
             mediosPago={mediosPago}
             usuarioActualId={usuarioActualId}
             pacientesPendientes={pacientesPendientes}
+            onGuardado={onTratamientoGuardado}
             desdeCita={{
               id: cita.id,
               paciente_id: cita.paciente_id,
@@ -213,10 +221,15 @@ export function EstadoAcciones({
               tipo_tratamiento_id: cita.tipo_tratamiento_id,
               sede_id: cita.consultorios?.sede_id ?? undefined,
               fecha: cita.fecha,
+              yaAtendida: cita.estado === "atendida",
             }}
             trigger={
               <Button size="sm" disabled={pending}>
-                Atender
+                {cita.estado === "atendida"
+                  ? `Agregar tratamiento${
+                      cita.tratamientos_count ? ` · ${cita.tratamientos_count} registrados` : ""
+                    }`
+                  : "Atender"}
               </Button>
             }
           />
@@ -226,12 +239,12 @@ export function EstadoAcciones({
             No asistió
           </Button>
         ) : null}
-        {puedeEditar ? (
+        {cita.estado !== "atendida" && puedeEditar ? (
           <Button variant="ghost" size="sm" onClick={() => setReprogramando(true)} disabled={pending}>
             Reprogramar
           </Button>
         ) : null}
-        {puedeEditar ? <CancelarDialog id={cita.id} /> : null}
+        {cita.estado !== "atendida" && puedeEditar ? <CancelarDialog id={cita.id} /> : null}
       </div>
       {error ? <span className="text-xs text-destructive">{error}</span> : null}
     </div>
