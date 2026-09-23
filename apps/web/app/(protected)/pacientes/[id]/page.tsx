@@ -1,18 +1,30 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
+  IdCardIcon,
   StethoscopeIcon,
   CalendarDaysIcon,
   SyringeIcon,
   PhoneCallIcon,
 } from "lucide-react";
-import { requireUsuario } from "@/lib/auth/session";
+import { requireUsuario, esAdministrador } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { nombreCompleto } from "@/lib/pacientes/nombre";
 import { formatoMoneda } from "@/lib/format";
-import { getSedesActivas, getMediosPagoActivos, getTiposTratamientoActivos } from "@/lib/catalogos";
+import {
+  getSedesActivas,
+  getMediosPagoActivos,
+  getTiposTratamientoActivos,
+  getTiposIdentificacionActivos,
+  getGenerosActivos,
+  getPaisesActivos,
+  getCanalesCaptacionActivos,
+  getCampanasActivas,
+  getEpsActivos,
+} from "@/lib/catalogos";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -24,8 +36,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ContactoDialog } from "./contacto-dialog";
+import { PacienteDialog } from "../paciente-dialog";
 import { TratamientoDialog } from "../../tratamientos/tratamiento-dialog";
-import { Button } from "@/components/ui/button";
+import { AnularDialog } from "../../tratamientos/anular-dialog";
+import { RevertirAnulacionButton } from "../../tratamientos/revertir-anulacion-button";
+import { FotosDialog } from "../../tratamientos/fotos-dialog";
+import { AnexosDialog } from "../../tratamientos/anexos-dialog";
+import { InsumosDialog } from "../../tratamientos/insumos-dialog";
 
 const TIPO_CONTACTO_LABEL: Record<string, string> = {
   llamada: "Llamada",
@@ -42,11 +59,47 @@ const RESULTADO_LABEL: Record<string, string> = {
   otro: "Otro",
 };
 
+type PacienteCompleto = {
+  id: string;
+  tipo_identificacion_id: string;
+  numero_identificacion: string;
+  primer_nombre: string;
+  segundo_nombre: string | null;
+  primer_apellido: string;
+  segundo_apellido: string | null;
+  fecha_nacimiento: string | null;
+  genero_id: string | null;
+  nacionalidad_id: string | null;
+  pais_residencia_id: string | null;
+  canal_captacion_id: string | null;
+  campana_id: string | null;
+  eps_id: string | null;
+  email: string | null;
+  telefono1: string | null;
+  telefono2: string | null;
+  activo: boolean;
+  tipos_identificacion: { nombre: string } | null;
+  generos: { nombre: string } | null;
+  nacionalidad: { nombre: string } | null;
+  pais_residencia: { nombre: string } | null;
+  canal_captacion: { nombre: string } | null;
+  campanas: { nombre: string } | null;
+  eps: { nombre: string } | null;
+};
+
 type TratamientoRow = {
   id: string;
   fecha: string;
   costo: number | null;
+  notas: string | null;
+  cufe: string | null;
   anulado: boolean;
+  anulado_motivo: string | null;
+  paciente_id: string;
+  tipo_tratamiento_id: string;
+  profesional_id: string;
+  sede_id: string;
+  medio_pago_id: string;
   tipos_tratamiento: { nombre: string } | null;
   sedes: { nombre: string } | null;
   profesional: { nombre: string } | null;
@@ -82,6 +135,15 @@ type ContactoRow = {
   creador: { nombre: string } | null;
 };
 
+function Dato({ etiqueta, valor }: { etiqueta: string; valor: React.ReactNode }) {
+  return (
+    <div className="space-y-0.5">
+      <p className="text-xs text-muted-foreground">{etiqueta}</p>
+      <p className="text-sm">{valor ?? "—"}</p>
+    </div>
+  );
+}
+
 export default async function PacienteDetallePage({
   params,
 }: {
@@ -104,38 +166,76 @@ export default async function PacienteDetallePage({
     );
   }
 
-  const { data: paciente } = await supabase
+  const { data: pacienteData } = await supabase
     .from("pacientes")
     .select(
-      "id, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, numero_identificacion, email, telefono1, activo",
+      `id, tipo_identificacion_id, numero_identificacion, primer_nombre, segundo_nombre,
+       primer_apellido, segundo_apellido, fecha_nacimiento, genero_id, nacionalidad_id,
+       pais_residencia_id, canal_captacion_id, campana_id, eps_id, email, telefono1, telefono2, activo,
+       tipos_identificacion(nombre),
+       generos(nombre),
+       nacionalidad:paises!pacientes_nacionalidad_id_fkey(nombre),
+       pais_residencia:paises!pacientes_pais_residencia_id_fkey(nombre),
+       canal_captacion:canales_captacion!pacientes_medio_contacto_id_fkey(nombre),
+       campanas(nombre),
+       eps(nombre)`,
     )
     .eq("id", id)
     .maybeSingle();
 
-  if (!paciente) notFound();
+  if (!pacienteData) notFound();
+  const paciente = pacienteData as unknown as PacienteCompleto;
 
   const [
+    { data: puedeEditarPaciente },
     { data: puedeCrearContacto },
     { data: puedeCrearTratamiento },
-    tiposTratamientoData,
+    { data: puedeAnularTratamiento },
+    { data: puedeRegistrarConsumo },
+    { data: puedeRevertirConsumo },
+    tiposIdentificacion,
+    generos,
+    paises,
+    canalesCaptacion,
+    campanas,
+    eps,
+    tiposTratamiento,
     { data: profesionalesData },
-    sedesData,
-    mediosPagoData,
+    sedes,
+    mediosPago,
+    { data: insumosData },
+    { data: lotesData },
     { data: tratamientosData },
     { data: citasData },
     { data: contactosData },
     { data: consumosData },
   ] = await Promise.all([
+    supabase.rpc("has_permission", { modulo_code: "pacientes", permiso_code: "EDIT" }),
     supabase.rpc("has_permission", { modulo_code: "pacientes", permiso_code: "CREATE" }),
     supabase.rpc("has_permission", { modulo_code: "tratamientos", permiso_code: "CREATE" }),
+    supabase.rpc("has_permission", { modulo_code: "tratamientos", permiso_code: "VOID" }),
+    supabase.rpc("has_permission", { modulo_code: "inventario", permiso_code: "CREATE" }),
+    supabase.rpc("has_permission", { modulo_code: "inventario", permiso_code: "VOID" }),
+    getTiposIdentificacionActivos(supabase),
+    getGenerosActivos(supabase),
+    getPaisesActivos(supabase),
+    getCanalesCaptacionActivos(supabase),
+    getCampanasActivas(supabase),
+    getEpsActivos(supabase),
     getTiposTratamientoActivos(supabase),
     supabase.from("usuarios").select("id, nombre").eq("activo", true).order("nombre"),
     getSedesActivas(supabase),
     getMediosPagoActivos(supabase),
+    supabase.from("insumos").select("id, nombre").eq("activo", true).order("orden"),
+    supabase
+      .from("lotes")
+      .select("id, insumo_id, sede_id, numero_lote, cantidad_actual")
+      .eq("activo", true),
     supabase
       .from("tratamientos")
       .select(
-        `id, fecha, costo, anulado,
+        `id, fecha, costo, notas, cufe, anulado, anulado_motivo,
+         paciente_id, tipo_tratamiento_id, profesional_id, sede_id, medio_pago_id,
          tipos_tratamiento(nombre), sedes(nombre),
          profesional:usuarios!tratamientos_profesional_id_fkey(nombre)`,
       )
@@ -170,14 +270,27 @@ export default async function PacienteDetallePage({
       .order("created_at", { ascending: false }),
   ]);
 
-  const tratamientos = (tratamientosData ?? []) as unknown as TratamientoRow[];
+  const puedeVerAnulados = esAdministrador(usuario);
+  const puedeEliminarArchivos = esAdministrador(usuario);
+  const tratamientosCompletos = (tratamientosData ?? []) as unknown as TratamientoRow[];
+  const tratamientos = puedeVerAnulados
+    ? tratamientosCompletos
+    : tratamientosCompletos.filter((t) => !t.anulado);
   const citas = (citasData ?? []) as unknown as CitaRow[];
   const contactos = (contactosData ?? []) as unknown as ContactoRow[];
   const consumos = (consumosData ?? []) as unknown as ConsumoRow[];
-  const tiposTratamiento = tiposTratamientoData ?? [];
   const profesionales = profesionalesData ?? [];
-  const sedes = sedesData ?? [];
-  const mediosPago = mediosPagoData ?? [];
+  const insumos = insumosData ?? [];
+  const lotes = lotesData ?? [];
+
+  const catalogosPaciente = {
+    tiposIdentificacion,
+    generos,
+    paises,
+    canalesCaptacion,
+    campanas,
+    eps,
+  };
 
   return (
     <div className="space-y-6">
@@ -199,8 +312,11 @@ export default async function PacienteDetallePage({
         </Badge>
       </div>
 
-      <Tabs defaultValue="tratamientos">
+      <Tabs defaultValue="datos">
         <TabsList className="w-full sm:w-fit">
+          <TabsTrigger value="datos">
+            <IdCardIcon /> Datos básicos
+          </TabsTrigger>
           <TabsTrigger value="tratamientos">
             <StethoscopeIcon /> Tratamientos
           </TabsTrigger>
@@ -214,6 +330,40 @@ export default async function PacienteDetallePage({
             <PhoneCallIcon /> Contactos
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="datos">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-base font-medium">Datos básicos</CardTitle>
+              {puedeEditarPaciente ? (
+                <PacienteDialog
+                  catalogos={catalogosPaciente}
+                  paciente={paciente}
+                  trigger={<Button size="sm">Editar paciente</Button>}
+                />
+              ) : null}
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <Dato
+                  etiqueta="Identificación"
+                  valor={`${paciente.tipos_identificacion?.nombre ?? "—"} ${paciente.numero_identificacion}`}
+                />
+                <Dato etiqueta="Nombre completo" valor={nombreCompleto(paciente)} />
+                <Dato etiqueta="Fecha de nacimiento" valor={paciente.fecha_nacimiento} />
+                <Dato etiqueta="Género" valor={paciente.generos?.nombre} />
+                <Dato etiqueta="Nacionalidad" valor={paciente.nacionalidad?.nombre} />
+                <Dato etiqueta="País de residencia" valor={paciente.pais_residencia?.nombre} />
+                <Dato etiqueta="¿Cómo nos conoció?" valor={paciente.canal_captacion?.nombre} />
+                <Dato etiqueta="Campaña" valor={paciente.campanas?.nombre} />
+                <Dato etiqueta="EPS" valor={paciente.eps?.nombre} />
+                <Dato etiqueta="Correo" valor={paciente.email} />
+                <Dato etiqueta="Teléfono principal" valor={paciente.telefono1} />
+                <Dato etiqueta="Teléfono alterno" valor={paciente.telefono2} />
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="tratamientos">
           <Card>
@@ -243,14 +393,25 @@ export default async function PacienteDetallePage({
                     <TableHead>Sede</TableHead>
                     <TableHead>Profesional</TableHead>
                     <TableHead>Valor</TableHead>
-                    <TableHead>Estado</TableHead>
+                    <TableHead />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {tratamientos.map((t) => (
                     <TableRow key={t.id}>
                       <TableCell className="text-muted-foreground">{t.fecha}</TableCell>
-                      <TableCell>{t.tipos_tratamiento?.nombre ?? "—"}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-col gap-0.5">
+                          <span className={t.anulado ? "text-muted-foreground line-through" : ""}>
+                            {t.tipos_tratamiento?.nombre ?? "—"}
+                          </span>
+                          {t.anulado ? (
+                            <span className="text-xs text-muted-foreground">
+                              Anulado{t.anulado_motivo ? `: ${t.anulado_motivo}` : ""}
+                            </span>
+                          ) : null}
+                        </div>
+                      </TableCell>
                       <TableCell className="text-muted-foreground">
                         {t.sedes?.nombre ?? "—"}
                       </TableCell>
@@ -260,10 +421,83 @@ export default async function PacienteDetallePage({
                       <TableCell className="text-muted-foreground">
                         {formatoMoneda(t.costo)}
                       </TableCell>
-                      <TableCell>
-                        <Badge variant={t.anulado ? "outline" : "secondary"}>
-                          {t.anulado ? "Anulado" : "Vigente"}
-                        </Badge>
+                      <TableCell className="flex flex-wrap justify-end gap-2 text-right">
+                        <InsumosDialog
+                          tratamientoId={t.id}
+                          sedeId={t.sede_id}
+                          insumos={insumos}
+                          lotes={lotes}
+                          puedeRegistrar={!!puedeRegistrarConsumo}
+                          puedeRevertir={!!puedeRevertirConsumo}
+                        />
+                        <FotosDialog
+                          tratamientoId={t.id}
+                          puedeSubir={!!puedeCrearTratamiento}
+                          puedeEliminar={puedeEliminarArchivos}
+                        />
+                        <AnexosDialog
+                          tratamientoId={t.id}
+                          puedeSubir={!!puedeCrearTratamiento}
+                          puedeEliminar={puedeEliminarArchivos}
+                        />
+                        {!t.anulado && puedeCrearTratamiento && puedeAnularTratamiento ? (
+                          <TratamientoDialog
+                            pacientes={[{ id: paciente.id, nombre: nombreCompleto(paciente) }]}
+                            tiposTratamiento={tiposTratamiento}
+                            profesionales={profesionales}
+                            sedes={sedes}
+                            mediosPago={mediosPago}
+                            usuarioActualId={usuario.id}
+                            editando={{
+                              id: t.id,
+                              paciente_id: t.paciente_id,
+                              tipo_tratamiento_id: t.tipo_tratamiento_id,
+                              profesional_id: t.profesional_id,
+                              sede_id: t.sede_id,
+                              medio_pago_id: t.medio_pago_id,
+                              fecha: t.fecha,
+                              costo: t.costo,
+                              notas: t.notas,
+                              cufe: t.cufe,
+                            }}
+                            trigger={
+                              <Button variant="outline" size="sm">
+                                Editar
+                              </Button>
+                            }
+                          />
+                        ) : null}
+                        {!t.anulado && puedeAnularTratamiento ? <AnularDialog id={t.id} /> : null}
+                        {t.anulado && puedeCrearTratamiento ? (
+                          <TratamientoDialog
+                            pacientes={[{ id: paciente.id, nombre: nombreCompleto(paciente) }]}
+                            tiposTratamiento={tiposTratamiento}
+                            profesionales={profesionales}
+                            sedes={sedes}
+                            mediosPago={mediosPago}
+                            usuarioActualId={usuario.id}
+                            corrigiendo={{
+                              id: t.id,
+                              paciente_id: t.paciente_id,
+                              tipo_tratamiento_id: t.tipo_tratamiento_id,
+                              profesional_id: t.profesional_id,
+                              sede_id: t.sede_id,
+                              medio_pago_id: t.medio_pago_id,
+                              fecha: t.fecha,
+                              costo: t.costo,
+                              notas: t.notas,
+                              cufe: t.cufe,
+                            }}
+                            trigger={
+                              <Button variant="outline" size="sm">
+                                Corregir
+                              </Button>
+                            }
+                          />
+                        ) : null}
+                        {t.anulado && puedeVerAnulados ? (
+                          <RevertirAnulacionButton id={t.id} />
+                        ) : null}
                       </TableCell>
                     </TableRow>
                   ))}

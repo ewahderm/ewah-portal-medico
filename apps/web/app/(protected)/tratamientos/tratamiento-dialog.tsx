@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { crearTratamiento } from "@/lib/tratamientos/actions";
+import { crearTratamiento, editarTratamiento } from "@/lib/tratamientos/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -55,6 +55,7 @@ export function TratamientoDialog({
   mediosPago,
   usuarioActualId,
   corrigiendo,
+  editando,
   desdeCita,
   desdePaciente,
   trigger,
@@ -66,12 +67,20 @@ export function TratamientoDialog({
   mediosPago: Opcion[];
   usuarioActualId: string;
   corrigiendo?: Correccion;
+  editando?: Correccion;
   desdeCita?: DesdeCita;
   desdePaciente?: DesdePaciente;
   trigger: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
-  const [state, formAction, pending] = useActionState(crearTratamiento, null);
+  const [state, formAction, pending] = useActionState(
+    editando ? editarTratamiento : crearTratamiento,
+    null,
+  );
+  // Corregir (registro ya anulado) y Editar (atajo anular+corregir) parten
+  // de la misma forma de tratamiento — solo difieren en qué campo oculto
+  // envían y en qué acción de servidor invocan.
+  const prefill = corrigiendo ?? editando;
 
   return (
     <Dialog
@@ -84,7 +93,13 @@ export function TratamientoDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            {corrigiendo ? "Corregir tratamiento" : desdeCita ? "Atender cita" : "Nuevo tratamiento"}
+            {corrigiendo
+              ? "Corregir tratamiento"
+              : editando
+                ? "Editar tratamiento"
+                : desdeCita
+                  ? "Atender cita"
+                  : "Nuevo tratamiento"}
           </DialogTitle>
         </DialogHeader>
 
@@ -92,6 +107,7 @@ export function TratamientoDialog({
           {corrigiendo ? (
             <input type="hidden" name="corrigeA" value={corrigiendo.id} />
           ) : null}
+          {editando ? <input type="hidden" name="editaId" value={editando.id} /> : null}
           {desdeCita ? <input type="hidden" name="citaId" value={desdeCita.id} /> : null}
 
           {corrigiendo ? (
@@ -99,6 +115,14 @@ export function TratamientoDialog({
               <AlertDescription>
                 Este registro anulado no se modifica. Al guardar se crea un tratamiento
                 nuevo que lo corrige.
+              </AlertDescription>
+            </Alert>
+          ) : null}
+          {editando ? (
+            <Alert>
+              <AlertDescription>
+                El registro actual se anulará y se creará uno nuevo con estos datos — un
+                tratamiento nunca se edita in-place.
               </AlertDescription>
             </Alert>
           ) : null}
@@ -116,7 +140,7 @@ export function TratamientoDialog({
               name="pacienteId"
               required
               items={toItems(pacientes)}
-              defaultValue={corrigiendo?.paciente_id ?? desdeCita?.paciente_id ?? desdePaciente?.id}
+              defaultValue={prefill?.paciente_id ?? desdeCita?.paciente_id ?? desdePaciente?.id}
               placeholder="Selecciona un paciente"
             />
           </div>
@@ -128,7 +152,7 @@ export function TratamientoDialog({
               name="tipoTratamientoId"
               required
               items={toItems(tiposTratamiento)}
-              defaultValue={corrigiendo?.tipo_tratamiento_id ?? desdeCita?.tipo_tratamiento_id ?? undefined}
+              defaultValue={prefill?.tipo_tratamiento_id ?? desdeCita?.tipo_tratamiento_id ?? undefined}
               placeholder="Selecciona un tratamiento"
             />
           </div>
@@ -141,7 +165,7 @@ export function TratamientoDialog({
                 name="profesionalId"
                 required
                 items={toItems(profesionales)}
-                defaultValue={corrigiendo?.profesional_id ?? desdeCita?.profesional_id ?? usuarioActualId}
+                defaultValue={prefill?.profesional_id ?? desdeCita?.profesional_id ?? usuarioActualId}
                 placeholder="Selecciona"
               />
             </div>
@@ -152,7 +176,7 @@ export function TratamientoDialog({
                 name="fecha"
                 type="date"
                 required
-                defaultValue={corrigiendo?.fecha ?? desdeCita?.fecha ?? hoy()}
+                defaultValue={prefill?.fecha ?? desdeCita?.fecha ?? hoy()}
               />
             </div>
           </div>
@@ -165,7 +189,7 @@ export function TratamientoDialog({
                 name="sedeId"
                 required
                 items={toItems(sedes)}
-                defaultValue={corrigiendo?.sede_id ?? desdeCita?.sede_id}
+                defaultValue={prefill?.sede_id ?? desdeCita?.sede_id}
                 placeholder="Selecciona"
               />
             </div>
@@ -176,7 +200,7 @@ export function TratamientoDialog({
                 name="medioPagoId"
                 required
                 items={toItems(mediosPago)}
-                defaultValue={corrigiendo?.medio_pago_id}
+                defaultValue={prefill?.medio_pago_id}
                 placeholder="Selecciona"
               />
             </div>
@@ -192,7 +216,7 @@ export function TratamientoDialog({
               step="1000"
               placeholder="0"
               required
-              defaultValue={corrigiendo?.costo ?? ""}
+              defaultValue={prefill?.costo ?? ""}
             />
           </div>
 
@@ -203,7 +227,7 @@ export function TratamientoDialog({
               name="notas"
               rows={4}
               placeholder="Evolución, indicaciones, reacciones..."
-              defaultValue={corrigiendo?.notas ?? ""}
+              defaultValue={prefill?.notas ?? ""}
             />
           </div>
 
@@ -213,7 +237,7 @@ export function TratamientoDialog({
               id="cufe"
               name="cufe"
               placeholder="Código Único de Facturación Electrónica"
-              defaultValue={corrigiendo?.cufe ?? ""}
+              defaultValue={prefill?.cufe ?? ""}
             />
           </div>
 
@@ -222,9 +246,11 @@ export function TratamientoDialog({
               ? "Guardando..."
               : corrigiendo
                 ? "Guardar corrección"
-                : desdeCita
-                  ? "Registrar y marcar como atendida"
-                  : "Registrar tratamiento"}
+                : editando
+                  ? "Guardar edición"
+                  : desdeCita
+                    ? "Registrar y marcar como atendida"
+                    : "Registrar tratamiento"}
           </Button>
         </form>
       </DialogContent>

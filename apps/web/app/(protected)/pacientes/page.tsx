@@ -2,6 +2,14 @@ import { requireUsuario } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { normalizarBusqueda } from "@/lib/pacientes/normalizar";
 import { nombreCompleto } from "@/lib/pacientes/nombre";
+import {
+  getTiposIdentificacionActivos,
+  getGenerosActivos,
+  getPaisesActivos,
+  getCanalesCaptacionActivos,
+  getCampanasActivas,
+  getEpsActivos,
+} from "@/lib/catalogos";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -43,29 +51,29 @@ export default async function PacientesPage({
 
   const [
     { data: puedeCrear },
-    { data: tiposIdentificacion },
-    { data: generos },
-    { data: paises },
-    { data: canalesCaptacion },
-    { data: campanas },
-    { data: eps },
+    tiposIdentificacion,
+    generos,
+    paises,
+    canalesCaptacion,
+    campanas,
+    eps,
   ] = await Promise.all([
     supabase.rpc("has_permission", { modulo_code: "pacientes", permiso_code: "CREATE" }),
-    supabase.from("tipos_identificacion").select("id, nombre").eq("activo", true).order("orden"),
-    supabase.from("generos").select("id, nombre").eq("activo", true).order("orden"),
-    supabase.from("paises").select("id, nombre").eq("activo", true).order("orden"),
-    supabase.from("canales_captacion").select("id, nombre").eq("activo", true).order("orden"),
-    supabase.from("campanas").select("id, nombre").eq("activo", true).order("created_at", { ascending: false }),
-    supabase.from("eps").select("id, nombre").eq("activo", true).order("orden"),
+    getTiposIdentificacionActivos(supabase),
+    getGenerosActivos(supabase),
+    getPaisesActivos(supabase),
+    getCanalesCaptacionActivos(supabase),
+    getCampanasActivas(supabase),
+    getEpsActivos(supabase),
   ]);
 
   const catalogos = {
-    tiposIdentificacion: tiposIdentificacion ?? [],
-    generos: generos ?? [],
-    paises: paises ?? [],
-    canalesCaptacion: canalesCaptacion ?? [],
-    campanas: campanas ?? [],
-    eps: eps ?? [],
+    tiposIdentificacion,
+    generos,
+    paises,
+    canalesCaptacion,
+    campanas,
+    eps,
   };
 
   let query = supabase

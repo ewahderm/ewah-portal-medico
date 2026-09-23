@@ -1,11 +1,10 @@
 import { CameraIcon, PaperclipIcon } from "lucide-react";
-import { requireUsuario } from "@/lib/auth/session";
+import { requireUsuario, esAdministrador } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { nombreCompleto } from "@/lib/pacientes/nombre";
 import { formatoMoneda } from "@/lib/format";
 import { getSedesActivas, getMediosPagoActivos, getTiposTratamientoActivos } from "@/lib/catalogos";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -18,6 +17,7 @@ import {
 } from "@/components/ui/table";
 import { TratamientoDialog } from "./tratamiento-dialog";
 import { AnularDialog } from "./anular-dialog";
+import { RevertirAnulacionButton } from "./revertir-anulacion-button";
 import { FotosDialog } from "./fotos-dialog";
 import { AnexosDialog } from "./anexos-dialog";
 import { InsumosDialog } from "./insumos-dialog";
@@ -115,7 +115,11 @@ export default async function TratamientosPage() {
       .order("created_at", { ascending: false }),
   ]);
 
-  const historial = (tratamientos ?? []) as unknown as TratamientoRow[];
+  const puedeVerAnulados = esAdministrador(usuario);
+  const historialCompleto = (tratamientos ?? []) as unknown as TratamientoRow[];
+  const historial = puedeVerAnulados
+    ? historialCompleto
+    : historialCompleto.filter((t) => !t.anulado);
   const pacientes = (pacientesData ?? []).map((p) => ({ id: p.id, nombre: nombreCompleto(p) }));
   const insumos = insumosData ?? [];
   const lotes = lotesData ?? [];
@@ -160,7 +164,6 @@ export default async function TratamientosPage() {
                 <TableHead>Profesional</TableHead>
                 <TableHead>Valor</TableHead>
                 <TableHead>Observaciones</TableHead>
-                <TableHead>Estado</TableHead>
                 <TableHead />
               </TableRow>
             </TableHeader>
@@ -172,21 +175,30 @@ export default async function TratamientosPage() {
                     {t.pacientes ? nombreCompleto(t.pacientes) : "—"}
                   </TableCell>
                   <TableCell>
-                    <span className="inline-flex items-center gap-1.5">
-                      {t.tipos_tratamiento?.nombre ?? "—"}
-                      {tratamientosConFotos.has(t.id) ? (
-                        <CameraIcon
-                          className="size-3.5 text-muted-foreground"
-                          aria-label="Tiene fotos"
-                        />
+                    <div className="flex flex-col gap-0.5">
+                      <span
+                        className={`inline-flex items-center gap-1.5 ${t.anulado ? "text-muted-foreground line-through" : ""}`}
+                      >
+                        {t.tipos_tratamiento?.nombre ?? "—"}
+                        {tratamientosConFotos.has(t.id) ? (
+                          <CameraIcon
+                            className="size-3.5 text-muted-foreground"
+                            aria-label="Tiene fotos"
+                          />
+                        ) : null}
+                        {tratamientosConAnexos.has(t.id) ? (
+                          <PaperclipIcon
+                            className="size-3.5 text-muted-foreground"
+                            aria-label="Tiene anexos"
+                          />
+                        ) : null}
+                      </span>
+                      {t.anulado ? (
+                        <span className="text-xs text-muted-foreground">
+                          Anulado{t.anulado_motivo ? `: ${t.anulado_motivo}` : ""}
+                        </span>
                       ) : null}
-                      {tratamientosConAnexos.has(t.id) ? (
-                        <PaperclipIcon
-                          className="size-3.5 text-muted-foreground"
-                          aria-label="Tiene anexos"
-                        />
-                      ) : null}
-                    </span>
+                    </div>
                   </TableCell>
                   <TableCell className="text-muted-foreground">{t.sedes?.nombre ?? "—"}</TableCell>
                   <TableCell className="text-muted-foreground">
@@ -198,19 +210,7 @@ export default async function TratamientosPage() {
                   <TableCell className="max-w-xs text-muted-foreground">
                     {t.notas ?? "—"}
                   </TableCell>
-                  <TableCell>
-                    <div className="flex flex-col gap-1">
-                      <Badge variant={t.anulado ? "outline" : "secondary"}>
-                        {t.anulado ? "Anulado" : "Vigente"}
-                      </Badge>
-                      {t.anulado && t.anulado_motivo ? (
-                        <span className="text-xs text-muted-foreground">
-                          {t.anulado_motivo}
-                        </span>
-                      ) : null}
-                    </div>
-                  </TableCell>
-                  <TableCell className="flex justify-end gap-2 text-right">
+                  <TableCell className="flex flex-wrap justify-end gap-2 text-right">
                     <InsumosDialog
                       tratamientoId={t.id}
                       sedeId={t.sede_id}
@@ -229,6 +229,33 @@ export default async function TratamientosPage() {
                       puedeSubir={!!puedeCrear}
                       puedeEliminar={!!usuario.roles && usuario.roles.nivel === 1}
                     />
+                    {!t.anulado && puedeCrear && puedeAnular ? (
+                      <TratamientoDialog
+                        pacientes={pacientes}
+                        tiposTratamiento={tiposTratamiento ?? []}
+                        profesionales={profesionales ?? []}
+                        sedes={sedes ?? []}
+                        mediosPago={mediosPago ?? []}
+                        usuarioActualId={usuario.id}
+                        editando={{
+                          id: t.id,
+                          paciente_id: t.paciente_id,
+                          tipo_tratamiento_id: t.tipo_tratamiento_id,
+                          profesional_id: t.profesional_id,
+                          sede_id: t.sede_id,
+                          medio_pago_id: t.medio_pago_id,
+                          fecha: t.fecha,
+                          costo: t.costo,
+                          notas: t.notas,
+                          cufe: t.cufe,
+                        }}
+                        trigger={
+                          <Button variant="outline" size="sm">
+                            Editar
+                          </Button>
+                        }
+                      />
+                    ) : null}
                     {!t.anulado && puedeAnular ? <AnularDialog id={t.id} /> : null}
                     {t.anulado && puedeCrear ? (
                       <TratamientoDialog
@@ -257,12 +284,15 @@ export default async function TratamientosPage() {
                         }
                       />
                     ) : null}
+                    {t.anulado && puedeVerAnulados ? (
+                      <RevertirAnulacionButton id={t.id} />
+                    ) : null}
                   </TableCell>
                 </TableRow>
               ))}
               {historial.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center text-muted-foreground">
                     Todavía no hay tratamientos registrados.
                   </TableCell>
                 </TableRow>

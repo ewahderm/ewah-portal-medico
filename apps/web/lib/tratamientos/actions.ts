@@ -18,40 +18,49 @@ function requirePermiso(permiso: "CREATE" | "VOID") {
   return requirePermisoBase("tratamientos", permiso);
 }
 
+function datosTratamientoDesdeForm(formData: FormData) {
+  return {
+    pacienteId: String(formData.get("pacienteId") ?? ""),
+    tipoTratamientoId: String(formData.get("tipoTratamientoId") ?? ""),
+    profesionalId: String(formData.get("profesionalId") ?? ""),
+    sedeId: String(formData.get("sedeId") ?? ""),
+    medioPagoId: String(formData.get("medioPagoId") ?? ""),
+    fecha: String(formData.get("fecha") ?? "").trim(),
+    costoTexto: String(formData.get("costo") ?? "").trim(),
+    notas: campoOpcional(formData, "notas"),
+    cufe: campoOpcional(formData, "cufe"),
+  };
+}
+
+function validarDatosTratamiento(datos: ReturnType<typeof datosTratamientoDesdeForm>) {
+  if (
+    !datos.pacienteId ||
+    !datos.tipoTratamientoId ||
+    !datos.profesionalId ||
+    !datos.sedeId ||
+    !datos.medioPagoId ||
+    !datos.fecha ||
+    !datos.costoTexto
+  ) {
+    return "Paciente, tratamiento, profesional, sede, medio de pago, fecha y valor son obligatorios.";
+  }
+  const costo = Number(datos.costoTexto);
+  if (Number.isNaN(costo) || costo < 0) {
+    return "El valor debe ser un número válido.";
+  }
+  return null;
+}
+
 export async function crearTratamiento(
   _prevState: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const pacienteId = String(formData.get("pacienteId") ?? "");
-  const tipoTratamientoId = String(formData.get("tipoTratamientoId") ?? "");
-  const profesionalId = String(formData.get("profesionalId") ?? "");
-  const sedeId = String(formData.get("sedeId") ?? "");
-  const medioPagoId = String(formData.get("medioPagoId") ?? "");
-  const fecha = String(formData.get("fecha") ?? "").trim();
-  const costoTexto = String(formData.get("costo") ?? "").trim();
-  const notas = campoOpcional(formData, "notas");
-  const cufe = campoOpcional(formData, "cufe");
+  const datos = datosTratamientoDesdeForm(formData);
   const corrigeA = campoOpcional(formData, "corrigeA");
   const citaId = campoOpcional(formData, "citaId");
 
-  if (
-    !pacienteId ||
-    !tipoTratamientoId ||
-    !profesionalId ||
-    !sedeId ||
-    !medioPagoId ||
-    !fecha ||
-    !costoTexto
-  ) {
-    return {
-      error: "Paciente, tratamiento, profesional, sede, medio de pago, fecha y valor son obligatorios.",
-    };
-  }
-
-  const costo = Number(costoTexto);
-  if (Number.isNaN(costo) || costo < 0) {
-    return { error: "El valor debe ser un número válido." };
-  }
+  const errorValidacion = validarDatosTratamiento(datos);
+  if (errorValidacion) return { error: errorValidacion };
 
   const check = await requirePermiso("CREATE");
   if (!check.ok) return { error: check.error };
@@ -61,15 +70,15 @@ export async function crearTratamiento(
     .from("tratamientos")
     .insert({
       clinica_id: check.usuario.clinica_id,
-      paciente_id: pacienteId,
-      tipo_tratamiento_id: tipoTratamientoId,
-      profesional_id: profesionalId,
-      sede_id: sedeId,
-      medio_pago_id: medioPagoId,
-      fecha,
-      costo,
-      notas,
-      cufe,
+      paciente_id: datos.pacienteId,
+      tipo_tratamiento_id: datos.tipoTratamientoId,
+      profesional_id: datos.profesionalId,
+      sede_id: datos.sedeId,
+      medio_pago_id: datos.medioPagoId,
+      fecha: datos.fecha,
+      costo: Number(datos.costoTexto),
+      notas: datos.notas,
+      cufe: datos.cufe,
       corrige_a: corrigeA,
       created_by: check.usuario.id,
     })
@@ -84,6 +93,69 @@ export async function crearTratamiento(
       .update({ estado: "atendida", tratamiento_id: tratamiento.id })
       .eq("id", citaId);
     revalidatePath("/citas");
+  }
+
+  revalidatePath("/tratamientos");
+  return null;
+}
+
+// "Editar" = atajo de un clic para lo que antes eran dos pasos manuales
+// (Anular + Corregir): crea el tratamiento corregido y anula el original
+// en la misma acción. Un tratamiento nunca se edita in-place — esto sigue
+// respetando esa regla, solo empaqueta las dos operaciones ya existentes.
+export async function editarTratamiento(
+  _prevState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const editaId = String(formData.get("editaId") ?? "");
+  if (!editaId) return { error: "Tratamiento inválido." };
+
+  const datos = datosTratamientoDesdeForm(formData);
+  const errorValidacion = validarDatosTratamiento(datos);
+  if (errorValidacion) return { error: errorValidacion };
+
+  const checkCrear = await requirePermiso("CREATE");
+  if (!checkCrear.ok) return { error: checkCrear.error };
+  const checkAnular = await requirePermiso("VOID");
+  if (!checkAnular.ok) return { error: checkAnular.error };
+
+  const supabase = await createClient();
+  const { data: tratamiento, error: insertError } = await supabase
+    .from("tratamientos")
+    .insert({
+      clinica_id: checkCrear.usuario.clinica_id,
+      paciente_id: datos.pacienteId,
+      tipo_tratamiento_id: datos.tipoTratamientoId,
+      profesional_id: datos.profesionalId,
+      sede_id: datos.sedeId,
+      medio_pago_id: datos.medioPagoId,
+      fecha: datos.fecha,
+      costo: Number(datos.costoTexto),
+      notas: datos.notas,
+      cufe: datos.cufe,
+      corrige_a: editaId,
+      created_by: checkCrear.usuario.id,
+    })
+    .select("id")
+    .single();
+
+  if (insertError || !tratamiento) return { error: "No se pudo guardar el tratamiento editado." };
+
+  const { error: anularError } = await supabase
+    .from("tratamientos")
+    .update({
+      anulado: true,
+      anulado_motivo: "Editado — reemplazado por un registro corregido.",
+      anulado_por: checkAnular.usuario.id,
+      anulado_en: new Date().toISOString(),
+    })
+    .eq("id", editaId);
+
+  if (anularError) {
+    return {
+      error:
+        "Se guardó el tratamiento corregido, pero no se pudo anular el original — anúlalo manualmente.",
+    };
   }
 
   revalidatePath("/tratamientos");
@@ -108,6 +180,32 @@ export async function anularTratamiento(id: string, motivo: string) {
     .eq("id", id);
 
   if (error) throw new Error("No se pudo anular el tratamiento.");
+
+  revalidatePath("/tratamientos");
+}
+
+// Revertir una anulación queda restringido a un administrador — la base de
+// datos ya lo exige (fn_tratamientos_solo_anular), esto solo da un mensaje
+// claro en vez del error crudo de la policy.
+export async function revertirAnulacionTratamiento(id: string) {
+  const usuario = await getCurrentUsuario();
+  if (!usuario) throw new Error("Sesión inválida.");
+  if (!esAdministrador(usuario)) {
+    throw new Error("Solo un administrador puede revertir la anulación de un tratamiento.");
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("tratamientos")
+    .update({
+      anulado: false,
+      anulado_motivo: null,
+      anulado_por: null,
+      anulado_en: null,
+    })
+    .eq("id", id);
+
+  if (error) throw new Error("No se pudo revertir la anulación.");
 
   revalidatePath("/tratamientos");
 }
