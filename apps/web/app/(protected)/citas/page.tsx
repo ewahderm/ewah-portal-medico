@@ -72,16 +72,22 @@ export default async function CitasPage({
     { data: puedeCrear },
     { data: puedeEditar },
     { data: puedeCrearTratamiento },
+    { data: puedeRegistrarConsumo },
+    { data: puedeRevertirConsumo },
     { data: pacientesData },
     { data: profesionalesData },
     { data: consultoriosData },
     sedesData,
     tiposTratamientoData,
     mediosPagoData,
+    { data: insumosData },
+    { data: lotesData },
   ] = await Promise.all([
     supabase.rpc("has_permission", { modulo_code: "citas", permiso_code: "CREATE" }),
     supabase.rpc("has_permission", { modulo_code: "citas", permiso_code: "EDIT" }),
     supabase.rpc("has_permission", { modulo_code: "tratamientos", permiso_code: "CREATE" }),
+    supabase.rpc("has_permission", { modulo_code: "inventario", permiso_code: "CREATE" }),
+    supabase.rpc("has_permission", { modulo_code: "inventario", permiso_code: "VOID" }),
     supabase
       .from("pacientes")
       .select(
@@ -98,6 +104,11 @@ export default async function CitasPage({
     getSedesActivas(supabase),
     getTiposTratamientoActivos(supabase),
     getMediosPagoActivos(supabase),
+    supabase.from("insumos").select("id, nombre").eq("activo", true).order("orden"),
+    supabase
+      .from("lotes")
+      .select("id, insumo_id, sede_id, numero_lote, cantidad_actual")
+      .eq("activo", true),
   ]);
 
   // consultorio_id es opcional en un bloqueo de día completo (no depende
@@ -137,6 +148,8 @@ export default async function CitasPage({
   const sedes = sedesData ?? [];
   const tiposTratamiento = tiposTratamientoData ?? [];
   const mediosPago = mediosPagoData ?? [];
+  const insumos = insumosData ?? [];
+  const lotes = lotesData ?? [];
   const citas = (citasData ?? []).map((c) => {
     const fila = c as unknown as CitaRow & { tratamientos?: { count: number }[] };
     return { ...fila, tratamientos_count: fila.tratamientos?.[0]?.count ?? 0 };
@@ -193,6 +206,10 @@ export default async function CitasPage({
         mediosPago={mediosPago}
         usuarioActualId={usuario.id}
         pacientesPendientes={pacientesPendientes}
+        insumos={insumos}
+        lotes={lotes}
+        puedeRegistrarConsumo={!!puedeRegistrarConsumo}
+        puedeRevertirConsumo={!!puedeRevertirConsumo}
       />
     </div>
   );

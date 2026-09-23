@@ -91,6 +91,10 @@ export function AgendaCalendario({
   mediosPago,
   usuarioActualId,
   pacientesPendientes = new Set(),
+  insumos,
+  lotes,
+  puedeRegistrarConsumo,
+  puedeRevertirConsumo,
 }: {
   citas: CitaRow[];
   vista: "day" | "week" | "month";
@@ -106,6 +110,10 @@ export function AgendaCalendario({
   mediosPago: { id: string; nombre: string }[];
   usuarioActualId: string;
   pacientesPendientes?: Set<string>;
+  insumos: { id: string; nombre: string }[];
+  lotes: { id: string; insumo_id: string; sede_id: string; numero_lote: string | null; cantidad_actual: number }[];
+  puedeRegistrarConsumo: boolean;
+  puedeRevertirConsumo: boolean;
 }) {
   const router = useRouter();
   const [citaSeleccionada, setCitaSeleccionada] = useState<CitaRow | null>(null);
@@ -240,6 +248,10 @@ export function AgendaCalendario({
           mediosPago={mediosPago}
           usuarioActualId={usuarioActualId}
           pacientesPendientes={pacientesPendientes}
+          insumos={insumos}
+          lotes={lotes}
+          puedeRegistrarConsumo={puedeRegistrarConsumo}
+          puedeRevertirConsumo={puedeRevertirConsumo}
         />
       ) : null}
 

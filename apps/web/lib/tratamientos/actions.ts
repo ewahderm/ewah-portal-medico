@@ -440,7 +440,7 @@ export async function listarTratamientosDeCita(citaId: string) {
   const supabase = await createClient();
   const { data } = await supabase
     .from("tratamientos")
-    .select("id, costo, anulado, tipos_tratamiento(nombre)")
+    .select("id, costo, anulado, sede_id, tipos_tratamiento(nombre)")
     .eq("cita_id", citaId)
     .eq("clinica_id", usuario.clinica_id)
     .order("created_at");
@@ -449,6 +449,7 @@ export async function listarTratamientosDeCita(citaId: string) {
     id: string;
     costo: number | null;
     anulado: boolean;
+    sede_id: string;
     tipos_tratamiento: { nombre: string } | null;
   }[];
 }

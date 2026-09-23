@@ -11,12 +11,14 @@ import {
 import { EstadoAcciones } from "./estado-acciones";
 import { ESTADO_LABEL, nombreCompleto, type CitaRow } from "./tipos";
 import { listarTratamientosDeCita } from "@/lib/tratamientos/actions";
+import { InsumosDialog } from "../tratamientos/insumos-dialog";
 import { formatoMoneda } from "@/lib/format";
 
 type TratamientoDeCita = {
   id: string;
   costo: number | null;
   anulado: boolean;
+  sede_id: string;
   tipos_tratamiento: { nombre: string } | null;
 };
 
@@ -33,6 +35,10 @@ export function CitaDetalleDialog({
   mediosPago,
   usuarioActualId,
   pacientesPendientes = new Set(),
+  insumos,
+  lotes,
+  puedeRegistrarConsumo,
+  puedeRevertirConsumo,
 }: {
   cita: CitaRow;
   open: boolean;
@@ -46,6 +52,10 @@ export function CitaDetalleDialog({
   mediosPago: { id: string; nombre: string }[];
   usuarioActualId: string;
   pacientesPendientes?: Set<string>;
+  insumos: { id: string; nombre: string }[];
+  lotes: { id: string; insumo_id: string; sede_id: string; numero_lote: string | null; cantidad_actual: number }[];
+  puedeRegistrarConsumo: boolean;
+  puedeRevertirConsumo: boolean;
 }) {
   // null = todavía cargando (o sin abrir) — distinto de un array vacío, que
   // significa "ya se consultó y de verdad no tiene tratamientos".
@@ -158,7 +168,7 @@ export function CitaDetalleDialog({
               <>
                 <div className="space-y-1">
                   {tratamientos.map((t) => (
-                    <div key={t.id} className="flex items-center justify-between text-sm">
+                    <div key={t.id} className="flex items-center justify-between gap-2 text-sm">
                       <span className={t.anulado ? "text-muted-foreground line-through" : ""}>
                         {t.tipos_tratamiento?.nombre ?? "—"}
                         {t.anulado ? (
@@ -167,11 +177,23 @@ export function CitaDetalleDialog({
                           </Badge>
                         ) : null}
                       </span>
-                      <span
-                        className={t.anulado ? "text-muted-foreground line-through" : "font-medium"}
-                      >
-                        {formatoMoneda(t.costo)}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={t.anulado ? "text-muted-foreground line-through" : "font-medium"}
+                        >
+                          {formatoMoneda(t.costo)}
+                        </span>
+                        {!t.anulado ? (
+                          <InsumosDialog
+                            tratamientoId={t.id}
+                            sedeId={t.sede_id}
+                            insumos={insumos}
+                            lotes={lotes}
+                            puedeRegistrar={puedeRegistrarConsumo}
+                            puedeRevertir={puedeRevertirConsumo}
+                          />
+                        ) : null}
+                      </div>
                     </div>
                   ))}
                 </div>
