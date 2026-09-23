@@ -41,7 +41,9 @@ const ESTADO_COLOR: Record<string, { bg: string; color: string }> = {
   atendida: { bg: "var(--ewah-navy)", color: "white" },
   cancelada: { bg: "var(--muted)", color: "var(--muted-foreground)" },
   no_asistio: { bg: "color-mix(in oklch, var(--destructive), transparent 70%)", color: "var(--destructive)" },
+  reprogramada: { bg: "color-mix(in oklch, var(--ewah-slate), transparent 80%)", color: "var(--ewah-slate)" },
 };
+const COLOR_POR_DEFECTO = { bg: "var(--muted)", color: "var(--muted-foreground)" };
 
 const BLOQUEO_COLOR = { bg: "var(--ewah-slate)", color: "white" };
 
@@ -192,7 +194,9 @@ export function AgendaCalendario({
         onSelectEvent={(evento) => setCitaSeleccionada((evento as EventoCita).resource)}
         eventPropGetter={(evento) => {
           const cita = (evento as EventoCita).resource;
-          const colores = cita.es_bloqueo ? BLOQUEO_COLOR : ESTADO_COLOR[cita.estado];
+          const colores = cita.es_bloqueo
+            ? BLOQUEO_COLOR
+            : (ESTADO_COLOR[cita.estado] ?? COLOR_POR_DEFECTO);
           return { style: { backgroundColor: colores.bg, color: colores.color } };
         }}
       />

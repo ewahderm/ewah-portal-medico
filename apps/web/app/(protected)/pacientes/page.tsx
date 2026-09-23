@@ -2,7 +2,7 @@ import { requireUsuario } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { normalizarBusqueda } from "@/lib/pacientes/normalizar";
 import { nombreCompleto } from "@/lib/pacientes/nombre";
-import { tieneInfoPendiente } from "@/lib/pacientes/completitud";
+import { tieneInfoPendiente, camposFaltantes } from "@/lib/pacientes/completitud";
 import {
   getTiposIdentificacionActivos,
   getGenerosActivos,
@@ -141,7 +141,11 @@ export default async function PacientesPage({
                     <div className="flex items-center gap-1.5">
                       {nombreCompleto(p)}
                       {tieneInfoPendiente(p) ? (
-                        <Badge variant="outline" className="text-amber-600">
+                        <Badge
+                          variant="outline"
+                          className="text-amber-600"
+                          title={`Falta: ${camposFaltantes(p).join(", ")}`}
+                        >
                           Información pendiente
                         </Badge>
                       ) : null}

@@ -184,7 +184,7 @@ export default async function TratamientosPage() {
                       {t.pacientes ? nombreCompleto(t.pacientes) : "—"}
                       {pacientesPendientes.has(t.paciente_id) ? (
                         <Badge variant="outline" className="text-amber-600">
-                          Info. pendiente
+                          Información pendiente
                         </Badge>
                       ) : null}
                     </div>

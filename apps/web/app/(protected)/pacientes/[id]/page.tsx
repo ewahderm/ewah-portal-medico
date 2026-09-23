@@ -10,7 +10,7 @@ import {
 import { requireUsuario, esAdministrador } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { nombreCompleto } from "@/lib/pacientes/nombre";
-import { tieneInfoPendiente } from "@/lib/pacientes/completitud";
+import { tieneInfoPendiente, camposFaltantes } from "@/lib/pacientes/completitud";
 import { formatoMoneda, hoy } from "@/lib/format";
 import {
   getSedesActivas,
@@ -331,7 +331,11 @@ export default async function PacienteDetallePage({
         </div>
         <div className="flex gap-2">
           {pacientePendiente ? (
-            <Badge variant="outline" className="text-amber-600">
+            <Badge
+              variant="outline"
+              className="text-amber-600"
+              title={`Falta: ${camposFaltantes(paciente).join(", ")}`}
+            >
               Información pendiente
             </Badge>
           ) : null}

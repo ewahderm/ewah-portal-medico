@@ -65,8 +65,30 @@ export function CitaDialog({
   const [horaFin, setHoraFin] = useState(sumarMinutos(horaInicioSeleccionada ?? "09:00", 60));
   const [sedeId, setSedeId] = useState(sedeInicial ?? "");
   const [pacientesLocal, setPacientesLocal] = useState(pacientes);
+  // Un paciente creado por PacienteRapidoDialog siempre nace "pendiente"
+  // (nunca pide documento de identidad) — el set que llega por prop es
+  // el que calculó el servidor al cargar la página, así que nunca va a
+  // incluir a alguien creado recién dentro de este mismo diálogo.
+  const [pacientesPendientesExtra, setPacientesPendientesExtra] = useState<Set<string>>(
+    new Set(),
+  );
+  const pacientesPendientesTotal = useMemo(
+    () => new Set([...pacientesPendientes, ...pacientesPendientesExtra]),
+    [pacientesPendientes, pacientesPendientesExtra],
+  );
   const [pacienteId, setPacienteId] = useState(desdePaciente?.id ?? "");
   const formRef = useRef<HTMLFormElement>(null);
+
+  // Cualquier cambio a un campo que participa en la detección de choque
+  // (profesional/consultorio/fecha/hora) invalida el resultado de la
+  // última validación: si no se limpia, el usuario puede corregir el
+  // horario y quedarse sin botón de guardar (el conflicto viejo lo sigue
+  // tapando) o, peor, reenviar con forzar=true heredado de un intento
+  // anterior y saltarse la detección sin darse cuenta.
+  function limpiarConflicto() {
+    setConflictoDescartado(true);
+    setForzar(false);
+  }
 
   const consultoriosDeLaSede = useMemo(
     () => consultorios.filter((c) => c.sede_id === sedeId),
@@ -77,9 +99,11 @@ export function CitaDialog({
     () =>
       pacientesLocal.map((p) => ({
         value: p.id,
-        label: pacientesPendientes.has(p.id) ? `${p.nombre} — Información pendiente` : p.nombre,
+        label: pacientesPendientesTotal.has(p.id)
+          ? `${p.nombre} — Información pendiente`
+          : p.nombre,
       })),
-    [pacientesLocal, pacientesPendientes],
+    [pacientesLocal, pacientesPendientesTotal],
   );
 
   useCerrarAlExito(pending, !state?.error && !state?.conflicto, () => {
@@ -134,15 +158,7 @@ export function CitaDialog({
               <AlertDescription className="space-y-3">
                 <p>{conflicto}</p>
                 <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setForzar(false);
-                      setConflictoDescartado(true);
-                    }}
-                  >
+                  <Button type="button" variant="outline" size="sm" onClick={limpiarConflicto}>
                     Cambiar horario
                   </Button>
                   <Button
@@ -165,6 +181,7 @@ export function CitaDialog({
               <PacienteRapidoDialog
                 onCreado={(nuevo) => {
                   setPacientesLocal((actual) => [...actual, nuevo]);
+                  setPacientesPendientesExtra((actual) => new Set([...actual, nuevo.id]));
                   setPacienteId(nuevo.id);
                 }}
               />
@@ -178,7 +195,7 @@ export function CitaDialog({
               onValueChange={(valor) => setPacienteId(String(valor ?? ""))}
               placeholder="Selecciona un paciente"
             />
-            {pacienteId && pacientesPendientes.has(pacienteId) ? (
+            {pacienteId && pacientesPendientesTotal.has(pacienteId) ? (
               <p className="text-xs text-amber-600">
                 Este paciente tiene información obligatoria pendiente — no podrá recibir
                 tratamientos hasta que se complete en su ficha.
@@ -204,6 +221,7 @@ export function CitaDialog({
               name="profesionalId"
               required
               items={toItems(profesionales)}
+              onValueChange={limpiarConflicto}
               placeholder="Selecciona"
             />
           </div>
@@ -215,7 +233,10 @@ export function CitaDialog({
                 id="sedeId"
                 items={toItems(sedes)}
                 value={sedeId}
-                onValueChange={(valor) => setSedeId(String(valor ?? ""))}
+                onValueChange={(valor) => {
+                  setSedeId(String(valor ?? ""));
+                  limpiarConflicto();
+                }}
                 placeholder="Selecciona"
               />
             </div>
@@ -228,6 +249,7 @@ export function CitaDialog({
                 required
                 disabled={consultoriosDeLaSede.length === 0}
                 items={toItems(consultoriosDeLaSede)}
+                onValueChange={limpiarConflicto}
                 placeholder={
                   !sedeId
                     ? "Elige una sede primero"
@@ -248,6 +270,7 @@ export function CitaDialog({
                 type="date"
                 required
                 defaultValue={fechaSeleccionada}
+                onChange={limpiarConflicto}
               />
             </div>
             <div className="space-y-2">
@@ -262,6 +285,7 @@ export function CitaDialog({
                   const nuevaHoraInicio = String(valor ?? "");
                   setHoraInicio(nuevaHoraInicio);
                   setHoraFin(sumarMinutos(nuevaHoraInicio, 60));
+                  limpiarConflicto();
                 }}
               />
             </div>
@@ -273,7 +297,10 @@ export function CitaDialog({
                 required
                 items={OPCIONES_HORA}
                 value={horaFin}
-                onValueChange={(valor) => setHoraFin(String(valor ?? ""))}
+                onValueChange={(valor) => {
+                  setHoraFin(String(valor ?? ""));
+                  limpiarConflicto();
+                }}
               />
             </div>
           </div>

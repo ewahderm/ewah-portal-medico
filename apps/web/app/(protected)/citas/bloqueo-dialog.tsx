@@ -3,6 +3,8 @@
 import { useActionState, useMemo, useState } from "react";
 import { crearBloqueo } from "@/lib/citas/actions";
 import { opcionesHora, sumarMinutos } from "@/lib/citas/horarios";
+import { useCerrarAlExito } from "@/lib/forms/cerrarAlExito";
+import { toast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -51,6 +53,11 @@ export function BloqueoDialog({
   const [profesionalesSeleccionados, setProfesionalesSeleccionados] = useState<Set<string>>(
     new Set(),
   );
+
+  useCerrarAlExito(pending, !state?.error, () => {
+    setOpen(false);
+    toast.add({ title: "Horario bloqueado", type: "success" });
+  });
 
   const consultoriosDisponibles = useMemo(
     () => (sedeId === TODAS_LAS_SEDES ? consultorios : consultorios.filter((c) => c.sede_id === sedeId)),

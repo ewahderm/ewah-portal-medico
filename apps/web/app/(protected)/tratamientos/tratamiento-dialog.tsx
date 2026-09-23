@@ -102,12 +102,19 @@ export function TratamientoDialog({
   // El paciente ya viene fijo (ficha del paciente, "Atender" desde una
   // cita, o Editar/Corregir de un tratamiento existente) y tiene
   // información obligatoria pendiente: ni se abre el diálogo, el botón
-  // queda deshabilitado con una pista de por qué.
+  // queda deshabilitado con una pista de por qué. El title va en un
+  // <span> que envuelve el botón, no en el botón mismo — un botón
+  // disabled trae pointer-events:none (ver components/ui/button.tsx),
+  // así que un title puesto directamente ahí nunca llega a dispararse.
   if (pacienteFijo && pacientesPendientes.has(pacienteInicial)) {
-    return cloneElement(trigger, {
-      disabled: true,
-      title: "Este paciente tiene información obligatoria pendiente — complétala en su ficha primero.",
-    } as Record<string, unknown>);
+    return (
+      <span
+        className="inline-block"
+        title="Este paciente tiene información obligatoria pendiente — complétala en su ficha primero."
+      >
+        {cloneElement(trigger, { disabled: true } as Record<string, unknown>)}
+      </span>
+    );
   }
 
   return (

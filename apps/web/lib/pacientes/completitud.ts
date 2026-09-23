@@ -13,10 +13,18 @@ export type PacienteCompletitud = {
 };
 
 export function tieneInfoPendiente(paciente: PacienteCompletitud): boolean {
-  return (
-    !paciente.tipo_identificacion_id ||
-    !paciente.numero_identificacion?.trim() ||
-    !paciente.email?.trim() ||
-    !paciente.telefono1?.trim()
-  );
+  return camposFaltantes(paciente).length > 0;
+}
+
+// Lista en español de qué falta exactamente — un badge "Información
+// pendiente" sin decir cuál campo no le sirve a nadie: quien lo ve tiene
+// que abrir el formulario completo de 12+ campos a adivinar.
+export function camposFaltantes(paciente: PacienteCompletitud): string[] {
+  const faltantes: string[] = [];
+  if (!paciente.tipo_identificacion_id || !paciente.numero_identificacion?.trim()) {
+    faltantes.push("documento de identidad");
+  }
+  if (!paciente.email?.trim()) faltantes.push("correo");
+  if (!paciente.telefono1?.trim()) faltantes.push("teléfono");
+  return faltantes;
 }
