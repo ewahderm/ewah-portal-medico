@@ -284,14 +284,11 @@ export async function revertirAnulacionTratamiento(id: string) {
   revalidatePath("/tratamientos");
 }
 
-export async function subirFotoTratamiento(
-  tratamientoId: string,
-  etiqueta: "antes" | "despues",
-  formData: FormData,
-) {
-  const check = await requirePermiso("CREATE");
-  if (!check.ok) throw new Error(check.error);
+function columnaFoto(etiqueta: "antes" | "despues") {
+  return etiqueta === "antes" ? "storage_path_antes" : "storage_path_despues";
+}
 
+function validarArchivoFoto(formData: FormData) {
   const foto = formData.get("foto");
   if (!(foto instanceof File) || foto.size === 0) {
     throw new Error("Selecciona una foto.");
@@ -302,7 +299,23 @@ export async function subirFotoTratamiento(
   if (!TIPOS_FOTO_PERMITIDOS.includes(foto.type)) {
     throw new Error("Formato no soportado. Usa JPG, PNG o WEBP.");
   }
+  return foto;
+}
 
+// Un registro de fotos es un PAR (antes + después) con una sola
+// observación compartida — no una foto suelta. Se puede crear con una
+// sola de las dos (la que se tenga a mano) y completar la otra después con
+// completarFotoRegistro, porque en la práctica el "antes" se toma en la
+// consulta inicial y el "después" en una posterior.
+export async function crearRegistroFoto(
+  tratamientoId: string,
+  etiqueta: "antes" | "despues",
+  formData: FormData,
+) {
+  const check = await requirePermiso("CREATE");
+  if (!check.ok) throw new Error(check.error);
+
+  const foto = validarArchivoFoto(formData);
   const observaciones = campoOpcional(formData, "observaciones");
 
   const supabase = await createClient();
@@ -317,8 +330,7 @@ export async function subirFotoTratamiento(
   const { error: insertError } = await supabase.from("tratamiento_fotos").insert({
     clinica_id: check.usuario.clinica_id,
     tratamiento_id: tratamientoId,
-    storage_path: path,
-    etiqueta,
+    [columnaFoto(etiqueta)]: path,
     observaciones,
     created_by: check.usuario.id,
   });
@@ -327,7 +339,51 @@ export async function subirFotoTratamiento(
   revalidarPantallasDeArchivos();
 }
 
-export async function eliminarFotoTratamiento(id: string, storagePath: string) {
+// Agrega la foto que falta (antes o después) a un registro ya existente.
+// No permite reemplazar una foto que ya está — para eso hay que eliminar
+// el registro completo y crear uno nuevo (mismo criterio append-only que
+// el resto de la historia clínica).
+export async function completarFotoRegistro(
+  fotoId: string,
+  tratamientoId: string,
+  etiqueta: "antes" | "despues",
+  formData: FormData,
+) {
+  const check = await requirePermiso("CREATE");
+  if (!check.ok) throw new Error(check.error);
+
+  const foto = validarArchivoFoto(formData);
+  const columna = columnaFoto(etiqueta);
+
+  const supabase = await createClient();
+  const { data: registro } = await supabase
+    .from("tratamiento_fotos")
+    .select("id, storage_path_antes, storage_path_despues")
+    .eq("id", fotoId)
+    .eq("tratamiento_id", tratamientoId)
+    .eq("clinica_id", check.usuario.clinica_id)
+    .maybeSingle();
+  if (!registro) throw new Error("Registro no encontrado.");
+  if (registro[columna]) throw new Error("Este registro ya tiene una foto de este lado.");
+
+  const extension = foto.name.split(".").pop() ?? "jpg";
+  const path = `${check.usuario.clinica_id}/${tratamientoId}/${etiqueta}-${Date.now()}.${extension}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from("tratamiento-fotos")
+    .upload(path, foto, { contentType: foto.type });
+  if (uploadError) throw new Error("No se pudo subir la foto.");
+
+  const { error: updateError } = await supabase
+    .from("tratamiento_fotos")
+    .update({ [columna]: path })
+    .eq("id", fotoId);
+  if (updateError) throw new Error("No se pudo completar el registro.");
+
+  revalidarPantallasDeArchivos();
+}
+
+export async function eliminarFotoTratamiento(id: string) {
   const usuario = await getCurrentUsuario();
   if (!usuario) throw new Error("Sesión inválida.");
   // La política de RLS ya solo permite este DELETE a un administrador
@@ -336,10 +392,20 @@ export async function eliminarFotoTratamiento(id: string, storagePath: string) {
   if (!esAdministrador(usuario)) throw new Error("Solo un administrador puede eliminar fotos.");
 
   const supabase = await createClient();
-  const { error: storageError } = await supabase.storage
-    .from("tratamiento-fotos")
-    .remove([storagePath]);
-  if (storageError) throw new Error("No se pudo eliminar el archivo.");
+  const { data: registro } = await supabase
+    .from("tratamiento_fotos")
+    .select("storage_path_antes, storage_path_despues")
+    .eq("id", id)
+    .maybeSingle();
+  if (!registro) throw new Error("Registro no encontrado.");
+
+  const paths = [registro.storage_path_antes, registro.storage_path_despues].filter(
+    (p): p is string => Boolean(p),
+  );
+  if (paths.length > 0) {
+    const { error: storageError } = await supabase.storage.from("tratamiento-fotos").remove(paths);
+    if (storageError) throw new Error("No se pudo eliminar el archivo.");
+  }
 
   const { error } = await supabase.from("tratamiento_fotos").delete().eq("id", id);
   if (error) throw new Error("No se pudo eliminar la foto.");
@@ -360,14 +426,18 @@ export async function listarFotosTratamiento(tratamientoId: string) {
   const supabase = await createClient();
   const { data } = await supabase
     .from("tratamiento_fotos")
-    .select("id, storage_path, etiqueta, observaciones, created_at")
+    .select("id, storage_path_antes, storage_path_despues, observaciones, created_at")
     .eq("tratamiento_id", tratamientoId)
     .order("created_at");
 
   return Promise.all(
     (data ?? []).map(async (foto) => ({
-      ...foto,
-      url: await urlFirmadaFoto(foto.storage_path),
+      id: foto.id,
+      observaciones: foto.observaciones,
+      storagePathAntes: foto.storage_path_antes,
+      storagePathDespues: foto.storage_path_despues,
+      urlAntes: foto.storage_path_antes ? await urlFirmadaFoto(foto.storage_path_antes) : null,
+      urlDespues: foto.storage_path_despues ? await urlFirmadaFoto(foto.storage_path_despues) : null,
     })),
   );
 }
@@ -395,6 +465,8 @@ export async function subirAnexoTratamiento(
     throw new Error("Formato no soportado. Usa JPG, PNG, WEBP o PDF.");
   }
 
+  const observaciones = campoOpcional(formData, "observaciones");
+
   const supabase = await createClient();
   const extension = archivo.name.split(".").pop() ?? "pdf";
   const path = `${check.usuario.clinica_id}/${tratamientoId}/${categoria}-${Date.now()}.${extension}`;
@@ -411,6 +483,7 @@ export async function subirAnexoTratamiento(
     nombre_archivo: archivo.name,
     content_type: archivo.type,
     categoria,
+    observaciones,
     created_by: check.usuario.id,
   });
   if (insertError) throw new Error("No se pudo registrar el anexo.");
@@ -498,7 +571,7 @@ export async function listarAnexosTratamiento(tratamientoId: string) {
   const supabase = await createClient();
   const { data } = await supabase
     .from("tratamiento_anexos")
-    .select("id, storage_path, nombre_archivo, content_type, categoria, created_at")
+    .select("id, storage_path, nombre_archivo, content_type, categoria, observaciones, created_at")
     .eq("tratamiento_id", tratamientoId)
     .order("created_at", { ascending: false });
 

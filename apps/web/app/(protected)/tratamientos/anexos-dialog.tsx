@@ -10,6 +10,7 @@ import {
 } from "@/lib/tratamientos/actions";
 import { CATEGORIAS_ANEXO, CATEGORIA_ANEXO_LABEL } from "@/lib/tratamientos/anexos";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -27,6 +28,7 @@ type Anexo = {
   nombre_archivo: string;
   content_type: string;
   categoria: string;
+  observaciones: string | null;
   url: string | null;
 };
 
@@ -48,6 +50,11 @@ export function AnexosDialog({
   const [open, setOpen] = useState(false);
   const [anexos, setAnexos] = useState<Anexo[]>([]);
   const [categoria, setCategoria] = useState<string>(CATEGORIAS_ANEXO[0]);
+  // Controlado por el mismo motivo que en FotosDialog: handleSubir atrapa
+  // su propio error, así que React nunca ve el rechazo y resetea los
+  // campos no controlados igual — sin esto, una subida fallida borraba la
+  // observación ya escrita.
+  const [observaciones, setObservaciones] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [confirmandoId, setConfirmandoId] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -64,6 +71,7 @@ export function AnexosDialog({
     startTransition(async () => {
       try {
         await subirAnexoTratamiento(tratamientoId, categoria, formData);
+        setObservaciones("");
         cargar();
       } catch (e) {
         setError(e instanceof Error ? e.message : "No se pudo subir el archivo.");
@@ -162,6 +170,9 @@ export function AnexosDialog({
                 <p className="mt-1 text-center text-xs text-muted-foreground">
                   {CATEGORIA_ANEXO_LABEL[anexo.categoria] ?? anexo.categoria}
                 </p>
+                {anexo.observaciones ? (
+                  <p className="text-center text-xs text-muted-foreground">{anexo.observaciones}</p>
+                ) : null}
                 <button
                   type="button"
                   onClick={() => handleDescargar(anexo)}
@@ -223,6 +234,12 @@ export function AnexosDialog({
                 {pending ? "Subiendo..." : "Subir"}
               </Button>
             </div>
+            <Input
+              name="observaciones"
+              value={observaciones}
+              onChange={(e) => setObservaciones(e.target.value)}
+              placeholder="Observaciones (opcional)"
+            />
           </form>
         ) : null}
       </DialogContent>

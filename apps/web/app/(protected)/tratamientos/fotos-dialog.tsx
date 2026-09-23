@@ -4,7 +4,8 @@ import { useState, useTransition } from "react";
 import { DownloadIcon } from "lucide-react";
 import {
   listarFotosTratamiento,
-  subirFotoTratamiento,
+  crearRegistroFoto,
+  completarFotoRegistro,
   eliminarFotoTratamiento,
   urlFirmadaFoto,
 } from "@/lib/tratamientos/actions";
@@ -21,12 +22,13 @@ import {
 } from "@/components/ui/dialog";
 import { Combobox } from "@/components/ui/combobox";
 
-type Foto = {
+type Registro = {
   id: string;
-  storage_path: string;
-  etiqueta: "antes" | "despues";
   observaciones: string | null;
-  url: string | null;
+  storagePathAntes: string | null;
+  storagePathDespues: string | null;
+  urlAntes: string | null;
+  urlDespues: string | null;
 };
 
 const ITEMS_ETIQUETA = [
@@ -43,19 +45,19 @@ export function FotosDialog({
   tratamientoId: string;
   puedeSubir: boolean;
   puedeEliminar: boolean;
-  /** Marca el botón cuando el tratamiento ya tiene al menos una foto —
-   * para saberlo sin tener que abrir el diálogo. */
+  /** Marca el botón cuando el tratamiento ya tiene al menos un registro de
+   * fotos — para saberlo sin tener que abrir el diálogo. */
   tieneArchivos: boolean;
 }) {
   const [open, setOpen] = useState(false);
-  const [fotos, setFotos] = useState<Foto[]>([]);
+  const [registros, setRegistros] = useState<Registro[]>([]);
   const [etiqueta, setEtiqueta] = useState<string>("antes");
   // Controlado a propósito: React resetea los campos no controlados del
-  // formulario en cuanto la acción resuelve, sin importar si tuvo éxito
-  // — como handleSubir atrapa su propio error (para poder mostrarlo con
-  // el Alert de abajo, en vez de dejar que el formulario "falle" crudo),
-  // React nunca ve el rechazo y siempre resetea. Sin esto, un error de
-  // formato de archivo borraba la observación ya escrita.
+  // formulario en cuanto la acción resuelve, sin importar si tuvo éxito —
+  // como handleCrear atrapa su propio error (para mostrarlo con el Alert
+  // de abajo, en vez de dejar que el formulario "falle" crudo), React
+  // nunca ve el rechazo y siempre resetea. Sin esto, un error de formato
+  // de archivo borraba la observación ya escrita.
   const [observaciones, setObservaciones] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [confirmandoId, setConfirmandoId] = useState<string | null>(null);
@@ -64,15 +66,15 @@ export function FotosDialog({
   function cargar() {
     startTransition(async () => {
       const data = await listarFotosTratamiento(tratamientoId);
-      setFotos(data as Foto[]);
+      setRegistros(data as Registro[]);
     });
   }
 
-  function handleSubir(formData: FormData) {
+  function handleCrear(formData: FormData) {
     setError(null);
     startTransition(async () => {
       try {
-        await subirFotoTratamiento(tratamientoId, etiqueta as "antes" | "despues", formData);
+        await crearRegistroFoto(tratamientoId, etiqueta as "antes" | "despues", formData);
         setObservaciones("");
         cargar();
       } catch (e) {
@@ -81,32 +83,41 @@ export function FotosDialog({
     });
   }
 
-  function handleEliminar(foto: Foto) {
-    if (confirmandoId !== foto.id) {
-      setConfirmandoId(foto.id);
+  function handleCompletar(registro: Registro, lado: "antes" | "despues", formData: FormData) {
+    setError(null);
+    startTransition(async () => {
+      try {
+        await completarFotoRegistro(registro.id, tratamientoId, lado, formData);
+        cargar();
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "No se pudo subir la foto.");
+      }
+    });
+  }
+
+  function handleEliminar(registro: Registro) {
+    if (confirmandoId !== registro.id) {
+      setConfirmandoId(registro.id);
       return;
     }
     setConfirmandoId(null);
     setError(null);
     startTransition(async () => {
       try {
-        await eliminarFotoTratamiento(foto.id, foto.storage_path);
+        await eliminarFotoTratamiento(registro.id);
         cargar();
       } catch (e) {
-        setError(e instanceof Error ? e.message : "No se pudo eliminar la foto.");
+        setError(e instanceof Error ? e.message : "No se pudo eliminar el registro.");
       }
     });
   }
 
-  function handleDescargar(foto: Foto) {
+  function handleDescargar(path: string) {
     startTransition(async () => {
-      const url = await urlFirmadaFoto(foto.storage_path, true);
+      const url = await urlFirmadaFoto(path, true);
       if (url) window.open(url, "_blank");
     });
   }
-
-  const antes = fotos.filter((f) => f.etiqueta === "antes");
-  const despues = fotos.filter((f) => f.etiqueta === "despues");
 
   return (
     <Dialog
@@ -144,37 +155,37 @@ export function FotosDialog({
           </Alert>
         ) : null}
 
-        <div className="grid grid-cols-2 gap-6">
-          <FotoColumna
-            titulo="Antes"
-            fotos={antes}
-            puedeEliminar={puedeEliminar}
-            pending={pending}
-            confirmandoId={confirmandoId}
-            onEliminar={handleEliminar}
-            onDescargar={handleDescargar}
-            onBlurEliminar={() => setConfirmandoId(null)}
-          />
-          <FotoColumna
-            titulo="Después"
-            fotos={despues}
-            puedeEliminar={puedeEliminar}
-            pending={pending}
-            confirmandoId={confirmandoId}
-            onEliminar={handleEliminar}
-            onDescargar={handleDescargar}
-            onBlurEliminar={() => setConfirmandoId(null)}
-          />
+        <div className="space-y-3">
+          {registros.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Todavía no hay fotos registradas.</p>
+          ) : (
+            registros.map((registro) => (
+              <RegistroFotos
+                key={registro.id}
+                registro={registro}
+                puedeSubir={puedeSubir}
+                puedeEliminar={puedeEliminar}
+                pending={pending}
+                confirmando={confirmandoId === registro.id}
+                onEliminar={() => handleEliminar(registro)}
+                onBlurEliminar={() => setConfirmandoId(null)}
+                onDescargar={handleDescargar}
+                onCompletar={(lado, formData) => handleCompletar(registro, lado, formData)}
+              />
+            ))
+          )}
         </div>
 
-        {/* Una sola foto por vez: un archivo, una observación, una
-            etiqueta — antes había un formulario completo por columna, con
-            su propio campo de observaciones cada uno, lo que mostraba dos
-            campos a la vez para lo que en la práctica es una sola acción. */}
+        {/* Un registro es un PAR: foto de antes + foto de después + una
+            sola observación compartida. Se crea con la primera foto que se
+            tenga a mano (el "antes" suele tomarse en la consulta inicial,
+            el "después" en una posterior) y se completa más tarde desde el
+            propio registro, en vez de exigir las dos fotos de una vez. */}
         {puedeSubir ? (
-          <form action={handleSubir} className="space-y-3 border-t pt-4">
+          <form action={handleCrear} className="space-y-3 border-t pt-4">
+            <p className="text-sm font-medium">Nuevo registro</p>
             <div className="space-y-2">
-              <Label htmlFor="etiquetaFoto">Es una foto de</Label>
+              <Label htmlFor="etiquetaFoto">Primera foto es de</Label>
               <Combobox
                 id="etiquetaFoto"
                 items={ITEMS_ETIQUETA}
@@ -191,7 +202,7 @@ export function FotosDialog({
                 required
               />
               <Button type="submit" size="sm" variant="outline" disabled={pending}>
-                {pending ? "Subiendo..." : "Subir"}
+                {pending ? "Subiendo..." : "Crear registro"}
               </Button>
             </div>
             <Input
@@ -207,83 +218,133 @@ export function FotosDialog({
   );
 }
 
-function FotoColumna({
-  titulo,
-  fotos,
+function RegistroFotos({
+  registro,
+  puedeSubir,
   puedeEliminar,
   pending,
-  confirmandoId,
+  confirmando,
   onEliminar,
-  onDescargar,
   onBlurEliminar,
+  onDescargar,
+  onCompletar,
 }: {
-  titulo: string;
-  fotos: Foto[];
+  registro: Registro;
+  puedeSubir: boolean;
   puedeEliminar: boolean;
   pending: boolean;
-  confirmandoId: string | null;
-  onEliminar: (foto: Foto) => void;
-  onDescargar: (foto: Foto) => void;
+  confirmando: boolean;
+  onEliminar: () => void;
   onBlurEliminar: () => void;
+  onDescargar: (path: string) => void;
+  onCompletar: (lado: "antes" | "despues", formData: FormData) => void;
 }) {
   return (
-    <div className="space-y-3">
-      <Label>{titulo}</Label>
-
-      <div className="grid grid-cols-2 gap-2">
-        {fotos.map((foto) =>
-          foto.url ? (
-            <div key={foto.id} className="space-y-1">
-              <div className="group relative">
-                <a href={foto.url} target="_blank" rel="noreferrer">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={foto.url}
-                    alt={foto.observaciones ?? titulo}
-                    className="aspect-square w-full rounded-lg object-cover"
-                  />
-                </a>
-                <button
-                  type="button"
-                  onClick={() => onDescargar(foto)}
-                  disabled={pending}
-                  aria-label="Descargar foto"
-                  title="Descargar"
-                  className="absolute bottom-1 left-1 rounded-full bg-black/60 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100"
-                >
-                  <DownloadIcon className="size-3" />
-                </button>
-                {puedeEliminar ? (
-                  <button
-                    type="button"
-                    onClick={() => onEliminar(foto)}
-                    onBlur={onBlurEliminar}
-                    disabled={pending}
-                    aria-label={
-                      confirmandoId === foto.id ? "Confirmar eliminación de foto" : "Eliminar foto"
-                    }
-                    className={`absolute top-1 right-1 rounded-full px-1.5 py-0.5 text-xs text-white transition-opacity ${
-                      confirmandoId === foto.id
-                        ? "bg-destructive opacity-100"
-                        : "bg-black/60 opacity-0 group-hover:opacity-100"
-                    }`}
-                  >
-                    {confirmandoId === foto.id ? "¿Seguro?" : "✕"}
-                  </button>
-                ) : null}
-              </div>
-              {foto.observaciones ? (
-                <p className="text-xs text-muted-foreground">{foto.observaciones}</p>
-              ) : null}
-            </div>
-          ) : null,
-        )}
-        {fotos.length === 0 ? (
-          <p className="col-span-2 text-center text-sm text-muted-foreground">
-            Todavía no hay fotos de {titulo.toLowerCase()}.
-          </p>
+    <div className="space-y-2 rounded-lg border p-3">
+      <div className="grid grid-cols-2 gap-3">
+        <SlotFoto
+          titulo="Antes"
+          url={registro.urlAntes}
+          path={registro.storagePathAntes}
+          puedeSubir={puedeSubir}
+          pending={pending}
+          onDescargar={onDescargar}
+          onSubir={(formData) => onCompletar("antes", formData)}
+        />
+        <SlotFoto
+          titulo="Después"
+          url={registro.urlDespues}
+          path={registro.storagePathDespues}
+          puedeSubir={puedeSubir}
+          pending={pending}
+          onDescargar={onDescargar}
+          onSubir={(formData) => onCompletar("despues", formData)}
+        />
+      </div>
+      <div className="flex items-center justify-between gap-2">
+        <p className="flex-1 text-xs text-muted-foreground">
+          {registro.observaciones || "Sin observaciones."}
+        </p>
+        {puedeEliminar ? (
+          <Button
+            type="button"
+            size="xs"
+            variant={confirmando ? "destructive" : "ghost"}
+            onClick={onEliminar}
+            onBlur={onBlurEliminar}
+            disabled={pending}
+            className="shrink-0"
+          >
+            {confirmando ? "¿Eliminar registro?" : "Eliminar"}
+          </Button>
         ) : null}
       </div>
+    </div>
+  );
+}
+
+function SlotFoto({
+  titulo,
+  url,
+  path,
+  puedeSubir,
+  pending,
+  onDescargar,
+  onSubir,
+}: {
+  titulo: string;
+  url: string | null;
+  path: string | null;
+  puedeSubir: boolean;
+  pending: boolean;
+  onDescargar: (path: string) => void;
+  onSubir: (formData: FormData) => void;
+}) {
+  return (
+    <div className="space-y-1">
+      <Label className="text-xs text-muted-foreground">{titulo}</Label>
+      {url && path ? (
+        <div className="group relative">
+          <a href={url} target="_blank" rel="noreferrer">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={url}
+              alt={titulo}
+              className="aspect-square w-full rounded-lg object-cover"
+            />
+          </a>
+          <button
+            type="button"
+            onClick={() => onDescargar(path)}
+            disabled={pending}
+            aria-label={`Descargar foto de ${titulo.toLowerCase()}`}
+            title="Descargar"
+            className="absolute bottom-1 left-1 rounded-full bg-black/60 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100"
+          >
+            <DownloadIcon className="size-3" />
+          </button>
+        </div>
+      ) : puedeSubir ? (
+        <form
+          action={onSubir}
+          className="flex aspect-square flex-col items-center justify-center gap-1 rounded-lg border border-dashed p-2 text-center"
+        >
+          <input
+            type="file"
+            name="foto"
+            accept="image/jpeg,image/png,image/webp"
+            className="w-full text-[10px]"
+            required
+          />
+          <Button type="submit" size="xs" variant="outline" disabled={pending}>
+            Agregar
+          </Button>
+        </form>
+      ) : (
+        <div className="flex aspect-square items-center justify-center rounded-lg border border-dashed text-xs text-muted-foreground">
+          Sin foto
+        </div>
+      )}
     </div>
   );
 }
