@@ -9,6 +9,7 @@ import { FiltrosAgenda } from "./filtros-agenda";
 import { AgendaCalendario } from "./agenda-calendario";
 import { nombreCompleto, type CitaRow } from "./tipos";
 import { getSedesActivas, getMediosPagoActivos, getTiposTratamientoActivos } from "@/lib/catalogos";
+import { tieneInfoPendiente } from "@/lib/pacientes/completitud";
 
 type Vista = "day" | "week" | "month";
 
@@ -83,7 +84,9 @@ export default async function CitasPage({
     supabase.rpc("has_permission", { modulo_code: "tratamientos", permiso_code: "CREATE" }),
     supabase
       .from("pacientes")
-      .select("id, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido")
+      .select(
+        "id, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, tipo_identificacion_id, numero_identificacion, email, telefono1",
+      )
       .eq("activo", true)
       .order("primer_apellido"),
     supabase.from("usuarios").select("id, nombre").eq("activo", true).order("nombre"),
@@ -125,6 +128,9 @@ export default async function CitasPage({
   const { data: citasData } = await query;
 
   const pacientes = (pacientesData ?? []).map((p) => ({ id: p.id, nombre: nombreCompleto(p) }));
+  const pacientesPendientes = new Set(
+    (pacientesData ?? []).filter(tieneInfoPendiente).map((p) => p.id),
+  );
   const profesionales = profesionalesData ?? [];
   const consultorios = consultoriosData ?? [];
   const sedes = sedesData ?? [];
@@ -159,6 +165,7 @@ export default async function CitasPage({
               sedes={sedes}
               tiposTratamiento={tiposTratamiento}
               fechaSeleccionada={fechaISO}
+              pacientesPendientes={pacientesPendientes}
               trigger={<Button>Nueva cita</Button>}
             />
           ) : null}
@@ -181,6 +188,7 @@ export default async function CitasPage({
         sedes={sedes}
         mediosPago={mediosPago}
         usuarioActualId={usuario.id}
+        pacientesPendientes={pacientesPendientes}
       />
     </div>
   );

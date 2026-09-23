@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { cancelarCita } from "@/lib/citas/actions";
+import { toast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -27,6 +28,7 @@ export function CancelarDialog({ id }: { id: string }) {
         await cancelarCita(id, motivo);
         setOpen(false);
         setMotivo("");
+        toast.add({ title: "Cita cancelada", type: "success" });
       } catch (e) {
         setError(e instanceof Error ? e.message : "No se pudo cancelar.");
       }

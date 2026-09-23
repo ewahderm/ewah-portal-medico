@@ -87,6 +87,7 @@ export function AgendaCalendario({
   sedes,
   mediosPago,
   usuarioActualId,
+  pacientesPendientes = new Set(),
 }: {
   citas: CitaRow[];
   vista: "day" | "week" | "month";
@@ -101,6 +102,7 @@ export function AgendaCalendario({
   sedes: { id: string; nombre: string }[];
   mediosPago: { id: string; nombre: string }[];
   usuarioActualId: string;
+  pacientesPendientes?: Set<string>;
 }) {
   const router = useRouter();
   const [citaSeleccionada, setCitaSeleccionada] = useState<CitaRow | null>(null);
@@ -210,6 +212,7 @@ export function AgendaCalendario({
           sedes={sedes}
           mediosPago={mediosPago}
           usuarioActualId={usuarioActualId}
+          pacientesPendientes={pacientesPendientes}
         />
       ) : null}
 
@@ -224,6 +227,7 @@ export function AgendaCalendario({
           fechaSeleccionada={nuevaCita.fecha}
           horaInicioSeleccionada={nuevaCita.horaInicio}
           sedeInicial={nuevaCita.sedeId}
+          pacientesPendientes={pacientesPendientes}
           open={!!nuevaCita}
           onOpenChange={(open) => {
             if (!open) setNuevaCita(null);

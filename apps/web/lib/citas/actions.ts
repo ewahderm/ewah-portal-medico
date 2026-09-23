@@ -5,7 +5,13 @@ import { createClient } from "@/lib/supabase/server";
 import { requirePermiso as requirePermisoBase } from "@/lib/auth/requirePermiso";
 import { valorOpcionalSelect, campoOpcional } from "@/lib/forms/opcional";
 
-export type CitaActionState = { error?: string; warning?: string } | null;
+export type CitaActionState =
+  | { error: string; conflicto?: undefined; ok?: undefined }
+  | { conflicto: string; error?: undefined; ok?: undefined }
+  | { ok: true; error?: undefined; conflicto?: undefined }
+  | null;
+
+export type ReprogramarResultado = { conflicto: string } | { ok: true };
 
 function requirePermiso(permiso: "CREATE" | "EDIT") {
   return requirePermisoBase("citas", permiso);
@@ -18,9 +24,10 @@ async function detectarChoque(params: {
   fecha: string;
   horaInicio: string;
   horaFin: string;
+  excluirCitaId?: string;
 }) {
   const supabase = await createClient();
-  const { data } = await supabase
+  let query = supabase
     .from("citas")
     .select("id, profesional_id, consultorio_id")
     .eq("clinica_id", params.clinicaId)
@@ -29,6 +36,9 @@ async function detectarChoque(params: {
     .lt("hora_inicio", params.horaFin)
     .gt("hora_fin", params.horaInicio);
 
+  if (params.excluirCitaId) query = query.neq("id", params.excluirCitaId);
+
+  const { data } = await query;
   const choques = data ?? [];
   const conProfesional = choques.some((c) => c.profesional_id === params.profesionalId);
   const conConsultorio = choques.some((c) => c.consultorio_id === params.consultorioId);
@@ -41,7 +51,13 @@ async function detectarChoque(params: {
   return null;
 }
 
+// `forzar` llega como primer argumento vía crearCita.bind(null, forzar) —
+// el diálogo lo actualiza a true solo después de que el usuario confirma
+// explícitamente el choque de horario que se le mostró. Sin eso, un
+// choque bloquea el guardado por completo (antes solo advertía y guardaba
+// igual, lo que permitía doble-agendar sin darse cuenta).
 export async function crearCita(
+  forzar: boolean,
   _prevState: CitaActionState,
   formData: FormData,
 ): Promise<CitaActionState> {
@@ -71,7 +87,7 @@ export async function crearCita(
   const check = await requirePermiso("CREATE");
   if (!check.ok) return { error: check.error };
 
-  const warning = await detectarChoque({
+  const conflicto = await detectarChoque({
     clinicaId: check.usuario.clinica_id,
     profesionalId,
     consultorioId,
@@ -79,6 +95,7 @@ export async function crearCita(
     horaInicio,
     horaFin,
   });
+  if (conflicto && !forzar) return { conflicto };
 
   const supabase = await createClient();
   const { error } = await supabase.from("citas").insert({
@@ -96,7 +113,7 @@ export async function crearCita(
   if (error) return { error: "No se pudo agendar la cita." };
 
   revalidatePath("/citas");
-  return warning ? { warning } : null;
+  return { ok: true };
 }
 
 export async function crearBloqueo(
@@ -188,7 +205,8 @@ export async function marcarNoAsistio(id: string) {
 export async function reprogramarCita(
   id: string,
   datos: { fecha: string; horaInicio: string; horaFin: string },
-) {
+  forzar = false,
+): Promise<ReprogramarResultado> {
   if (!datos.fecha || !datos.horaInicio || !datos.horaFin) {
     throw new Error("Fecha, hora de inicio y hora de fin son obligatorias.");
   }
@@ -207,6 +225,17 @@ export async function reprogramarCita(
     .maybeSingle();
 
   if (!original) throw new Error("La cita no existe.");
+
+  const conflicto = await detectarChoque({
+    clinicaId: original.clinica_id,
+    profesionalId: original.profesional_id,
+    consultorioId: original.consultorio_id,
+    fecha: datos.fecha,
+    horaInicio: datos.horaInicio,
+    horaFin: datos.horaFin,
+    excluirCitaId: id,
+  });
+  if (conflicto && !forzar) return { conflicto };
 
   const { error: nuevaError } = await supabase.from("citas").insert({
     clinica_id: original.clinica_id,
@@ -228,4 +257,5 @@ export async function reprogramarCita(
   if (anteriorError) throw new Error("La cita nueva ya se creó, pero no se pudo marcar la original como reprogramada.");
 
   revalidatePath("/citas");
+  return { ok: true };
 }

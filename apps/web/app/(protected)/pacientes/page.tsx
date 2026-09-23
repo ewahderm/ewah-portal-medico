@@ -2,6 +2,7 @@ import { requireUsuario } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { normalizarBusqueda } from "@/lib/pacientes/normalizar";
 import { nombreCompleto } from "@/lib/pacientes/nombre";
+import { tieneInfoPendiente } from "@/lib/pacientes/completitud";
 import {
   getTiposIdentificacionActivos,
   getGenerosActivos,
@@ -136,9 +137,18 @@ export default async function PacientesPage({
             <TableBody>
               {(pacientes ?? []).map((p) => (
                 <TableRow key={p.id}>
-                  <TableCell className="font-medium">{nombreCompleto(p)}</TableCell>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-1.5">
+                      {nombreCompleto(p)}
+                      {tieneInfoPendiente(p) ? (
+                        <Badge variant="outline" className="text-amber-600">
+                          Información pendiente
+                        </Badge>
+                      ) : null}
+                    </div>
+                  </TableCell>
                   <TableCell className="text-muted-foreground">
-                    {p.numero_identificacion}
+                    {p.numero_identificacion ?? "—"}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {p.telefono1 ?? p.email ?? "—"}

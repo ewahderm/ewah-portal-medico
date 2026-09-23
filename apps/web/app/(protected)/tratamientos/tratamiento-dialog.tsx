@@ -1,7 +1,9 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { cloneElement, useActionState, useState } from "react";
 import { crearTratamiento, editarTratamiento } from "@/lib/tratamientos/actions";
+import { useCerrarAlExito } from "@/lib/forms/cerrarAlExito";
+import { toast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -55,6 +57,7 @@ export function TratamientoDialog({
   editando,
   desdeCita,
   desdePaciente,
+  pacientesPendientes = new Set(),
   trigger,
 }: {
   pacientes: Opcion[];
@@ -67,7 +70,8 @@ export function TratamientoDialog({
   editando?: Correccion;
   desdeCita?: DesdeCita;
   desdePaciente?: DesdePaciente;
-  trigger: React.ReactNode;
+  pacientesPendientes?: Set<string>;
+  trigger: React.ReactElement;
 }) {
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState(
@@ -78,6 +82,33 @@ export function TratamientoDialog({
   // de la misma forma de tratamiento — solo difieren en qué campo oculto
   // envían y en qué acción de servidor invocan.
   const prefill = corrigiendo ?? editando;
+  const pacienteInicial = prefill?.paciente_id ?? desdeCita?.paciente_id ?? desdePaciente?.id ?? "";
+  const pacienteFijo = Boolean(prefill || desdeCita || desdePaciente);
+  const [pacienteId, setPacienteId] = useState(pacienteInicial);
+  const pacientePendiente = pacientesPendientes.has(pacienteId);
+
+  useCerrarAlExito(pending, !state?.error, () => {
+    setOpen(false);
+    toast.add({
+      title: corrigiendo
+        ? "Tratamiento corregido"
+        : editando
+          ? "Tratamiento editado"
+          : "Tratamiento registrado",
+      type: "success",
+    });
+  });
+
+  // El paciente ya viene fijo (ficha del paciente, "Atender" desde una
+  // cita, o Editar/Corregir de un tratamiento existente) y tiene
+  // información obligatoria pendiente: ni se abre el diálogo, el botón
+  // queda deshabilitado con una pista de por qué.
+  if (pacienteFijo && pacientesPendientes.has(pacienteInicial)) {
+    return cloneElement(trigger, {
+      disabled: true,
+      title: "Este paciente tiene información obligatoria pendiente — complétala en su ficha primero.",
+    } as Record<string, unknown>);
+  }
 
   return (
     <Dialog
@@ -137,9 +168,18 @@ export function TratamientoDialog({
               name="pacienteId"
               required
               items={toItems(pacientes)}
-              defaultValue={prefill?.paciente_id ?? desdeCita?.paciente_id ?? desdePaciente?.id}
+              value={pacienteId}
+              onValueChange={(valor) => setPacienteId(String(valor ?? ""))}
               placeholder="Selecciona un paciente"
             />
+            {pacientePendiente ? (
+              <Alert variant="destructive">
+                <AlertDescription>
+                  Este paciente tiene información obligatoria pendiente. Complétala en su
+                  ficha antes de registrar un tratamiento.
+                </AlertDescription>
+              </Alert>
+            ) : null}
           </div>
 
           <div className="space-y-2">
@@ -238,7 +278,7 @@ export function TratamientoDialog({
             />
           </div>
 
-          <Button type="submit" className="w-full" disabled={pending}>
+          <Button type="submit" className="w-full" disabled={pending || pacientePendiente}>
             {pending
               ? "Guardando..."
               : corrigiendo

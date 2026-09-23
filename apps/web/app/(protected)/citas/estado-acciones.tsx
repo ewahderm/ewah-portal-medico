@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { confirmarCita, marcarNoAsistio, reprogramarCita } from "@/lib/citas/actions";
 import { opcionesHora, sumarMinutos } from "@/lib/citas/horarios";
+import { toast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,6 +24,7 @@ export function EstadoAcciones({
   sedes,
   mediosPago,
   usuarioActualId,
+  pacientesPendientes = new Set(),
 }: {
   cita: {
     id: string;
@@ -42,8 +44,10 @@ export function EstadoAcciones({
   sedes: Opcion[];
   mediosPago: Opcion[];
   usuarioActualId: string;
+  pacientesPendientes?: Set<string>;
 }) {
   const [error, setError] = useState<string | null>(null);
+  const [conflicto, setConflicto] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [reprogramando, setReprogramando] = useState(false);
   const [nuevaFecha, setNuevaFecha] = useState(cita.fecha);
@@ -55,6 +59,7 @@ export function EstadoAcciones({
     startTransition(async () => {
       try {
         await confirmarCita(cita.id);
+        toast.add({ title: "Cita confirmada", type: "success" });
       } catch (e) {
         setError(e instanceof Error ? e.message : "No se pudo confirmar.");
       }
@@ -66,22 +71,29 @@ export function EstadoAcciones({
     startTransition(async () => {
       try {
         await marcarNoAsistio(cita.id);
+        toast.add({ title: "Cita marcada como no asistió", type: "success" });
       } catch (e) {
         setError(e instanceof Error ? e.message : "No se pudo actualizar.");
       }
     });
   }
 
-  function handleReprogramar() {
+  function handleReprogramar(forzar = false) {
     setError(null);
     startTransition(async () => {
       try {
-        await reprogramarCita(cita.id, {
-          fecha: nuevaFecha,
-          horaInicio: nuevaHoraInicio,
-          horaFin: nuevaHoraFin,
-        });
+        const resultado = await reprogramarCita(
+          cita.id,
+          { fecha: nuevaFecha, horaInicio: nuevaHoraInicio, horaFin: nuevaHoraFin },
+          forzar,
+        );
+        if ("conflicto" in resultado) {
+          setConflicto(resultado.conflicto);
+          return;
+        }
+        setConflicto(null);
         setReprogramando(false);
+        toast.add({ title: "Cita reprogramada", type: "success" });
       } catch (e) {
         setError(e instanceof Error ? e.message : "No se pudo reprogramar.");
       }
@@ -101,6 +113,11 @@ export function EstadoAcciones({
     return (
       <div className="flex flex-col items-end gap-2 rounded-lg border p-3">
         {error ? <span className="text-xs text-destructive">{error}</span> : null}
+        {conflicto ? (
+          <div className="w-full rounded-md bg-destructive/10 p-2 text-xs text-destructive">
+            {conflicto}
+          </div>
+        ) : null}
         <div className="grid grid-cols-3 gap-2">
           <div className="space-y-1">
             <Label htmlFor={`reprogramarFecha-${cita.id}`} className="text-xs">
@@ -110,7 +127,10 @@ export function EstadoAcciones({
               id={`reprogramarFecha-${cita.id}`}
               type="date"
               value={nuevaFecha}
-              onChange={(e) => setNuevaFecha(e.target.value)}
+              onChange={(e) => {
+                setNuevaFecha(e.target.value);
+                setConflicto(null);
+              }}
             />
           </div>
           <div className="space-y-1">
@@ -122,6 +142,7 @@ export function EstadoAcciones({
                 const valor = String(v ?? "");
                 setNuevaHoraInicio(valor);
                 setNuevaHoraFin(sumarMinutos(valor, 60));
+                setConflicto(null);
               }}
             />
           </div>
@@ -130,17 +151,39 @@ export function EstadoAcciones({
             <Combobox
               items={OPCIONES_HORA}
               value={nuevaHoraFin}
-              onValueChange={(v) => setNuevaHoraFin(String(v ?? ""))}
+              onValueChange={(v) => {
+                setNuevaHoraFin(String(v ?? ""));
+                setConflicto(null);
+              }}
             />
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => setReprogramando(false)} disabled={pending}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setReprogramando(false);
+              setConflicto(null);
+            }}
+            disabled={pending}
+          >
             Cancelar
           </Button>
-          <Button size="sm" onClick={handleReprogramar} disabled={pending}>
-            {pending ? "Guardando..." : "Confirmar nueva fecha"}
-          </Button>
+          {conflicto ? (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => handleReprogramar(true)}
+              disabled={pending}
+            >
+              {pending ? "Guardando..." : "Reprogramar de todas formas"}
+            </Button>
+          ) : (
+            <Button size="sm" onClick={() => handleReprogramar(false)} disabled={pending}>
+              {pending ? "Guardando..." : "Confirmar nueva fecha"}
+            </Button>
+          )}
         </div>
       </div>
     );
@@ -162,6 +205,7 @@ export function EstadoAcciones({
             sedes={sedes}
             mediosPago={mediosPago}
             usuarioActualId={usuarioActualId}
+            pacientesPendientes={pacientesPendientes}
             desdeCita={{
               id: cita.id,
               paciente_id: cita.paciente_id,

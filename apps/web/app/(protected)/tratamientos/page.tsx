@@ -4,7 +4,9 @@ import { createClient } from "@/lib/supabase/server";
 import { nombreCompleto } from "@/lib/pacientes/nombre";
 import { formatoMoneda } from "@/lib/format";
 import { getSedesActivas, getMediosPagoActivos, getTiposTratamientoActivos } from "@/lib/catalogos";
+import { tieneInfoPendiente } from "@/lib/pacientes/completitud";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -87,7 +89,9 @@ export default async function TratamientosPage() {
     supabase.rpc("has_permission", { modulo_code: "inventario", permiso_code: "VOID" }),
     supabase
       .from("pacientes")
-      .select("id, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido")
+      .select(
+        "id, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, tipo_identificacion_id, numero_identificacion, email, telefono1",
+      )
       .eq("activo", true)
       .order("primer_apellido"),
     getTiposTratamientoActivos(supabase),
@@ -121,6 +125,9 @@ export default async function TratamientosPage() {
     ? historialCompleto
     : historialCompleto.filter((t) => !t.anulado);
   const pacientes = (pacientesData ?? []).map((p) => ({ id: p.id, nombre: nombreCompleto(p) }));
+  const pacientesPendientes = new Set(
+    (pacientesData ?? []).filter(tieneInfoPendiente).map((p) => p.id),
+  );
   const insumos = insumosData ?? [];
   const lotes = lotesData ?? [];
   const tratamientosConFotos = new Set((fotosData ?? []).map((f) => f.tratamiento_id));
@@ -144,6 +151,7 @@ export default async function TratamientosPage() {
             sedes={sedes ?? []}
             mediosPago={mediosPago ?? []}
             usuarioActualId={usuario.id}
+            pacientesPendientes={pacientesPendientes}
             trigger={<Button>Nuevo tratamiento</Button>}
           />
         ) : null}
@@ -172,7 +180,14 @@ export default async function TratamientosPage() {
                 <TableRow key={t.id}>
                   <TableCell className="text-muted-foreground">{t.fecha}</TableCell>
                   <TableCell className="font-medium">
-                    {t.pacientes ? nombreCompleto(t.pacientes) : "—"}
+                    <div className="flex items-center gap-1.5">
+                      {t.pacientes ? nombreCompleto(t.pacientes) : "—"}
+                      {pacientesPendientes.has(t.paciente_id) ? (
+                        <Badge variant="outline" className="text-amber-600">
+                          Info. pendiente
+                        </Badge>
+                      ) : null}
+                    </div>
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-col gap-0.5">
@@ -237,6 +252,7 @@ export default async function TratamientosPage() {
                         sedes={sedes ?? []}
                         mediosPago={mediosPago ?? []}
                         usuarioActualId={usuario.id}
+                        pacientesPendientes={pacientesPendientes}
                         editando={{
                           id: t.id,
                           paciente_id: t.paciente_id,
@@ -265,6 +281,7 @@ export default async function TratamientosPage() {
                         sedes={sedes ?? []}
                         mediosPago={mediosPago ?? []}
                         usuarioActualId={usuario.id}
+                        pacientesPendientes={pacientesPendientes}
                         corrigiendo={{
                           id: t.id,
                           paciente_id: t.paciente_id,

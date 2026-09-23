@@ -10,6 +10,7 @@ import {
 import { requireUsuario, esAdministrador } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { nombreCompleto } from "@/lib/pacientes/nombre";
+import { tieneInfoPendiente } from "@/lib/pacientes/completitud";
 import { formatoMoneda, hoy } from "@/lib/format";
 import {
   getSedesActivas,
@@ -64,8 +65,8 @@ const RESULTADO_LABEL: Record<string, string> = {
 
 type PacienteCompleto = {
   id: string;
-  tipo_identificacion_id: string;
-  numero_identificacion: string;
+  tipo_identificacion_id: string | null;
+  numero_identificacion: string | null;
   primer_nombre: string;
   segundo_nombre: string | null;
   primer_apellido: string;
@@ -289,6 +290,8 @@ export default async function PacienteDetallePage({
 
   const puedeVerAnulados = esAdministrador(usuario);
   const puedeEliminarArchivos = esAdministrador(usuario);
+  const pacientePendiente = tieneInfoPendiente(paciente);
+  const pacientesPendientes = pacientePendiente ? new Set([paciente.id]) : new Set<string>();
   const tratamientosCompletos = (tratamientosData ?? []) as unknown as TratamientoRow[];
   const tratamientos = puedeVerAnulados
     ? tratamientosCompletos
@@ -322,12 +325,20 @@ export default async function PacienteDetallePage({
         <div>
           <h1 className="text-2xl font-semibold">{nombreCompleto(paciente)}</h1>
           <p className="text-sm text-muted-foreground">
-            {paciente.numero_identificacion} · {paciente.telefono1 ?? paciente.email ?? "sin contacto"}
+            {paciente.numero_identificacion ?? "Sin documento"} ·{" "}
+            {paciente.telefono1 ?? paciente.email ?? "sin contacto"}
           </p>
         </div>
-        <Badge variant={paciente.activo ? "secondary" : "outline"}>
-          {paciente.activo ? "Activo" : "Inactivo"}
-        </Badge>
+        <div className="flex gap-2">
+          {pacientePendiente ? (
+            <Badge variant="outline" className="text-amber-600">
+              Información pendiente
+            </Badge>
+          ) : null}
+          <Badge variant={paciente.activo ? "secondary" : "outline"}>
+            {paciente.activo ? "Activo" : "Inactivo"}
+          </Badge>
+        </div>
       </div>
 
       <Tabs defaultValue="datos">
@@ -365,7 +376,11 @@ export default async function PacienteDetallePage({
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <Dato
                   etiqueta="Identificación"
-                  valor={`${paciente.tipos_identificacion?.nombre ?? "—"} ${paciente.numero_identificacion}`}
+                  valor={
+                    paciente.numero_identificacion
+                      ? `${paciente.tipos_identificacion?.nombre ?? "—"} ${paciente.numero_identificacion}`
+                      : "Pendiente"
+                  }
                 />
                 <Dato etiqueta="Nombre completo" valor={nombreCompleto(paciente)} />
                 <Dato etiqueta="Fecha de nacimiento" valor={paciente.fecha_nacimiento} />
@@ -397,6 +412,7 @@ export default async function PacienteDetallePage({
                   sedes={sedes}
                   mediosPago={mediosPago}
                   usuarioActualId={usuario.id}
+                  pacientesPendientes={pacientesPendientes}
                   desdePaciente={{ id: paciente.id }}
                   trigger={<Button size="sm">Nuevo tratamiento</Button>}
                 />
@@ -466,6 +482,7 @@ export default async function PacienteDetallePage({
                             sedes={sedes}
                             mediosPago={mediosPago}
                             usuarioActualId={usuario.id}
+                            pacientesPendientes={pacientesPendientes}
                             editando={{
                               id: t.id,
                               paciente_id: t.paciente_id,
@@ -494,6 +511,7 @@ export default async function PacienteDetallePage({
                             sedes={sedes}
                             mediosPago={mediosPago}
                             usuarioActualId={usuario.id}
+                            pacientesPendientes={pacientesPendientes}
                             corrigiendo={{
                               id: t.id,
                               paciente_id: t.paciente_id,
@@ -545,6 +563,7 @@ export default async function PacienteDetallePage({
                   tiposTratamiento={tiposTratamiento}
                   fechaSeleccionada={hoy()}
                   desdePaciente={{ id: paciente.id }}
+                  pacientesPendientes={pacientesPendientes}
                   trigger={<Button size="sm">Nueva cita</Button>}
                 />
               ) : null}
@@ -586,6 +605,7 @@ export default async function PacienteDetallePage({
                           sedes={sedes}
                           mediosPago={mediosPago}
                           usuarioActualId={usuario.id}
+                          pacientesPendientes={pacientesPendientes}
                         />
                       </TableCell>
                     </TableRow>

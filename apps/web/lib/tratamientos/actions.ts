@@ -6,6 +6,7 @@ import { getCurrentUsuario, esAdministrador } from "@/lib/auth/session";
 import { requirePermiso as requirePermisoBase } from "@/lib/auth/requirePermiso";
 import { campoOpcional } from "@/lib/forms/opcional";
 import { CATEGORIAS_ANEXO } from "./anexos";
+import { tieneInfoPendiente } from "@/lib/pacientes/completitud";
 import type { ActionState } from "@/lib/auth/actions";
 
 const MAX_FOTO_BYTES = 8 * 1024 * 1024;
@@ -16,6 +17,23 @@ const TIPOS_ANEXO_PERMITIDOS = ["image/jpeg", "image/png", "image/webp", "applic
 
 function requirePermiso(permiso: "CREATE" | "VOID") {
   return requirePermisoBase("tratamientos", permiso);
+}
+
+// Repetido en crearTratamiento y editarTratamiento (ambas insertan una fila
+// nueva en tratamientos) — se valida siempre en el servidor, sin confiar en
+// que el botón ya venga deshabilitado desde el cliente.
+async function pacienteTieneInfoPendiente(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  pacienteId: string,
+) {
+  const { data: paciente } = await supabase
+    .from("pacientes")
+    .select("tipo_identificacion_id, numero_identificacion, email, telefono1")
+    .eq("id", pacienteId)
+    .maybeSingle();
+
+  if (!paciente) return true;
+  return tieneInfoPendiente(paciente);
 }
 
 function datosTratamientoDesdeForm(formData: FormData) {
@@ -66,6 +84,14 @@ export async function crearTratamiento(
   if (!check.ok) return { error: check.error };
 
   const supabase = await createClient();
+
+  if (await pacienteTieneInfoPendiente(supabase, datos.pacienteId)) {
+    return {
+      error:
+        "Este paciente tiene información obligatoria pendiente. Complétala en su ficha antes de registrar un tratamiento.",
+    };
+  }
+
   const { data: tratamiento, error } = await supabase
     .from("tratamientos")
     .insert({
@@ -120,6 +146,14 @@ export async function editarTratamiento(
   if (!checkAnular.ok) return { error: checkAnular.error };
 
   const supabase = await createClient();
+
+  if (await pacienteTieneInfoPendiente(supabase, datos.pacienteId)) {
+    return {
+      error:
+        "Este paciente tiene información obligatoria pendiente. Complétala en su ficha antes de registrar un tratamiento.",
+    };
+  }
+
   const { data: tratamiento, error: insertError } = await supabase
     .from("tratamientos")
     .insert({

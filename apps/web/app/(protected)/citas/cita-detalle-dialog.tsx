@@ -22,6 +22,7 @@ export function CitaDetalleDialog({
   sedes,
   mediosPago,
   usuarioActualId,
+  pacientesPendientes = new Set(),
 }: {
   cita: CitaRow;
   open: boolean;
@@ -34,6 +35,7 @@ export function CitaDetalleDialog({
   sedes: { id: string; nombre: string }[];
   mediosPago: { id: string; nombre: string }[];
   usuarioActualId: string;
+  pacientesPendientes?: Set<string>;
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -61,8 +63,13 @@ export function CitaDetalleDialog({
             <>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Paciente</span>
-                <span className="font-medium">
+                <span className="flex items-center gap-2 font-medium">
                   {cita.pacientes ? nombreCompleto(cita.pacientes) : "—"}
+                  {cita.paciente_id && pacientesPendientes.has(cita.paciente_id) ? (
+                    <Badge variant="outline" className="text-amber-600">
+                      Información pendiente
+                    </Badge>
+                  ) : null}
                 </span>
               </div>
               <div className="flex justify-between">
@@ -107,6 +114,7 @@ export function CitaDetalleDialog({
               sedes={sedes}
               mediosPago={mediosPago}
               usuarioActualId={usuarioActualId}
+              pacientesPendientes={pacientesPendientes}
             />
           </div>
         ) : null}

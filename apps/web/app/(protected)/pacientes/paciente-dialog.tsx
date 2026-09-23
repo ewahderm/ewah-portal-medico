@@ -2,6 +2,8 @@
 
 import { useActionState, useState } from "react";
 import { crearPaciente, actualizarPaciente } from "@/lib/pacientes/actions";
+import { useCerrarAlExito } from "@/lib/forms/cerrarAlExito";
+import { toast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,8 +21,8 @@ import { toItems, toItemsOpcional, type Opcion } from "@/lib/forms/opciones";
 
 type Paciente = {
   id: string;
-  tipo_identificacion_id: string;
-  numero_identificacion: string;
+  tipo_identificacion_id: string | null;
+  numero_identificacion: string | null;
   primer_nombre: string;
   segundo_nombre: string | null;
   primer_apellido: string;
@@ -68,6 +70,14 @@ export function PacienteDialog({
   const action = paciente ? actualizarPaciente : crearPaciente;
   const [state, formAction, pending] = useActionState(action, null);
 
+  useCerrarAlExito(pending, !state?.error, () => {
+    setOpen(false);
+    toast.add({
+      title: paciente ? "Paciente actualizado" : "Paciente creado",
+      type: "success",
+    });
+  });
+
   const colombiaId = catalogos.paises.find((p) => p.nombre === COLOMBIA_NOMBRE)?.id;
 
   return (
@@ -95,7 +105,7 @@ export function PacienteDialog({
                 name="tipoIdentificacionId"
                 required
                 items={toItems(catalogos.tiposIdentificacion)}
-                defaultValue={paciente?.tipo_identificacion_id}
+                defaultValue={paciente?.tipo_identificacion_id ?? undefined}
                 placeholder="Selecciona"
               />
             </div>
@@ -105,7 +115,7 @@ export function PacienteDialog({
               <Input
                 id="numeroIdentificacion"
                 name="numeroIdentificacion"
-                defaultValue={paciente?.numero_identificacion}
+                defaultValue={paciente?.numero_identificacion ?? undefined}
                 required
               />
             </div>
@@ -232,7 +242,13 @@ export function PacienteDialog({
 
           <div className="space-y-2">
             <Label htmlFor="email">Correo</Label>
-            <Input id="email" name="email" type="email" defaultValue={paciente?.email ?? ""} />
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              required
+              defaultValue={paciente?.email ?? ""}
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-6">
@@ -241,6 +257,7 @@ export function PacienteDialog({
               <Input
                 id="telefono1"
                 name="telefono1"
+                required
                 defaultValue={paciente?.telefono1 ?? ""}
               />
             </div>
