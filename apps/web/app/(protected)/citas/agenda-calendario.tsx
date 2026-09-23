@@ -2,15 +2,32 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Calendar, dateFnsLocalizer, Views, type View, type SlotInfo } from "react-big-calendar";
+import {
+  Calendar,
+  dateFnsLocalizer,
+  Views,
+  type View,
+  type SlotInfo,
+  type EventProps,
+} from "react-big-calendar";
 import { format, parse, startOfWeek, getDay } from "date-fns";
 import { es } from "date-fns/locale";
+import {
+  Clock,
+  CircleCheck,
+  CheckCheck,
+  TriangleAlert,
+  X,
+  RotateCcw,
+  Lock,
+  type LucideIcon,
+} from "lucide-react";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import "./agenda-calendario.css";
 import { CitaDetalleDialog } from "./cita-detalle-dialog";
 import { CitaDialog } from "./cita-dialog";
 import { redondearA15 } from "@/lib/citas/horarios";
-import { nombreCompleto, type CitaRow } from "./tipos";
+import { nombreCompleto, ESTADO_LABEL, type CitaRow } from "./tipos";
 import { colorPorProfesional } from "./colores-profesional";
 
 const localizer = dateFnsLocalizer({
@@ -36,17 +53,32 @@ const MENSAJES = {
   showMore: (total: number) => `+${total} más`,
 };
 
-const ESTADO_COLOR: Record<string, { bg: string; color: string }> = {
-  agendada: { bg: "color-mix(in oklch, var(--ewah-cyan), transparent 80%)", color: "var(--ewah-navy)" },
-  confirmada: { bg: "var(--ewah-cyan)", color: "var(--ewah-navy)" },
-  atendida: { bg: "var(--ewah-navy)", color: "white" },
-  cancelada: { bg: "var(--muted)", color: "var(--muted-foreground)" },
-  no_asistio: { bg: "color-mix(in oklch, var(--destructive), transparent 70%)", color: "var(--destructive)" },
-  reprogramada: { bg: "color-mix(in oklch, var(--ewah-slate), transparent 80%)", color: "var(--ewah-slate)" },
+// Insignia de estado (ícono en círculo) que se dibuja sobre cada evento y
+// se reutiliza tal cual en la leyenda de "Estado" — una sola tabla para no
+// duplicar la definición entre ambos lugares. El FONDO/borde del evento ya
+// no depende del estado (ver eventPropGetter más abajo): esa señal ahora es
+// 100% profesional, y el estado se comunica solo por esta insignia.
+type EstadoInfo = {
+  clave: string;
+  label: string;
+  Icono: LucideIcon;
+  bgInsignia: string;
+  colorIcono: string;
 };
-const COLOR_POR_DEFECTO = { bg: "var(--muted)", color: "var(--muted-foreground)" };
 
-const BLOQUEO_COLOR = { bg: "var(--ewah-slate)", color: "white" };
+const ESTADOS_LEYENDA: EstadoInfo[] = [
+  { clave: "agendada", label: ESTADO_LABEL.agendada, Icono: Clock, bgInsignia: "var(--ewah-cyan)", colorIcono: "var(--ewah-navy)" },
+  { clave: "confirmada", label: ESTADO_LABEL.confirmada, Icono: CircleCheck, bgInsignia: "var(--ewah-cyan-dark)", colorIcono: "white" },
+  { clave: "atendida", label: ESTADO_LABEL.atendida, Icono: CheckCheck, bgInsignia: "var(--ewah-navy)", colorIcono: "white" },
+  { clave: "no_asistio", label: ESTADO_LABEL.no_asistio, Icono: TriangleAlert, bgInsignia: "oklch(0.75 0.15 70)", colorIcono: "var(--ewah-navy)" },
+  { clave: "cancelada", label: ESTADO_LABEL.cancelada, Icono: X, bgInsignia: "var(--destructive)", colorIcono: "white" },
+  { clave: "reprogramada", label: ESTADO_LABEL.reprogramada, Icono: RotateCcw, bgInsignia: "var(--ewah-slate)", colorIcono: "white" },
+  { clave: "bloqueo", label: "Bloqueo", Icono: Lock, bgInsignia: "var(--ewah-navy)", colorIcono: "white" },
+];
+
+const ESTADOS_POR_CLAVE: Record<string, EstadoInfo> = Object.fromEntries(
+  ESTADOS_LEYENDA.map((e) => [e.clave, e]),
+);
 
 function combinarFechaHora(fecha: string, hora: string) {
   const [y, m, d] = fecha.split("-").map(Number);
@@ -62,6 +94,44 @@ type EventoCita = {
   resource: CitaRow;
   resourceId: string;
 };
+
+// Insignia de estado dibujada sobre cada evento (components.event de
+// react-big-calendar — eventPropGetter solo puede tocar estilos del
+// contenedor, no puede meter un ícono adentro). En vista mes se reduce a un
+// punto sólido sin ícono: no hay espacio legible en una fila de una sola
+// línea, el detalle completo se sigue viendo al abrir la cita.
+function EventoAgenda({
+  event,
+  title,
+  vista,
+}: EventProps<EventoCita> & { vista: "day" | "week" | "month" }) {
+  const cita = event.resource;
+  const info = ESTADOS_POR_CLAVE[cita.es_bloqueo ? "bloqueo" : cita.estado];
+  const tachado = cita.estado === "cancelada";
+
+  return (
+    <>
+      <span style={tachado ? { textDecoration: "line-through" } : undefined}>{title}</span>
+      {info ? (
+        vista === "month" ? (
+          <span
+            aria-hidden
+            className="absolute right-0.5 top-0.5 h-2 w-2 shrink-0 rounded-full"
+            style={{ backgroundColor: info.bgInsignia }}
+          />
+        ) : (
+          <span
+            aria-hidden
+            className="absolute right-0.5 top-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full"
+            style={{ backgroundColor: info.bgInsignia }}
+          >
+            <info.Icono className="h-2.5 w-2.5" style={{ color: info.colorIcono }} strokeWidth={2.5} />
+          </span>
+        )
+      ) : null}
+    </>
+  );
+}
 
 const SIN_SEDE_ID = "__sin_sede__";
 
@@ -154,6 +224,13 @@ export function AgendaCalendario({
       : sedes;
   }, [vista, sedes, citas]);
 
+  const componentesCalendario = useMemo(
+    () => ({
+      event: (props: EventProps<EventoCita>) => <EventoAgenda {...props} vista={vista} />,
+    }),
+    [vista],
+  );
+
   function navegarUrl(nuevaFecha: Date, nuevaVista: string) {
     const params = new URLSearchParams(window.location.search);
     params.set("fecha", format(nuevaFecha, "yyyy-MM-dd"));
@@ -196,6 +273,22 @@ export function AgendaCalendario({
         </div>
       ) : null}
 
+      <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
+        <span className="font-medium text-foreground">Estado:</span>
+        {ESTADOS_LEYENDA.map((e) => (
+          <span key={e.clave} className="inline-flex items-center gap-1.5">
+            <span
+              className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full"
+              style={{ backgroundColor: e.bgInsignia }}
+              aria-hidden
+            >
+              <e.Icono className="h-2.5 w-2.5" style={{ color: e.colorIcono }} strokeWidth={2.5} />
+            </span>
+            {e.label}
+          </span>
+        ))}
+      </div>
+
       <Calendar
         localizer={localizer}
         culture="es"
@@ -217,16 +310,15 @@ export function AgendaCalendario({
         onView={(nuevaVista) => navegarUrl(fecha, RBC_A_VISTA[nuevaVista] ?? vista)}
         onSelectSlot={handleSelectSlot}
         onSelectEvent={(evento) => setCitaSeleccionada((evento as EventoCita).resource)}
+        components={componentesCalendario}
         eventPropGetter={(evento) => {
           const cita = (evento as EventoCita).resource;
-          const colores = cita.es_bloqueo
-            ? BLOQUEO_COLOR
-            : (ESTADO_COLOR[cita.estado] ?? COLOR_POR_DEFECTO);
+          const colorProfesional = colorPorProfesional(cita.profesional_id);
           return {
             style: {
-              backgroundColor: colores.bg,
-              color: colores.color,
-              borderLeft: `4px solid ${colorPorProfesional(cita.profesional_id)}`,
+              backgroundColor: `color-mix(in oklch, ${colorProfesional}, transparent 82%)`,
+              color: "var(--ewah-navy)",
+              borderLeft: `5px solid ${colorProfesional}`,
             },
           };
         }}

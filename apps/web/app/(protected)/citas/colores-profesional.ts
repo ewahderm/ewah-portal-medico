@@ -1,11 +1,12 @@
-// Paleta de acento para distinguir profesionales en la Agenda — un color
-// ADICIONAL al que ya usa `ESTADO_COLOR` en agenda-calendario.tsx (ese sigue
-// coloreando el FONDO del evento según el estado de la cita; esto solo
-// agrega una franja lateral). Mismo nivel de saturación/luminosidad que
-// --ewah-cyan (oklch ~0.75L / ~0.13C) pero con hues repartidos lejos del
-// cyan de marca (~210°), del navy/slate (baja croma) y del destructive
-// (~22-27°, rojo-naranja) para que ninguno se confunda con los colores de
-// estado ya existentes.
+// Paleta de acento para distinguir profesionales en la Agenda — pinta tanto
+// el fondo (versión clarita) como el borde izquierdo (saturación completa)
+// de cada evento en `agenda-calendario.tsx`; el estado de la cita ya no se
+// comunica por color de fondo, sino por una insignia con ícono (ver
+// ESTADOS_LEYENDA en ese mismo archivo). Mismo nivel de saturación/
+// luminosidad que --ewah-cyan (oklch ~0.75L / ~0.13C) pero con hues
+// repartidos lejos del cyan de marca (~210°), del navy/slate (baja croma) y
+// del destructive (~22-27°, rojo-naranja) para que ninguno se confunda con
+// los colores de las insignias de estado.
 export const PALETA_PROFESIONAL: readonly string[] = [
   "oklch(0.72 0.14 60)", // Ámbar dorado
   "oklch(0.72 0.13 95)", // Verde lima/oliva

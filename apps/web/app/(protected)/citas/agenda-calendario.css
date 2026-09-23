@@ -70,6 +70,7 @@
 }
 
 .ewah-agenda .rbc-event {
+  position: relative;
   border: none;
   border-radius: var(--radius-md);
   padding: 2px 6px;
