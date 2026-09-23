@@ -165,6 +165,7 @@ export function AgendaCalendario({
   lotes,
   puedeRegistrarConsumo,
   puedeRevertirConsumo,
+  puedeEliminarArchivos,
 }: {
   citas: CitaRow[];
   vista: "day" | "week" | "month";
@@ -184,6 +185,7 @@ export function AgendaCalendario({
   lotes: { id: string; insumo_id: string; sede_id: string; numero_lote: string | null; cantidad_actual: number }[];
   puedeRegistrarConsumo: boolean;
   puedeRevertirConsumo: boolean;
+  puedeEliminarArchivos: boolean;
 }) {
   const router = useRouter();
   const [citaSeleccionada, setCitaSeleccionada] = useState<CitaRow | null>(null);
@@ -344,6 +346,7 @@ export function AgendaCalendario({
           lotes={lotes}
           puedeRegistrarConsumo={puedeRegistrarConsumo}
           puedeRevertirConsumo={puedeRevertirConsumo}
+          puedeEliminarArchivos={puedeEliminarArchivos}
         />
       ) : null}
 

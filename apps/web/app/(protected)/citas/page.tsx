@@ -1,5 +1,5 @@
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, format } from "date-fns";
-import { requireUsuario } from "@/lib/auth/session";
+import { requireUsuario, esAdministrador } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -150,6 +150,7 @@ export default async function CitasPage({
   const mediosPago = mediosPagoData ?? [];
   const insumos = insumosData ?? [];
   const lotes = lotesData ?? [];
+  const puedeEliminarArchivos = esAdministrador(usuario);
   const citas = (citasData ?? []).map((c) => {
     const fila = c as unknown as CitaRow & { tratamientos?: { count: number }[] };
     return { ...fila, tratamientos_count: fila.tratamientos?.[0]?.count ?? 0 };
@@ -210,6 +211,7 @@ export default async function CitasPage({
         lotes={lotes}
         puedeRegistrarConsumo={!!puedeRegistrarConsumo}
         puedeRevertirConsumo={!!puedeRevertirConsumo}
+        puedeEliminarArchivos={puedeEliminarArchivos}
       />
     </div>
   );

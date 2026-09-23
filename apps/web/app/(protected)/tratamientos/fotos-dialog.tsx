@@ -7,6 +7,7 @@ import {
   eliminarFotoTratamiento,
 } from "@/lib/tratamientos/actions";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -21,6 +22,7 @@ type Foto = {
   id: string;
   storage_path: string;
   etiqueta: "antes" | "despues";
+  observaciones: string | null;
   url: string | null;
 };
 
@@ -158,30 +160,35 @@ function FotoColumna({
       <div className="grid grid-cols-2 gap-2">
         {fotos.map((foto) =>
           foto.url ? (
-            <div key={foto.id} className="group relative">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={foto.url}
-                alt={titulo}
-                className="aspect-square w-full rounded-lg object-cover"
-              />
-              {puedeEliminar ? (
-                <button
-                  type="button"
-                  onClick={() => handleClickEliminar(foto)}
-                  onBlur={() => setConfirmandoId(null)}
-                  disabled={pending}
-                  aria-label={
-                    confirmandoId === foto.id ? "Confirmar eliminación de foto" : "Eliminar foto"
-                  }
-                  className={`absolute top-1 right-1 rounded-full px-1.5 py-0.5 text-xs text-white transition-opacity ${
-                    confirmandoId === foto.id
-                      ? "bg-destructive opacity-100"
-                      : "bg-black/60 opacity-0 group-hover:opacity-100"
-                  }`}
-                >
-                  {confirmandoId === foto.id ? "¿Seguro?" : "✕"}
-                </button>
+            <div key={foto.id} className="space-y-1">
+              <div className="group relative">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={foto.url}
+                  alt={foto.observaciones ?? titulo}
+                  className="aspect-square w-full rounded-lg object-cover"
+                />
+                {puedeEliminar ? (
+                  <button
+                    type="button"
+                    onClick={() => handleClickEliminar(foto)}
+                    onBlur={() => setConfirmandoId(null)}
+                    disabled={pending}
+                    aria-label={
+                      confirmandoId === foto.id ? "Confirmar eliminación de foto" : "Eliminar foto"
+                    }
+                    className={`absolute top-1 right-1 rounded-full px-1.5 py-0.5 text-xs text-white transition-opacity ${
+                      confirmandoId === foto.id
+                        ? "bg-destructive opacity-100"
+                        : "bg-black/60 opacity-0 group-hover:opacity-100"
+                    }`}
+                  >
+                    {confirmandoId === foto.id ? "¿Seguro?" : "✕"}
+                  </button>
+                ) : null}
+              </div>
+              {foto.observaciones ? (
+                <p className="text-xs text-muted-foreground">{foto.observaciones}</p>
               ) : null}
             </div>
           ) : null,
@@ -189,16 +196,18 @@ function FotoColumna({
       </div>
 
       {puedeSubir ? (
-        <form
-          action={(formData) => onSubir(formData)}
-          className="flex items-center gap-2"
-        >
+        <form action={(formData) => onSubir(formData)} className="space-y-2">
           <input
             type="file"
             name="foto"
             accept="image/jpeg,image/png,image/webp"
             className="text-xs"
             required
+          />
+          <Input
+            name="observaciones"
+            placeholder="Zona y perspectiva (ej: rostro, perfil derecho)"
+            className="text-xs"
           />
           <Button type="submit" size="sm" variant="outline" disabled={pending}>
             {pending ? "Subiendo..." : "Subir"}

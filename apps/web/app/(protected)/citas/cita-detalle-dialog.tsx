@@ -12,6 +12,8 @@ import { EstadoAcciones } from "./estado-acciones";
 import { ESTADO_LABEL, nombreCompleto, type CitaRow } from "./tipos";
 import { listarTratamientosDeCita } from "@/lib/tratamientos/actions";
 import { InsumosDialog } from "../tratamientos/insumos-dialog";
+import { FotosDialog } from "../tratamientos/fotos-dialog";
+import { AnexosDialog } from "../tratamientos/anexos-dialog";
 import { formatoMoneda } from "@/lib/format";
 
 type TratamientoDeCita = {
@@ -39,6 +41,7 @@ export function CitaDetalleDialog({
   lotes,
   puedeRegistrarConsumo,
   puedeRevertirConsumo,
+  puedeEliminarArchivos,
 }: {
   cita: CitaRow;
   open: boolean;
@@ -56,6 +59,9 @@ export function CitaDetalleDialog({
   lotes: { id: string; insumo_id: string; sede_id: string; numero_lote: string | null; cantidad_actual: number }[];
   puedeRegistrarConsumo: boolean;
   puedeRevertirConsumo: boolean;
+  /** Solo administrador — mismo criterio que /tratamientos y la pestaña
+   * Tratamientos del paciente (eliminar fotos/anexos ya lo exige RLS). */
+  puedeEliminarArchivos: boolean;
 }) {
   // null = todavía cargando (o sin abrir) — distinto de un array vacío, que
   // significa "ya se consultó y de verdad no tiene tratamientos".
@@ -177,7 +183,7 @@ export function CitaDetalleDialog({
                           </Badge>
                         ) : null}
                       </span>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center justify-end gap-2">
                         <span
                           className={t.anulado ? "text-muted-foreground line-through" : "font-medium"}
                         >
@@ -193,6 +199,16 @@ export function CitaDetalleDialog({
                             puedeRevertir={puedeRevertirConsumo}
                           />
                         ) : null}
+                        <FotosDialog
+                          tratamientoId={t.id}
+                          puedeSubir={puedeCrearTratamiento}
+                          puedeEliminar={puedeEliminarArchivos}
+                        />
+                        <AnexosDialog
+                          tratamientoId={t.id}
+                          puedeSubir={puedeCrearTratamiento}
+                          puedeEliminar={puedeEliminarArchivos}
+                        />
                       </div>
                     </div>
                   ))}

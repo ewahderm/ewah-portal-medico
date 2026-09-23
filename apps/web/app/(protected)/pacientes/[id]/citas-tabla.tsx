@@ -35,6 +35,7 @@ export function CitasTabla({
   lotes,
   puedeRegistrarConsumo,
   puedeRevertirConsumo,
+  puedeEliminarArchivos,
 }: {
   citas: CitaRow[];
   puedeEditar: boolean;
@@ -56,6 +57,7 @@ export function CitasTabla({
   }[];
   puedeRegistrarConsumo: boolean;
   puedeRevertirConsumo: boolean;
+  puedeEliminarArchivos: boolean;
 }) {
   const [citaSeleccionada, setCitaSeleccionada] = useState<CitaRow | null>(null);
 
@@ -121,6 +123,7 @@ export function CitasTabla({
           lotes={lotes}
           puedeRegistrarConsumo={puedeRegistrarConsumo}
           puedeRevertirConsumo={puedeRevertirConsumo}
+          puedeEliminarArchivos={puedeEliminarArchivos}
         />
       ) : null}
     </>

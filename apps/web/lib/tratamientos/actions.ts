@@ -289,6 +289,8 @@ export async function subirFotoTratamiento(
     throw new Error("Formato no soportado. Usa JPG, PNG o WEBP.");
   }
 
+  const observaciones = campoOpcional(formData, "observaciones");
+
   const supabase = await createClient();
   const extension = foto.name.split(".").pop() ?? "jpg";
   const path = `${check.usuario.clinica_id}/${tratamientoId}/${etiqueta}-${Date.now()}.${extension}`;
@@ -303,6 +305,7 @@ export async function subirFotoTratamiento(
     tratamiento_id: tratamientoId,
     storage_path: path,
     etiqueta,
+    observaciones,
     created_by: check.usuario.id,
   });
   if (insertError) throw new Error("No se pudo registrar la foto.");
@@ -343,7 +346,7 @@ export async function listarFotosTratamiento(tratamientoId: string) {
   const supabase = await createClient();
   const { data } = await supabase
     .from("tratamiento_fotos")
-    .select("id, storage_path, etiqueta, created_at")
+    .select("id, storage_path, etiqueta, observaciones, created_at")
     .eq("tratamiento_id", tratamientoId)
     .order("created_at");
 

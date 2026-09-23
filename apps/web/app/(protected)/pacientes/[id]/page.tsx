@@ -580,6 +580,7 @@ export default async function PacienteDetallePage({
                 lotes={lotes}
                 puedeRegistrarConsumo={!!puedeRegistrarConsumo}
                 puedeRevertirConsumo={!!puedeRevertirConsumo}
+                puedeEliminarArchivos={puedeEliminarArchivos}
               />
             </CardContent>
           </Card>
