@@ -16,6 +16,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Combobox } from "@/components/ui/combobox";
+import { hoy } from "@/lib/format";
 
 const TIPOS = [
   { value: "llamada", label: "Llamada" },
@@ -32,10 +33,6 @@ const RESULTADOS = [
   { value: "pendiente", label: "Pendiente" },
   { value: "otro", label: "Otro" },
 ];
-
-function hoy() {
-  return new Date().toISOString().slice(0, 10);
-}
 
 export function ContactoDialog({ pacienteId }: { pacienteId: string }) {
   const [open, setOpen] = useState(false);

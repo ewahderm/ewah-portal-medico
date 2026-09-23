@@ -1,11 +1,17 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { confirmarCita, marcarNoAsistio } from "@/lib/citas/actions";
+import { confirmarCita, marcarNoAsistio, reprogramarCita } from "@/lib/citas/actions";
+import { opcionesHora, sumarMinutos } from "@/lib/citas/horarios";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Combobox } from "@/components/ui/combobox";
 import { CancelarDialog } from "./cancelar-dialog";
 import { TratamientoDialog } from "../tratamientos/tratamiento-dialog";
 import type { Opcion } from "@/lib/forms/opciones";
+
+const OPCIONES_HORA = opcionesHora();
 
 export function EstadoAcciones({
   cita,
@@ -25,6 +31,7 @@ export function EstadoAcciones({
     profesional_id: string;
     tipo_tratamiento_id: string | null;
     fecha: string;
+    hora_inicio?: string;
     consultorios?: { sede_id: string | null } | null;
   };
   puedeEditar: boolean;
@@ -38,6 +45,10 @@ export function EstadoAcciones({
 }) {
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [reprogramando, setReprogramando] = useState(false);
+  const [nuevaFecha, setNuevaFecha] = useState(cita.fecha);
+  const [nuevaHoraInicio, setNuevaHoraInicio] = useState(cita.hora_inicio ?? "09:00");
+  const [nuevaHoraFin, setNuevaHoraFin] = useState(sumarMinutos(cita.hora_inicio ?? "09:00", 60));
 
   function handleConfirmar() {
     setError(null);
@@ -61,13 +72,83 @@ export function EstadoAcciones({
     });
   }
 
-  if (cita.estado === "cancelada" || cita.estado === "no_asistio" || cita.estado === "atendida") {
+  function handleReprogramar() {
+    setError(null);
+    startTransition(async () => {
+      try {
+        await reprogramarCita(cita.id, {
+          fecha: nuevaFecha,
+          horaInicio: nuevaHoraInicio,
+          horaFin: nuevaHoraFin,
+        });
+        setReprogramando(false);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "No se pudo reprogramar.");
+      }
+    });
+  }
+
+  if (
+    cita.estado === "cancelada" ||
+    cita.estado === "no_asistio" ||
+    cita.estado === "atendida" ||
+    cita.estado === "reprogramada"
+  ) {
     return error ? <span className="text-xs text-destructive">{error}</span> : null;
+  }
+
+  if (reprogramando) {
+    return (
+      <div className="flex flex-col items-end gap-2 rounded-lg border p-3">
+        {error ? <span className="text-xs text-destructive">{error}</span> : null}
+        <div className="grid grid-cols-3 gap-2">
+          <div className="space-y-1">
+            <Label htmlFor={`reprogramarFecha-${cita.id}`} className="text-xs">
+              Fecha
+            </Label>
+            <Input
+              id={`reprogramarFecha-${cita.id}`}
+              type="date"
+              value={nuevaFecha}
+              onChange={(e) => setNuevaFecha(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Hora inicio</Label>
+            <Combobox
+              items={OPCIONES_HORA}
+              value={nuevaHoraInicio}
+              onValueChange={(v) => {
+                const valor = String(v ?? "");
+                setNuevaHoraInicio(valor);
+                setNuevaHoraFin(sumarMinutos(valor, 60));
+              }}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Hora fin</Label>
+            <Combobox
+              items={OPCIONES_HORA}
+              value={nuevaHoraFin}
+              onValueChange={(v) => setNuevaHoraFin(String(v ?? ""))}
+            />
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => setReprogramando(false)} disabled={pending}>
+            Cancelar
+          </Button>
+          <Button size="sm" onClick={handleReprogramar} disabled={pending}>
+            {pending ? "Guardando..." : "Confirmar nueva fecha"}
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="flex flex-col items-end gap-1">
-      <div className="flex justify-end gap-2">
+      <div className="flex flex-wrap justify-end gap-2">
         {cita.estado === "agendada" && puedeEditar ? (
           <Button variant="ghost" size="sm" onClick={handleConfirmar} disabled={pending}>
             Confirmar
@@ -99,6 +180,11 @@ export function EstadoAcciones({
         {cita.estado === "confirmada" && puedeEditar ? (
           <Button variant="ghost" size="sm" onClick={handleNoAsistio} disabled={pending}>
             No asistió
+          </Button>
+        ) : null}
+        {puedeEditar ? (
+          <Button variant="ghost" size="sm" onClick={() => setReprogramando(true)} disabled={pending}>
+            Reprogramar
           </Button>
         ) : null}
         {puedeEditar ? <CancelarDialog id={cita.id} /> : null}

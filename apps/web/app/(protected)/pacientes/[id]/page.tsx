@@ -10,7 +10,7 @@ import {
 import { requireUsuario, esAdministrador } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { nombreCompleto } from "@/lib/pacientes/nombre";
-import { formatoMoneda } from "@/lib/format";
+import { formatoMoneda, hoy } from "@/lib/format";
 import {
   getSedesActivas,
   getMediosPagoActivos,
@@ -43,6 +43,9 @@ import { RevertirAnulacionButton } from "../../tratamientos/revertir-anulacion-b
 import { FotosDialog } from "../../tratamientos/fotos-dialog";
 import { AnexosDialog } from "../../tratamientos/anexos-dialog";
 import { InsumosDialog } from "../../tratamientos/insumos-dialog";
+import { CitaDialog } from "../../citas/cita-dialog";
+import { EstadoAcciones } from "../../citas/estado-acciones";
+import { ESTADO_LABEL } from "../../citas/tipos";
 
 const TIPO_CONTACTO_LABEL: Record<string, string> = {
   llamada: "Llamada",
@@ -109,10 +112,17 @@ type CitaRow = {
   id: string;
   fecha: string;
   hora_inicio: string;
+  hora_fin: string;
   estado: string;
+  paciente_id: string | null;
+  profesional_id: string;
+  tipo_tratamiento_id: string | null;
   tipos_tratamiento: { nombre: string } | null;
   profesional: { nombre: string } | null;
+  consultorios: { sede_id: string | null } | null;
 };
+
+type Consultorio = { id: string; nombre: string; sede_id: string };
 
 type ConsumoRow = {
   id: string;
@@ -193,6 +203,8 @@ export default async function PacienteDetallePage({
     { data: puedeAnularTratamiento },
     { data: puedeRegistrarConsumo },
     { data: puedeRevertirConsumo },
+    { data: puedeCrearCita },
+    { data: puedeEditarCita },
     tiposIdentificacion,
     generos,
     paises,
@@ -205,6 +217,7 @@ export default async function PacienteDetallePage({
     mediosPago,
     { data: insumosData },
     { data: lotesData },
+    { data: consultoriosData },
     { data: tratamientosData },
     { data: citasData },
     { data: contactosData },
@@ -216,6 +229,8 @@ export default async function PacienteDetallePage({
     supabase.rpc("has_permission", { modulo_code: "tratamientos", permiso_code: "VOID" }),
     supabase.rpc("has_permission", { modulo_code: "inventario", permiso_code: "CREATE" }),
     supabase.rpc("has_permission", { modulo_code: "inventario", permiso_code: "VOID" }),
+    supabase.rpc("has_permission", { modulo_code: "citas", permiso_code: "CREATE" }),
+    supabase.rpc("has_permission", { modulo_code: "citas", permiso_code: "EDIT" }),
     getTiposIdentificacionActivos(supabase),
     getGenerosActivos(supabase),
     getPaisesActivos(supabase),
@@ -231,6 +246,7 @@ export default async function PacienteDetallePage({
       .from("lotes")
       .select("id, insumo_id, sede_id, numero_lote, cantidad_actual")
       .eq("activo", true),
+    supabase.from("consultorios").select("id, nombre, sede_id").eq("activo", true).order("nombre"),
     supabase
       .from("tratamientos")
       .select(
@@ -244,9 +260,10 @@ export default async function PacienteDetallePage({
     supabase
       .from("citas")
       .select(
-        `id, fecha, hora_inicio, estado,
+        `id, fecha, hora_inicio, hora_fin, estado, paciente_id, profesional_id, tipo_tratamiento_id,
          tipos_tratamiento(nombre),
-         profesional:usuarios!citas_profesional_id_fkey(nombre)`,
+         profesional:usuarios!citas_profesional_id_fkey(nombre),
+         consultorios(sede_id)`,
       )
       .eq("paciente_id", id)
       .order("fecha", { ascending: false }),
@@ -282,6 +299,7 @@ export default async function PacienteDetallePage({
   const profesionales = profesionalesData ?? [];
   const insumos = insumosData ?? [];
   const lotes = lotesData ?? [];
+  const consultorios = (consultoriosData ?? []) as Consultorio[];
 
   const catalogosPaciente = {
     tiposIdentificacion,
@@ -516,8 +534,20 @@ export default async function PacienteDetallePage({
 
         <TabsContent value="citas">
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-base font-medium">Citas</CardTitle>
+              {puedeCrearCita ? (
+                <CitaDialog
+                  pacientes={[{ id: paciente.id, nombre: nombreCompleto(paciente) }]}
+                  profesionales={profesionales}
+                  consultorios={consultorios}
+                  sedes={sedes}
+                  tiposTratamiento={tiposTratamiento}
+                  fechaSeleccionada={hoy()}
+                  desdePaciente={{ id: paciente.id }}
+                  trigger={<Button size="sm">Nueva cita</Button>}
+                />
+              ) : null}
             </CardHeader>
             <CardContent>
               <Table>
@@ -528,6 +558,7 @@ export default async function PacienteDetallePage({
                     <TableHead>Tratamiento</TableHead>
                     <TableHead>Profesional</TableHead>
                     <TableHead>Estado</TableHead>
+                    <TableHead />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -542,13 +573,26 @@ export default async function PacienteDetallePage({
                         {c.profesional?.nombre ?? "—"}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline">{c.estado}</Badge>
+                        <Badge variant="outline">{ESTADO_LABEL[c.estado] ?? c.estado}</Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <EstadoAcciones
+                          cita={c}
+                          puedeEditar={!!puedeEditarCita}
+                          puedeCrearTratamiento={!!puedeCrearTratamiento}
+                          pacientes={[{ id: paciente.id, nombre: nombreCompleto(paciente) }]}
+                          tiposTratamiento={tiposTratamiento}
+                          profesionales={profesionales}
+                          sedes={sedes}
+                          mediosPago={mediosPago}
+                          usuarioActualId={usuario.id}
+                        />
                       </TableCell>
                     </TableRow>
                   ))}
                   {citas.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center text-muted-foreground">
+                      <TableCell colSpan={6} className="text-center text-muted-foreground">
                         Sin citas registradas.
                       </TableCell>
                     </TableRow>

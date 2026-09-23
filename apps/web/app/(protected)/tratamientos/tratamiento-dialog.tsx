@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Combobox } from "@/components/ui/combobox";
 import { toItems, type Opcion } from "@/lib/forms/opciones";
+import { hoy } from "@/lib/format";
 
 type Correccion = {
   id: string;
@@ -42,10 +43,6 @@ type DesdeCita = {
 type DesdePaciente = {
   id: string;
 };
-
-function hoy() {
-  return new Date().toISOString().slice(0, 10);
-}
 
 export function TratamientoDialog({
   pacientes,

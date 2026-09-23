@@ -179,3 +179,53 @@ export async function cancelarCita(id: string, motivo: string) {
 export async function marcarNoAsistio(id: string) {
   await cambiarEstado(id, "no_asistio");
 }
+
+// Reprogramar no es solo cambiar la fecha de la cita existente: la
+// original queda como "reprogramada" (libera su horario para el
+// detector de choques) y se crea una cita nueva con la fecha/hora
+// elegida, para que quede registro de que se movió en vez de perder
+// el dato de cuándo estaba agendada antes.
+export async function reprogramarCita(
+  id: string,
+  datos: { fecha: string; horaInicio: string; horaFin: string },
+) {
+  if (!datos.fecha || !datos.horaInicio || !datos.horaFin) {
+    throw new Error("Fecha, hora de inicio y hora de fin son obligatorias.");
+  }
+  if (datos.horaFin <= datos.horaInicio) {
+    throw new Error("La hora de fin debe ser posterior a la hora de inicio.");
+  }
+
+  const check = await requirePermiso("EDIT");
+  if (!check.ok) throw new Error(check.error);
+
+  const supabase = await createClient();
+  const { data: original } = await supabase
+    .from("citas")
+    .select("clinica_id, paciente_id, profesional_id, consultorio_id, tipo_tratamiento_id")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (!original) throw new Error("La cita no existe.");
+
+  const { error: nuevaError } = await supabase.from("citas").insert({
+    clinica_id: original.clinica_id,
+    paciente_id: original.paciente_id,
+    profesional_id: original.profesional_id,
+    consultorio_id: original.consultorio_id,
+    tipo_tratamiento_id: original.tipo_tratamiento_id,
+    fecha: datos.fecha,
+    hora_inicio: datos.horaInicio,
+    hora_fin: datos.horaFin,
+    created_by: check.usuario.id,
+  });
+  if (nuevaError) throw new Error("No se pudo crear la nueva cita.");
+
+  const { error: anteriorError } = await supabase
+    .from("citas")
+    .update({ estado: "reprogramada" })
+    .eq("id", id);
+  if (anteriorError) throw new Error("La cita nueva ya se creó, pero no se pudo marcar la original como reprogramada.");
+
+  revalidatePath("/citas");
+}

@@ -18,6 +18,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { toItems, type Opcion } from "@/lib/forms/opciones";
 
 type Consultorio = { id: string; nombre: string; sede_id: string };
+type DesdePaciente = { id: string };
 
 const OPCIONES_HORA = opcionesHora();
 
@@ -30,6 +31,7 @@ export function CitaDialog({
   fechaSeleccionada,
   horaInicioSeleccionada,
   sedeInicial,
+  desdePaciente,
   trigger,
   open: openControlado,
   onOpenChange: onOpenChangeControlado,
@@ -42,6 +44,7 @@ export function CitaDialog({
   fechaSeleccionada: string;
   horaInicioSeleccionada?: string;
   sedeInicial?: string;
+  desdePaciente?: DesdePaciente;
   trigger?: React.ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -88,6 +91,7 @@ export function CitaDialog({
               name="pacienteId"
               required
               items={toItems(pacientes)}
+              defaultValue={desdePaciente?.id}
               placeholder="Selecciona un paciente"
             />
           </div>

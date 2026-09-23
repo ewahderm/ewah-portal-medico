@@ -29,4 +29,5 @@ export const ESTADO_LABEL: Record<string, string> = {
   atendida: "Atendida",
   cancelada: "Cancelada",
   no_asistio: "No asistió",
+  reprogramada: "Reprogramada",
 };
