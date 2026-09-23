@@ -464,7 +464,10 @@ export default async function PacienteDetallePage({
                       <TableCell className="text-muted-foreground">
                         {formatoMoneda(t.costo)}
                       </TableCell>
-                      <TableCell className="flex flex-wrap justify-end gap-2 text-right">
+                      {/* Sin flex-wrap a propósito: ver el comentario en
+                          /tratamientos — un <td> flex que envuelve se encoge
+                          al ancho de un solo botón y los apila en columna. */}
+                      <TableCell className="flex justify-end gap-2 text-right">
                         <InsumosDialog
                           tratamientoId={t.id}
                           sedeId={t.sede_id}

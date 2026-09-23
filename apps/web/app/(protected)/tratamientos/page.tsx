@@ -212,7 +212,14 @@ export default async function TratamientosPage() {
                   <TableCell className="max-w-xs text-muted-foreground">
                     {t.notas ?? "—"}
                   </TableCell>
-                  <TableCell className="flex flex-wrap justify-end gap-2 text-right">
+                  {/* Sin flex-wrap a propósito: en una tabla de layout "auto"
+                      un <td> flex que puede envolver se encoge hasta el ancho
+                      de un solo botón (el motor de columnas lo trata como
+                      infinitamente comprimible), apilando los 5 botones en
+                      una sola columna vertical. Sin wrap, el contenedor de
+                      la tabla (overflow-x-auto) hace scroll horizontal en
+                      vez de apilar. */}
+                  <TableCell className="flex justify-end gap-2 text-right">
                     <InsumosDialog
                       tratamientoId={t.id}
                       sedeId={t.sede_id}
