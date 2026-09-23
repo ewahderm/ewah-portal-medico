@@ -10,6 +10,7 @@ import { requireUsuario } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { nombreCompleto } from "@/lib/pacientes/nombre";
 import { formatoMoneda } from "@/lib/format";
+import { getSedesActivas, getMediosPagoActivos, getTiposTratamientoActivos } from "@/lib/catalogos";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -116,10 +117,10 @@ export default async function PacienteDetallePage({
   const [
     { data: puedeCrearContacto },
     { data: puedeCrearTratamiento },
-    { data: tiposTratamientoData },
+    tiposTratamientoData,
     { data: profesionalesData },
-    { data: sedesData },
-    { data: mediosPagoData },
+    sedesData,
+    mediosPagoData,
     { data: tratamientosData },
     { data: citasData },
     { data: contactosData },
@@ -127,10 +128,10 @@ export default async function PacienteDetallePage({
   ] = await Promise.all([
     supabase.rpc("has_permission", { modulo_code: "pacientes", permiso_code: "CREATE" }),
     supabase.rpc("has_permission", { modulo_code: "tratamientos", permiso_code: "CREATE" }),
-    supabase.from("tipos_tratamiento").select("id, nombre").eq("activo", true).order("orden"),
+    getTiposTratamientoActivos(supabase),
     supabase.from("usuarios").select("id, nombre").eq("activo", true).order("nombre"),
-    supabase.from("sedes").select("id, nombre").eq("activo", true).order("orden"),
-    supabase.from("medios_pago").select("id, nombre").eq("activo", true).order("orden"),
+    getSedesActivas(supabase),
+    getMediosPagoActivos(supabase),
     supabase
       .from("tratamientos")
       .select(

@@ -55,7 +55,12 @@ export function InventarioTabs({
       </TabsList>
 
       <TabsContent value="actual" className="pt-4">
-        <InventarioActualTab lotes={lotes} sedes={sedes} puedeAjustar={puedeAjustar} />
+        <InventarioActualTab
+          lotes={lotes}
+          sedes={sedes}
+          puedeAjustar={puedeAjustar}
+          puedeTrasladar={puedeCrear}
+        />
       </TabsContent>
 
       {puedeCrear ? (

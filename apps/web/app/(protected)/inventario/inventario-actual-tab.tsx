@@ -43,10 +43,12 @@ export function InventarioActualTab({
   lotes,
   sedes,
   puedeAjustar,
+  puedeTrasladar,
 }: {
   lotes: LoteRow[];
   sedes: Opcion[];
   puedeAjustar: boolean;
+  puedeTrasladar: boolean;
 }) {
   const [sedeId, setSedeId] = useState(TODAS);
 
@@ -155,13 +157,15 @@ export function InventarioActualTab({
                     </TableCell>
                     <TableCell className="text-muted-foreground">{formatoMoneda(l.costo_unitario)}</TableCell>
                     <TableCell className="flex justify-end gap-2 text-right">
-                      <TrasladoDialog
-                        loteId={l.id}
-                        insumoNombre={l.insumos?.nombre ?? "Insumo"}
-                        numeroLote={l.numero_lote}
-                        sedeOrigenNombre={l.sedes?.nombre ?? "—"}
-                        sedesDestino={sedes.filter((s) => s.id !== l.sede_id)}
-                      />
+                      {puedeTrasladar ? (
+                        <TrasladoDialog
+                          loteId={l.id}
+                          insumoNombre={l.insumos?.nombre ?? "Insumo"}
+                          numeroLote={l.numero_lote}
+                          sedeOrigenNombre={l.sedes?.nombre ?? "—"}
+                          sedesDestino={sedes.filter((s) => s.id !== l.sede_id)}
+                        />
+                      ) : null}
                       {puedeAjustar ? <AjusteDialog loteId={l.id} /> : null}
                     </TableCell>
                   </TableRow>

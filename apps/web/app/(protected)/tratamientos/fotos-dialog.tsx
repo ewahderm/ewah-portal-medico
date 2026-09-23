@@ -140,6 +140,17 @@ function FotoColumna({
   onSubir: (formData: FormData) => void;
   onEliminar: (id: string, storagePath: string) => void;
 }) {
+  const [confirmandoId, setConfirmandoId] = useState<string | null>(null);
+
+  function handleClickEliminar(foto: Foto) {
+    if (confirmandoId === foto.id) {
+      setConfirmandoId(null);
+      onEliminar(foto.id, foto.storage_path);
+    } else {
+      setConfirmandoId(foto.id);
+    }
+  }
+
   return (
     <div className="space-y-3">
       <Label>{titulo}</Label>
@@ -157,11 +168,19 @@ function FotoColumna({
               {puedeEliminar ? (
                 <button
                   type="button"
-                  onClick={() => onEliminar(foto.id, foto.storage_path)}
+                  onClick={() => handleClickEliminar(foto)}
+                  onBlur={() => setConfirmandoId(null)}
                   disabled={pending}
-                  className="absolute top-1 right-1 rounded-full bg-black/60 px-1.5 py-0.5 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100"
+                  aria-label={
+                    confirmandoId === foto.id ? "Confirmar eliminación de foto" : "Eliminar foto"
+                  }
+                  className={`absolute top-1 right-1 rounded-full px-1.5 py-0.5 text-xs text-white transition-opacity ${
+                    confirmandoId === foto.id
+                      ? "bg-destructive opacity-100"
+                      : "bg-black/60 opacity-0 group-hover:opacity-100"
+                  }`}
                 >
-                  ✕
+                  {confirmandoId === foto.id ? "¿Seguro?" : "✕"}
                 </button>
               ) : null}
             </div>
@@ -182,7 +201,7 @@ function FotoColumna({
             required
           />
           <Button type="submit" size="sm" variant="outline" disabled={pending}>
-            Subir
+            {pending ? "Subiendo..." : "Subir"}
           </Button>
         </form>
       ) : null}

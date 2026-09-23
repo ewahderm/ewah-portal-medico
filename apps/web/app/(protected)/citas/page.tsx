@@ -8,6 +8,7 @@ import { BloqueoDialog } from "./bloqueo-dialog";
 import { FiltrosAgenda } from "./filtros-agenda";
 import { AgendaCalendario } from "./agenda-calendario";
 import { nombreCompleto, type CitaRow } from "./tipos";
+import { getSedesActivas, getMediosPagoActivos, getTiposTratamientoActivos } from "@/lib/catalogos";
 
 type Vista = "day" | "week" | "month";
 
@@ -73,9 +74,9 @@ export default async function CitasPage({
     { data: pacientesData },
     { data: profesionalesData },
     { data: consultoriosData },
-    { data: sedesData },
-    { data: tiposTratamientoData },
-    { data: mediosPagoData },
+    sedesData,
+    tiposTratamientoData,
+    mediosPagoData,
   ] = await Promise.all([
     supabase.rpc("has_permission", { modulo_code: "citas", permiso_code: "CREATE" }),
     supabase.rpc("has_permission", { modulo_code: "citas", permiso_code: "EDIT" }),
@@ -91,13 +92,9 @@ export default async function CitasPage({
       .select("id, nombre, sede_id")
       .eq("activo", true)
       .order("orden"),
-    supabase.from("sedes").select("id, nombre").eq("activo", true).order("orden"),
-    supabase
-      .from("tipos_tratamiento")
-      .select("id, nombre")
-      .eq("activo", true)
-      .order("orden"),
-    supabase.from("medios_pago").select("id, nombre").eq("activo", true).order("orden"),
+    getSedesActivas(supabase),
+    getTiposTratamientoActivos(supabase),
+    getMediosPagoActivos(supabase),
   ]);
 
   // consultorio_id es opcional en un bloqueo de día completo (no depende

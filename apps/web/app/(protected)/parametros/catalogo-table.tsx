@@ -85,6 +85,13 @@ export function CatalogoTable({
               </TableCell>
             </TableRow>
           ))}
+          {valores.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={3} className="text-center text-muted-foreground">
+                Todavía no hay valores registrados en este catálogo.
+              </TableCell>
+            </TableRow>
+          ) : null}
         </TableBody>
       </Table>
     </div>

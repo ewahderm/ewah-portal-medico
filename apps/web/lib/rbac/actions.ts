@@ -125,17 +125,19 @@ export async function toggleRolPermiso(
   }
 
   if (concedido) {
-    await supabase
+    const { error } = await supabase
       .from("rol_modulo_permiso")
       .upsert(
         { rol_id: rolId, modulo_id: moduloId, permiso_id: permisoId, concedido: true },
         { onConflict: "rol_id,modulo_id,permiso_id" },
       );
+    if (error) throw new Error("No se pudo conceder el permiso.");
   } else {
-    await supabase
+    const { error } = await supabase
       .from("rol_modulo_permiso")
       .delete()
       .match({ rol_id: rolId, modulo_id: moduloId, permiso_id: permisoId });
+    if (error) throw new Error("No se pudo quitar el permiso.");
   }
 
   revalidatePath("/usuarios");

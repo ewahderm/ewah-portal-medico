@@ -2,9 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { requirePermiso } from "@/lib/auth/requirePermiso";
+import { requirePermiso as requirePermisoBase } from "@/lib/auth/requirePermiso";
 import { valorOpcionalSelect, campoOpcional } from "@/lib/forms/opcional";
 import type { ActionState } from "@/lib/auth/actions";
+
+function requirePermiso(permiso: "CREATE" | "EDIT") {
+  return requirePermisoBase("campanas", permiso);
+}
 
 function datosCampanaDesdeForm(formData: FormData) {
   return {
@@ -15,6 +19,13 @@ function datosCampanaDesdeForm(formData: FormData) {
     presupuesto: campoOpcional(formData, "presupuesto"),
     objetivo: campoOpcional(formData, "objetivo"),
   };
+}
+
+function validarRangoFechas(fechaInicio: string | null, fechaFin: string | null): string | null {
+  if (fechaInicio && fechaFin && fechaFin < fechaInicio) {
+    return "La fecha de fin debe ser posterior a la fecha de inicio.";
+  }
+  return null;
 }
 
 export async function crearCampana(
@@ -29,7 +40,10 @@ export async function crearCampana(
     return { error: "El presupuesto debe ser un número válido." };
   }
 
-  const check = await requirePermiso("campanas", "CREATE");
+  const errorFechas = validarRangoFechas(datos.fecha_inicio, datos.fecha_fin);
+  if (errorFechas) return { error: errorFechas };
+
+  const check = await requirePermiso("CREATE");
   if (!check.ok) return { error: check.error };
 
   const supabase = await createClient();
@@ -65,7 +79,10 @@ export async function actualizarCampana(
     return { error: "El presupuesto debe ser un número válido." };
   }
 
-  const check = await requirePermiso("campanas", "EDIT");
+  const errorFechas = validarRangoFechas(datos.fecha_inicio, datos.fecha_fin);
+  if (errorFechas) return { error: errorFechas };
+
+  const check = await requirePermiso("EDIT");
   if (!check.ok) return { error: check.error };
 
   const supabase = await createClient();
@@ -88,7 +105,7 @@ export async function actualizarCampana(
 }
 
 export async function toggleActivoCampana(id: string, activo: boolean) {
-  const check = await requirePermiso("campanas", "EDIT");
+  const check = await requirePermiso("EDIT");
   if (!check.ok) throw new Error(check.error);
 
   const supabase = await createClient();

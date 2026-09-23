@@ -3,6 +3,7 @@ import { requireUsuario } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { InventarioTabs } from "./inventario-tabs";
+import { getSedesActivas } from "@/lib/catalogos";
 
 type LoteRow = {
   id: string;
@@ -39,13 +40,13 @@ export default async function InventarioPage() {
     { data: puedeCrear },
     { data: puedeAjustar },
     { data: insumosData },
-    { data: sedesData },
+    sedesData,
     { data: lotesData },
   ] = await Promise.all([
     supabase.rpc("has_permission", { modulo_code: "inventario", permiso_code: "CREATE" }),
     supabase.rpc("has_permission", { modulo_code: "inventario", permiso_code: "VOID" }),
     supabase.from("insumos").select("id, nombre").eq("activo", true).order("orden"),
-    supabase.from("sedes").select("id, nombre").eq("activo", true).order("orden"),
+    getSedesActivas(supabase),
     supabase
       .from("lotes")
       .select(

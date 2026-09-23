@@ -44,6 +44,7 @@ export function AnexosDialog({
   const [anexos, setAnexos] = useState<Anexo[]>([]);
   const [categoria, setCategoria] = useState<string>(CATEGORIAS_ANEXO[0]);
   const [error, setError] = useState<string | null>(null);
+  const [confirmandoId, setConfirmandoId] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   function cargar() {
@@ -75,6 +76,15 @@ export function AnexosDialog({
         setError(e instanceof Error ? e.message : "No se pudo eliminar el anexo.");
       }
     });
+  }
+
+  function handleClickEliminar(anexo: Anexo) {
+    if (confirmandoId === anexo.id) {
+      setConfirmandoId(null);
+      handleEliminar(anexo.id, anexo.storage_path);
+    } else {
+      setConfirmandoId(anexo.id);
+    }
   }
 
   return (
@@ -133,11 +143,19 @@ export function AnexosDialog({
                 {puedeEliminar ? (
                   <button
                     type="button"
-                    onClick={() => handleEliminar(anexo.id, anexo.storage_path)}
+                    onClick={() => handleClickEliminar(anexo)}
+                    onBlur={() => setConfirmandoId(null)}
                     disabled={pending}
-                    className="absolute top-1 right-1 rounded-full bg-black/60 px-1.5 py-0.5 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100"
+                    aria-label={
+                      confirmandoId === anexo.id ? "Confirmar eliminación de anexo" : "Eliminar anexo"
+                    }
+                    className={`absolute top-1 right-1 rounded-full px-1.5 py-0.5 text-xs text-white transition-opacity ${
+                      confirmandoId === anexo.id
+                        ? "bg-destructive opacity-100"
+                        : "bg-black/60 opacity-0 group-hover:opacity-100"
+                    }`}
                   >
-                    ✕
+                    {confirmandoId === anexo.id ? "¿Seguro?" : "✕"}
                   </button>
                 ) : null}
               </div>
@@ -170,7 +188,7 @@ export function AnexosDialog({
                 required
               />
               <Button type="submit" size="sm" variant="outline" disabled={pending}>
-                Subir
+                {pending ? "Subiendo..." : "Subir"}
               </Button>
             </div>
           </form>

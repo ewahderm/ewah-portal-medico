@@ -3,6 +3,7 @@ import { requireUsuario } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { nombreCompleto } from "@/lib/pacientes/nombre";
 import { formatoMoneda } from "@/lib/format";
+import { getSedesActivas, getMediosPagoActivos, getTiposTratamientoActivos } from "@/lib/catalogos";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -68,11 +69,12 @@ export default async function TratamientosPage() {
     { data: puedeCrear },
     { data: puedeAnular },
     { data: puedeRegistrarConsumo },
+    { data: puedeRevertirConsumo },
     { data: pacientesData },
-    { data: tiposTratamiento },
+    tiposTratamiento,
     { data: profesionales },
-    { data: sedes },
-    { data: mediosPago },
+    sedes,
+    mediosPago,
     { data: insumosData },
     { data: lotesData },
     { data: fotosData },
@@ -82,19 +84,16 @@ export default async function TratamientosPage() {
     supabase.rpc("has_permission", { modulo_code: "tratamientos", permiso_code: "CREATE" }),
     supabase.rpc("has_permission", { modulo_code: "tratamientos", permiso_code: "VOID" }),
     supabase.rpc("has_permission", { modulo_code: "inventario", permiso_code: "CREATE" }),
+    supabase.rpc("has_permission", { modulo_code: "inventario", permiso_code: "VOID" }),
     supabase
       .from("pacientes")
       .select("id, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido")
       .eq("activo", true)
       .order("primer_apellido"),
-    supabase
-      .from("tipos_tratamiento")
-      .select("id, nombre")
-      .eq("activo", true)
-      .order("orden"),
+    getTiposTratamientoActivos(supabase),
     supabase.from("usuarios").select("id, nombre").eq("activo", true).order("nombre"),
-    supabase.from("sedes").select("id, nombre").eq("activo", true).order("orden"),
-    supabase.from("medios_pago").select("id, nombre").eq("activo", true).order("orden"),
+    getSedesActivas(supabase),
+    getMediosPagoActivos(supabase),
     supabase.from("insumos").select("id, nombre").eq("activo", true).order("orden"),
     supabase
       .from("lotes")
@@ -218,6 +217,7 @@ export default async function TratamientosPage() {
                       insumos={insumos}
                       lotes={lotes}
                       puedeRegistrar={!!puedeRegistrarConsumo}
+                      puedeRevertir={!!puedeRevertirConsumo}
                     />
                     <FotosDialog
                       tratamientoId={t.id}

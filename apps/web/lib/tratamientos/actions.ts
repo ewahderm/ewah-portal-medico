@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentUsuario } from "@/lib/auth/session";
+import { getCurrentUsuario, esAdministrador } from "@/lib/auth/session";
 import { requirePermiso as requirePermisoBase } from "@/lib/auth/requirePermiso";
 import { campoOpcional } from "@/lib/forms/opcional";
 import { CATEGORIAS_ANEXO } from "./anexos";
@@ -155,6 +155,10 @@ export async function subirFotoTratamiento(
 export async function eliminarFotoTratamiento(id: string, storagePath: string) {
   const usuario = await getCurrentUsuario();
   if (!usuario) throw new Error("Sesión inválida.");
+  // La política de RLS ya solo permite este DELETE a un administrador
+  // (es_admin()) — se repite aquí para dar un mensaje claro en vez de
+  // dejar que falle con el error crudo de la base de datos.
+  if (!esAdministrador(usuario)) throw new Error("Solo un administrador puede eliminar fotos.");
 
   const supabase = await createClient();
   const { error: storageError } = await supabase.storage
@@ -242,6 +246,9 @@ export async function subirAnexoTratamiento(
 export async function eliminarAnexoTratamiento(id: string, storagePath: string) {
   const usuario = await getCurrentUsuario();
   if (!usuario) throw new Error("Sesión inválida.");
+  // Mismo motivo que en eliminarFotoTratamiento: RLS ya lo exige, esto solo
+  // da un mensaje claro en vez de un error crudo.
+  if (!esAdministrador(usuario)) throw new Error("Solo un administrador puede eliminar anexos.");
 
   const supabase = await createClient();
   const { error: storageError } = await supabase.storage

@@ -108,6 +108,13 @@ export default async function UsuariosPage() {
                   </TableCell>
                 </TableRow>
               ))}
+              {(usuarios ?? []).length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center text-muted-foreground">
+                    Todavía no hay usuarios registrados.
+                  </TableCell>
+                </TableRow>
+              ) : null}
             </TableBody>
           </Table>
         </CardContent>
@@ -153,6 +160,13 @@ export default async function UsuariosPage() {
                   </TableCell>
                 </TableRow>
               ))}
+              {(roles ?? []).length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={3} className="text-center text-muted-foreground">
+                    Todavía no hay roles registrados.
+                  </TableCell>
+                </TableRow>
+              ) : null}
             </TableBody>
           </Table>
         </CardContent>

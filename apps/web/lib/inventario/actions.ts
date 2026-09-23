@@ -366,8 +366,15 @@ export async function listarConsumoTratamiento(tratamientoId: string) {
   return data ?? [];
 }
 
-export async function revertirConsumo(movimientoId: string) {
-  const check = await requirePermiso("CREATE");
+export async function revertirConsumo(movimientoId: string, motivo: string) {
+  if (!motivo.trim()) throw new Error("El motivo de la reversa es obligatorio.");
+
+  // Mismo nivel de permiso que anular un tratamiento o ajustar stock — no
+  // el permiso operativo básico (CREATE) que cualquiera usa para registrar
+  // un consumo normal. Revertir borra de facto el rastro de uso de un
+  // insumo, así que exige la misma autorización elevada que cualquier otra
+  // corrección del sistema.
+  const check = await requirePermiso("VOID");
   if (!check.ok) throw new Error(check.error);
 
   const supabase = await createClient();
@@ -396,6 +403,7 @@ export async function revertirConsumo(movimientoId: string) {
     cantidad: original.cantidad,
     tratamiento_id: original.tratamiento_id,
     revierte_movimiento_id: original.id,
+    motivo: motivo.trim(),
     created_by: check.usuario.id,
   });
   if (error) throw new Error("No se pudo revertir el consumo.");
