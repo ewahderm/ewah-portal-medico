@@ -45,8 +45,8 @@ import { FotosDialog } from "../../tratamientos/fotos-dialog";
 import { AnexosDialog } from "../../tratamientos/anexos-dialog";
 import { InsumosDialog } from "../../tratamientos/insumos-dialog";
 import { CitaDialog } from "../../citas/cita-dialog";
-import { EstadoAcciones } from "../../citas/estado-acciones";
-import { ESTADO_LABEL } from "../../citas/tipos";
+import { CitasTabla } from "./citas-tabla";
+import type { CitaRow } from "../../citas/tipos";
 
 const TIPO_CONTACTO_LABEL: Record<string, string> = {
   llamada: "Llamada",
@@ -107,21 +107,6 @@ type TratamientoRow = {
   tipos_tratamiento: { nombre: string } | null;
   sedes: { nombre: string } | null;
   profesional: { nombre: string } | null;
-};
-
-type CitaRow = {
-  id: string;
-  fecha: string;
-  hora_inicio: string;
-  hora_fin: string;
-  estado: string;
-  paciente_id: string | null;
-  profesional_id: string;
-  tipo_tratamiento_id: string | null;
-  tipos_tratamiento: { nombre: string } | null;
-  profesional: { nombre: string } | null;
-  consultorios: { sede_id: string | null } | null;
-  tratamientos_count: number;
 };
 
 type Consultorio = { id: string; nombre: string; sede_id: string };
@@ -262,10 +247,12 @@ export default async function PacienteDetallePage({
     supabase
       .from("citas")
       .select(
-        `id, fecha, hora_inicio, hora_fin, estado, paciente_id, profesional_id, tipo_tratamiento_id,
+        `id, fecha, hora_inicio, hora_fin, estado, es_bloqueo, todo_el_dia, motivo,
+         paciente_id, profesional_id, tipo_tratamiento_id,
+         pacientes(primer_nombre, segundo_nombre, primer_apellido, segundo_apellido),
          tipos_tratamiento(nombre),
          profesional:usuarios!citas_profesional_id_fkey(nombre),
-         consultorios(sede_id),
+         consultorios(nombre, sede_id, sedes(nombre)),
          tratamientos(count)`,
       )
       .eq("paciente_id", id)
@@ -578,56 +565,22 @@ export default async function PacienteDetallePage({
               ) : null}
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Fecha</TableHead>
-                    <TableHead>Hora</TableHead>
-                    <TableHead>Tratamiento</TableHead>
-                    <TableHead>Profesional</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {citas.map((c) => (
-                    <TableRow key={c.id}>
-                      <TableCell className="text-muted-foreground">{c.fecha}</TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {c.hora_inicio.slice(0, 5)}
-                      </TableCell>
-                      <TableCell>{c.tipos_tratamiento?.nombre ?? "—"}</TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {c.profesional?.nombre ?? "—"}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{ESTADO_LABEL[c.estado] ?? c.estado}</Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <EstadoAcciones
-                          cita={c}
-                          puedeEditar={!!puedeEditarCita}
-                          puedeCrearTratamiento={!!puedeCrearTratamiento}
-                          pacientes={[{ id: paciente.id, nombre: nombreCompleto(paciente) }]}
-                          tiposTratamiento={tiposTratamiento}
-                          profesionales={profesionales}
-                          sedes={sedes}
-                          mediosPago={mediosPago}
-                          usuarioActualId={usuario.id}
-                          pacientesPendientes={pacientesPendientes}
-                        />
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {citas.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground">
-                        Sin citas registradas.
-                      </TableCell>
-                    </TableRow>
-                  ) : null}
-                </TableBody>
-              </Table>
+              <CitasTabla
+                citas={citas}
+                puedeEditar={!!puedeEditarCita}
+                puedeCrearTratamiento={!!puedeCrearTratamiento}
+                pacientes={[{ id: paciente.id, nombre: nombreCompleto(paciente) }]}
+                tiposTratamiento={tiposTratamiento}
+                profesionales={profesionales}
+                sedes={sedes}
+                mediosPago={mediosPago}
+                usuarioActualId={usuario.id}
+                pacientesPendientes={pacientesPendientes}
+                insumos={insumos}
+                lotes={lotes}
+                puedeRegistrarConsumo={!!puedeRegistrarConsumo}
+                puedeRevertirConsumo={!!puedeRevertirConsumo}
+              />
             </CardContent>
           </Card>
         </TabsContent>
