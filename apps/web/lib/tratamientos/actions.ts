@@ -19,6 +19,20 @@ function requirePermiso(permiso: "CREATE" | "VOID") {
   return requirePermisoBase("tratamientos", permiso);
 }
 
+// El botón de Fotos/Anexos (con su marca de "tiene archivos") vive en 3
+// pantallas — /tratamientos, la ficha del paciente y el detalle de una
+// cita — pero antes solo se revalidaba /tratamientos: subir o borrar un
+// archivo desde las otras dos no actualizaba la marca hasta salir y
+// volver a entrar. `/pacientes/[id]` es una ruta dinámica: revalidarla
+// por patrón (`'page'`) cubre cualquier paciente, no solo uno — incluye
+// el segmento de grupo de rutas `(protected)` porque revalidatePath con
+// patrón opera sobre la estructura de archivos, no sobre la URL visible.
+function revalidarPantallasDeArchivos() {
+  revalidatePath("/tratamientos");
+  revalidatePath("/(protected)/pacientes/[id]", "page");
+  revalidatePath("/citas");
+}
+
 // Repetido en crearTratamiento y editarTratamiento (ambas insertan una fila
 // nueva en tratamientos) — se valida siempre en el servidor, sin confiar en
 // que el botón ya venga deshabilitado desde el cliente.
@@ -310,7 +324,7 @@ export async function subirFotoTratamiento(
   });
   if (insertError) throw new Error("No se pudo registrar la foto.");
 
-  revalidatePath("/tratamientos");
+  revalidarPantallasDeArchivos();
 }
 
 export async function eliminarFotoTratamiento(id: string, storagePath: string) {
@@ -330,14 +344,14 @@ export async function eliminarFotoTratamiento(id: string, storagePath: string) {
   const { error } = await supabase.from("tratamiento_fotos").delete().eq("id", id);
   if (error) throw new Error("No se pudo eliminar la foto.");
 
-  revalidatePath("/tratamientos");
+  revalidarPantallasDeArchivos();
 }
 
-export async function urlFirmadaFoto(storagePath: string) {
+export async function urlFirmadaFoto(storagePath: string, descargar = false) {
   const supabase = await createClient();
   const { data, error } = await supabase.storage
     .from("tratamiento-fotos")
-    .createSignedUrl(storagePath, 60 * 10);
+    .createSignedUrl(storagePath, 60 * 10, descargar ? { download: true } : undefined);
   if (error || !data) return null;
   return data.signedUrl;
 }
@@ -401,7 +415,7 @@ export async function subirAnexoTratamiento(
   });
   if (insertError) throw new Error("No se pudo registrar el anexo.");
 
-  revalidatePath("/tratamientos");
+  revalidarPantallasDeArchivos();
 }
 
 export async function eliminarAnexoTratamiento(id: string, storagePath: string) {
@@ -420,14 +434,14 @@ export async function eliminarAnexoTratamiento(id: string, storagePath: string) 
   const { error } = await supabase.from("tratamiento_anexos").delete().eq("id", id);
   if (error) throw new Error("No se pudo eliminar el anexo.");
 
-  revalidatePath("/tratamientos");
+  revalidarPantallasDeArchivos();
 }
 
-export async function urlFirmadaAnexo(storagePath: string) {
+export async function urlFirmadaAnexo(storagePath: string, descargar = false) {
   const supabase = await createClient();
   const { data, error } = await supabase.storage
     .from("tratamiento-anexos")
-    .createSignedUrl(storagePath, 60 * 10);
+    .createSignedUrl(storagePath, 60 * 10, descargar ? { download: true } : undefined);
   if (error || !data) return null;
   return data.signedUrl;
 }
@@ -443,17 +457,40 @@ export async function listarTratamientosDeCita(citaId: string) {
   const supabase = await createClient();
   const { data } = await supabase
     .from("tratamientos")
-    .select("id, costo, anulado, sede_id, tipos_tratamiento(nombre)")
+    .select(
+      "id, costo, anulado, sede_id, tipos_tratamiento(nombre), tratamiento_fotos(count), tratamiento_anexos(count)",
+    )
     .eq("cita_id", citaId)
     .eq("clinica_id", usuario.clinica_id)
     .order("created_at");
 
-  return (data ?? []) as unknown as {
+  return (data ?? []).map((fila) => {
+    const t = fila as unknown as {
+      id: string;
+      costo: number | null;
+      anulado: boolean;
+      sede_id: string;
+      tipos_tratamiento: { nombre: string } | null;
+      tratamiento_fotos?: { count: number }[];
+      tratamiento_anexos?: { count: number }[];
+    };
+    return {
+      id: t.id,
+      costo: t.costo,
+      anulado: t.anulado,
+      sede_id: t.sede_id,
+      tipos_tratamiento: t.tipos_tratamiento,
+      tieneFotos: (t.tratamiento_fotos?.[0]?.count ?? 0) > 0,
+      tieneAnexos: (t.tratamiento_anexos?.[0]?.count ?? 0) > 0,
+    };
+  }) as {
     id: string;
     costo: number | null;
     anulado: boolean;
     sede_id: string;
     tipos_tratamiento: { nombre: string } | null;
+    tieneFotos: boolean;
+    tieneAnexos: boolean;
   }[];
 }
 

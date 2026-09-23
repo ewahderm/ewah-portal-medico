@@ -22,6 +22,8 @@ type TratamientoDeCita = {
   anulado: boolean;
   sede_id: string;
   tipos_tratamiento: { nombre: string } | null;
+  tieneFotos: boolean;
+  tieneAnexos: boolean;
 };
 
 export function CitaDetalleDialog({
@@ -203,11 +205,13 @@ export function CitaDetalleDialog({
                           tratamientoId={t.id}
                           puedeSubir={puedeCrearTratamiento}
                           puedeEliminar={puedeEliminarArchivos}
+                          tieneArchivos={t.tieneFotos}
                         />
                         <AnexosDialog
                           tratamientoId={t.id}
                           puedeSubir={puedeCrearTratamiento}
                           puedeEliminar={puedeEliminarArchivos}
+                          tieneArchivos={t.tieneAnexos}
                         />
                       </div>
                     </div>

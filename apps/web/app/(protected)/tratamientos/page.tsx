@@ -1,4 +1,3 @@
-import { CameraIcon, PaperclipIcon } from "lucide-react";
 import { requireUsuario, esAdministrador } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { nombreCompleto } from "@/lib/pacientes/nombre";
@@ -192,21 +191,9 @@ export default async function TratamientosPage() {
                   <TableCell>
                     <div className="flex flex-col gap-0.5">
                       <span
-                        className={`inline-flex items-center gap-1.5 ${t.anulado ? "text-muted-foreground line-through" : ""}`}
+                        className={t.anulado ? "text-muted-foreground line-through" : ""}
                       >
                         {t.tipos_tratamiento?.nombre ?? "—"}
-                        {tratamientosConFotos.has(t.id) ? (
-                          <CameraIcon
-                            className="size-3.5 text-muted-foreground"
-                            aria-label="Tiene fotos"
-                          />
-                        ) : null}
-                        {tratamientosConAnexos.has(t.id) ? (
-                          <PaperclipIcon
-                            className="size-3.5 text-muted-foreground"
-                            aria-label="Tiene anexos"
-                          />
-                        ) : null}
                       </span>
                       {t.anulado ? (
                         <span className="text-xs text-muted-foreground">
@@ -238,11 +225,13 @@ export default async function TratamientosPage() {
                       tratamientoId={t.id}
                       puedeSubir={!!puedeCrear}
                       puedeEliminar={!!usuario.roles && usuario.roles.nivel === 1}
+                      tieneArchivos={tratamientosConFotos.has(t.id)}
                     />
                     <AnexosDialog
                       tratamientoId={t.id}
                       puedeSubir={!!puedeCrear}
                       puedeEliminar={!!usuario.roles && usuario.roles.nivel === 1}
+                      tieneArchivos={tratamientosConAnexos.has(t.id)}
                     />
                     {!t.anulado && puedeCrear && puedeAnular ? (
                       <TratamientoDialog

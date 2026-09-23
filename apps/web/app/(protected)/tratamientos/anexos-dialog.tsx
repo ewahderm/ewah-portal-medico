@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { FileTextIcon } from "lucide-react";
+import { FileTextIcon, DownloadIcon } from "lucide-react";
 import {
   listarAnexosTratamiento,
   subirAnexoTratamiento,
   eliminarAnexoTratamiento,
+  urlFirmadaAnexo,
 } from "@/lib/tratamientos/actions";
 import { CATEGORIAS_ANEXO, CATEGORIA_ANEXO_LABEL } from "@/lib/tratamientos/anexos";
 import { Button } from "@/components/ui/button";
@@ -35,10 +36,14 @@ export function AnexosDialog({
   tratamientoId,
   puedeSubir,
   puedeEliminar,
+  tieneArchivos,
 }: {
   tratamientoId: string;
   puedeSubir: boolean;
   puedeEliminar: boolean;
+  /** Marca el botón cuando el tratamiento ya tiene al menos un anexo —
+   * para saberlo sin tener que abrir el diálogo. */
+  tieneArchivos: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [anexos, setAnexos] = useState<Anexo[]>([]);
@@ -87,6 +92,13 @@ export function AnexosDialog({
     }
   }
 
+  function handleDescargar(anexo: Anexo) {
+    startTransition(async () => {
+      const url = await urlFirmadaAnexo(anexo.storage_path, true);
+      if (url) window.open(url, "_blank");
+    });
+  }
+
   return (
     <Dialog
       open={open}
@@ -97,8 +109,18 @@ export function AnexosDialog({
     >
       <DialogTrigger
         render={
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" className="relative">
             Anexos
+            {tieneArchivos ? (
+              <>
+                <span
+                  aria-hidden
+                  title="Ya tiene anexos"
+                  className="absolute -top-1 -right-1 size-2 rounded-full bg-primary"
+                />
+                <span className="sr-only"> (ya tiene anexos)</span>
+              </>
+            ) : null}
           </Button>
         }
       />
@@ -140,6 +162,16 @@ export function AnexosDialog({
                 <p className="mt-1 text-center text-xs text-muted-foreground">
                   {CATEGORIA_ANEXO_LABEL[anexo.categoria] ?? anexo.categoria}
                 </p>
+                <button
+                  type="button"
+                  onClick={() => handleDescargar(anexo)}
+                  disabled={pending}
+                  aria-label="Descargar anexo"
+                  title="Descargar"
+                  className="absolute bottom-1 left-1 rounded-full bg-black/60 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                >
+                  <DownloadIcon className="size-3" />
+                </button>
                 {puedeEliminar ? (
                   <button
                     type="button"

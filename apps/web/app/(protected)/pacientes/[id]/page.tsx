@@ -107,6 +107,8 @@ type TratamientoRow = {
   tipos_tratamiento: { nombre: string } | null;
   sedes: { nombre: string } | null;
   profesional: { nombre: string } | null;
+  tieneFotos: boolean;
+  tieneAnexos: boolean;
 };
 
 type Consultorio = { id: string; nombre: string; sede_id: string };
@@ -240,7 +242,8 @@ export default async function PacienteDetallePage({
         `id, fecha, costo, notas, cufe, anulado, anulado_motivo,
          paciente_id, tipo_tratamiento_id, profesional_id, sede_id, medio_pago_id,
          tipos_tratamiento(nombre), sedes(nombre),
-         profesional:usuarios!tratamientos_profesional_id_fkey(nombre)`,
+         profesional:usuarios!tratamientos_profesional_id_fkey(nombre),
+         tratamiento_fotos(count), tratamiento_anexos(count)`,
       )
       .eq("paciente_id", id)
       .order("fecha", { ascending: false }),
@@ -281,7 +284,17 @@ export default async function PacienteDetallePage({
   const puedeEliminarArchivos = esAdministrador(usuario);
   const pacientePendiente = tieneInfoPendiente(paciente);
   const pacientesPendientes = pacientePendiente ? new Set([paciente.id]) : new Set<string>();
-  const tratamientosCompletos = (tratamientosData ?? []) as unknown as TratamientoRow[];
+  const tratamientosCompletos = (tratamientosData ?? []).map((t) => {
+    const fila = t as unknown as Omit<TratamientoRow, "tieneFotos" | "tieneAnexos"> & {
+      tratamiento_fotos?: { count: number }[];
+      tratamiento_anexos?: { count: number }[];
+    };
+    return {
+      ...fila,
+      tieneFotos: (fila.tratamiento_fotos?.[0]?.count ?? 0) > 0,
+      tieneAnexos: (fila.tratamiento_anexos?.[0]?.count ?? 0) > 0,
+    };
+  }) as TratamientoRow[];
   const tratamientos = puedeVerAnulados
     ? tratamientosCompletos
     : tratamientosCompletos.filter((t) => !t.anulado);
@@ -464,11 +477,13 @@ export default async function PacienteDetallePage({
                           tratamientoId={t.id}
                           puedeSubir={!!puedeCrearTratamiento}
                           puedeEliminar={puedeEliminarArchivos}
+                          tieneArchivos={t.tieneFotos}
                         />
                         <AnexosDialog
                           tratamientoId={t.id}
                           puedeSubir={!!puedeCrearTratamiento}
                           puedeEliminar={puedeEliminarArchivos}
+                          tieneArchivos={t.tieneAnexos}
                         />
                         {!t.anulado && puedeCrearTratamiento && puedeAnularTratamiento ? (
                           <TratamientoDialog
