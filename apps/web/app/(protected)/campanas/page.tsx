@@ -7,6 +7,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { UpsellPlan } from "../_components/upsell-plan";
 import { CampanaDialog } from "./campana-dialog";
 import { ToggleActivoCampanaButton } from "./toggle-activo-campana-button";
 
@@ -54,6 +55,19 @@ export default async function CampanasPage() {
       <Alert variant="destructive">
         <AlertDescription>No tienes permiso para ver esta página.</AlertDescription>
       </Alert>
+    );
+  }
+
+  const { data: tieneEntitlement } = await supabase.rpc("has_entitlement", {
+    modulo_code: "campanas",
+  });
+
+  if (!tieneEntitlement) {
+    return (
+      <UpsellPlan
+        tituloModulo="Campañas"
+        mensaje="Campañas no está activo en tu clínica todavía. Aquí se mide el embudo de captación: leads, contactados, citas agendadas y tratamientos convertidos. Esta función se activa con el plan Pro. Pídele a tu administrador que la habilite — no perderás nada de lo que ya tienes guardado en Pacientes ni en Tratamientos."
+      />
     );
   }
 

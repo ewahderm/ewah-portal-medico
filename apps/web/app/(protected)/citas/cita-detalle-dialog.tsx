@@ -44,6 +44,7 @@ export function CitaDetalleDialog({
   puedeRegistrarConsumo,
   puedeRevertirConsumo,
   puedeEliminarArchivos,
+  tieneEntitlementAnexos,
 }: {
   cita: CitaRow;
   open: boolean;
@@ -64,6 +65,10 @@ export function CitaDetalleDialog({
   /** Solo administrador — mismo criterio que /tratamientos y la pestaña
    * Tratamientos del paciente (eliminar fotos/anexos ya lo exige RLS). */
   puedeEliminarArchivos: boolean;
+  /** Anexos es sub-feature de pago dentro de Tratamientos — calculado una
+   * sola vez en la página que renderiza este diálogo (citas/page.tsx o
+   * pacientes/[id]/page.tsx) y pasado hacia abajo hasta aquí. */
+  tieneEntitlementAnexos: boolean;
 }) {
   // null = todavía cargando (o sin abrir) — distinto de un array vacío, que
   // significa "ya se consultó y de verdad no tiene tratamientos".
@@ -212,6 +217,7 @@ export function CitaDetalleDialog({
                           puedeSubir={puedeCrearTratamiento}
                           puedeEliminar={puedeEliminarArchivos}
                           tieneArchivos={t.tieneAnexos}
+                          tieneEntitlement={tieneEntitlementAnexos}
                         />
                       </div>
                     </div>

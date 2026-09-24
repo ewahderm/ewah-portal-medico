@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { FileTextIcon, DownloadIcon } from "lucide-react";
+import { FileTextIcon, DownloadIcon, LockIcon } from "lucide-react";
 import {
   listarAnexosTratamiento,
   subirAnexoTratamiento,
@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -21,6 +22,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Combobox } from "@/components/ui/combobox";
+import { UpsellPlan } from "../_components/upsell-plan";
 
 type Anexo = {
   id: string;
@@ -39,6 +41,7 @@ export function AnexosDialog({
   puedeSubir,
   puedeEliminar,
   tieneArchivos,
+  tieneEntitlement,
 }: {
   tratamientoId: string;
   puedeSubir: boolean;
@@ -46,6 +49,10 @@ export function AnexosDialog({
   /** Marca el botón cuando el tratamiento ya tiene al menos un anexo —
    * para saberlo sin tener que abrir el diálogo. */
   tieneArchivos: boolean;
+  /** false = el plan de la clínica no incluye Anexos (sub-feature de pago
+   * dentro de Tratamientos). El botón sigue siendo clickeable, pero abre
+   * el mismo Dialog mostrando la pantalla de upsell en vez de la galería. */
+  tieneEntitlement: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [anexos, setAnexos] = useState<Anexo[]>([]);
@@ -112,13 +119,23 @@ export function AnexosDialog({
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
-        if (next) cargar();
+        if (next && tieneEntitlement) cargar();
       }}
     >
       <DialogTrigger
         render={
-          <Button variant="outline" size="sm" className="relative">
+          <Button
+            variant="outline"
+            size="sm"
+            className={`relative ${!tieneEntitlement ? "border-primary/20" : ""}`}
+          >
+            {!tieneEntitlement ? <LockIcon className="size-3.5 text-primary" /> : null}
             Anexos
+            {!tieneEntitlement ? (
+              <Badge className="border border-primary/20 bg-primary/10 px-1.5 text-[9px] font-semibold tracking-wide text-primary uppercase">
+                Pro
+              </Badge>
+            ) : null}
             {tieneArchivos ? (
               <>
                 <span
@@ -137,111 +154,120 @@ export function AnexosDialog({
           <DialogTitle>Anexos del tratamiento</DialogTitle>
         </DialogHeader>
 
-        {error ? (
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        ) : null}
+        {!tieneEntitlement ? (
+          <UpsellPlan
+            tituloModulo="Anexos"
+            mensaje="Anexos no está activo en tu clínica todavía. Aquí se guardan exámenes, ecografías y otros documentos del tratamiento. Esta función se activa con el plan Pro. Pídele a tu administrador que la habilite — no perderás nada de lo que ya tienes guardado en Tratamientos."
+          />
+        ) : (
+          <>
+            {error ? (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            ) : null}
 
-        <div className="grid grid-cols-2 gap-3">
-          {anexos.map((anexo) =>
-            anexo.url ? (
-              <div key={anexo.id} className="group relative rounded-lg border p-2">
-                {anexo.content_type === "application/pdf" ? (
-                  <a
-                    href={anexo.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex flex-col items-center gap-1 py-4 text-center text-xs text-muted-foreground hover:text-foreground"
-                  >
-                    <FileTextIcon className="size-8" />
-                    <span className="line-clamp-1 max-w-full">{anexo.nombre_archivo}</span>
-                  </a>
-                ) : (
-                  <a href={anexo.url} target="_blank" rel="noreferrer">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={anexo.url}
-                      alt={anexo.nombre_archivo}
-                      className="aspect-square w-full rounded object-cover"
-                    />
-                  </a>
-                )}
-                <p className="mt-1 text-center text-xs text-muted-foreground">
-                  {CATEGORIA_ANEXO_LABEL[anexo.categoria] ?? anexo.categoria}
+            <div className="grid grid-cols-2 gap-3">
+              {anexos.map((anexo) =>
+                anexo.url ? (
+                  <div key={anexo.id} className="group relative rounded-lg border p-2">
+                    {anexo.content_type === "application/pdf" ? (
+                      <a
+                        href={anexo.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex flex-col items-center gap-1 py-4 text-center text-xs text-muted-foreground hover:text-foreground"
+                      >
+                        <FileTextIcon className="size-8" />
+                        <span className="line-clamp-1 max-w-full">{anexo.nombre_archivo}</span>
+                      </a>
+                    ) : (
+                      <a href={anexo.url} target="_blank" rel="noreferrer">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={anexo.url}
+                          alt={anexo.nombre_archivo}
+                          className="aspect-square w-full rounded object-cover"
+                        />
+                      </a>
+                    )}
+                    <p className="mt-1 text-center text-xs text-muted-foreground">
+                      {CATEGORIA_ANEXO_LABEL[anexo.categoria] ?? anexo.categoria}
+                    </p>
+                    {anexo.observaciones ? (
+                      <p className="text-center text-xs text-muted-foreground">{anexo.observaciones}</p>
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={() => handleDescargar(anexo)}
+                      disabled={pending}
+                      aria-label="Descargar anexo"
+                      title="Descargar"
+                      className="absolute bottom-1 left-1 rounded-full bg-black/60 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                    >
+                      <DownloadIcon className="size-3" />
+                    </button>
+                    {puedeEliminar ? (
+                      <button
+                        type="button"
+                        onClick={() => handleClickEliminar(anexo)}
+                        onBlur={() => setConfirmandoId(null)}
+                        disabled={pending}
+                        aria-label={
+                          confirmandoId === anexo.id ? "Confirmar eliminación de anexo" : "Eliminar anexo"
+                        }
+                        className={`absolute top-1 right-1 rounded-full px-1.5 py-0.5 text-xs text-white transition-opacity ${
+                          confirmandoId === anexo.id
+                            ? "bg-destructive opacity-100"
+                            : "bg-black/60 opacity-0 group-hover:opacity-100"
+                        }`}
+                      >
+                        {confirmandoId === anexo.id ? "¿Seguro?" : "✕"}
+                      </button>
+                    ) : null}
+                  </div>
+                ) : null,
+              )}
+              {anexos.length === 0 ? (
+                <p className="col-span-2 text-center text-sm text-muted-foreground">
+                  Sin anexos registrados todavía.
                 </p>
-                {anexo.observaciones ? (
-                  <p className="text-center text-xs text-muted-foreground">{anexo.observaciones}</p>
-                ) : null}
-                <button
-                  type="button"
-                  onClick={() => handleDescargar(anexo)}
-                  disabled={pending}
-                  aria-label="Descargar anexo"
-                  title="Descargar"
-                  className="absolute bottom-1 left-1 rounded-full bg-black/60 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100"
-                >
-                  <DownloadIcon className="size-3" />
-                </button>
-                {puedeEliminar ? (
-                  <button
-                    type="button"
-                    onClick={() => handleClickEliminar(anexo)}
-                    onBlur={() => setConfirmandoId(null)}
-                    disabled={pending}
-                    aria-label={
-                      confirmandoId === anexo.id ? "Confirmar eliminación de anexo" : "Eliminar anexo"
-                    }
-                    className={`absolute top-1 right-1 rounded-full px-1.5 py-0.5 text-xs text-white transition-opacity ${
-                      confirmandoId === anexo.id
-                        ? "bg-destructive opacity-100"
-                        : "bg-black/60 opacity-0 group-hover:opacity-100"
-                    }`}
-                  >
-                    {confirmandoId === anexo.id ? "¿Seguro?" : "✕"}
-                  </button>
-                ) : null}
-              </div>
-            ) : null,
-          )}
-          {anexos.length === 0 ? (
-            <p className="col-span-2 text-center text-sm text-muted-foreground">
-              Sin anexos registrados todavía.
-            </p>
-          ) : null}
-        </div>
+              ) : null}
+            </div>
 
-        {puedeSubir ? (
-          <form action={handleSubir} className="space-y-3 border-t pt-4">
-            <div className="space-y-2">
-              <Label htmlFor="categoriaAnexo">Categoría</Label>
-              <Combobox
-                id="categoriaAnexo"
-                items={ITEMS_CATEGORIA}
-                value={categoria}
-                onValueChange={(v) => setCategoria(String(v ?? CATEGORIAS_ANEXO[0]))}
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <input
-                type="file"
-                name="archivo"
-                accept="image/jpeg,image/png,image/webp,application/pdf"
-                className="flex-1 text-xs"
-                required
-              />
-              <Button type="submit" size="sm" variant="outline" disabled={pending}>
-                {pending ? "Subiendo..." : "Subir"}
-              </Button>
-            </div>
-            <Input
-              name="observaciones"
-              value={observaciones}
-              onChange={(e) => setObservaciones(e.target.value)}
-              placeholder="Observaciones (opcional)"
-            />
-          </form>
-        ) : null}
+            {puedeSubir ? (
+              <form action={handleSubir} className="space-y-3 border-t pt-4">
+                <div className="space-y-2">
+                  <Label htmlFor="categoriaAnexo">Categoría</Label>
+                  <Combobox
+                    id="categoriaAnexo"
+                    items={ITEMS_CATEGORIA}
+                    value={categoria}
+                    onValueChange={(v) => setCategoria(String(v ?? CATEGORIAS_ANEXO[0]))}
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="file"
+                    name="archivo"
+                    accept="image/jpeg,image/png,image/webp,application/pdf"
+                    className="flex-1 text-xs"
+                    required
+                  />
+                  <Button type="submit" size="sm" variant="outline" disabled={pending}>
+                    {pending ? "Subiendo..." : "Subir"}
+                  </Button>
+                </div>
+                <Input
+                  name="observaciones"
+                  value={observaciones}
+                  onChange={(e) => setObservaciones(e.target.value)}
+                  placeholder="Observaciones (opcional)"
+                />
+              </form>
+            ) : null}
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );

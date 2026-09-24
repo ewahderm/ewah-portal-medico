@@ -36,6 +36,7 @@ export function CitasTabla({
   puedeRegistrarConsumo,
   puedeRevertirConsumo,
   puedeEliminarArchivos,
+  tieneEntitlementAnexos,
 }: {
   citas: CitaRow[];
   puedeEditar: boolean;
@@ -58,6 +59,9 @@ export function CitasTabla({
   puedeRegistrarConsumo: boolean;
   puedeRevertirConsumo: boolean;
   puedeEliminarArchivos: boolean;
+  /** Anexos es sub-feature de pago dentro de Tratamientos — calculado una
+   * sola vez en pacientes/[id]/page.tsx y pasado hasta CitaDetalleDialog. */
+  tieneEntitlementAnexos: boolean;
 }) {
   const [citaSeleccionada, setCitaSeleccionada] = useState<CitaRow | null>(null);
 
@@ -124,6 +128,7 @@ export function CitasTabla({
           puedeRegistrarConsumo={puedeRegistrarConsumo}
           puedeRevertirConsumo={puedeRevertirConsumo}
           puedeEliminarArchivos={puedeEliminarArchivos}
+          tieneEntitlementAnexos={tieneEntitlementAnexos}
         />
       ) : null}
     </>

@@ -2,6 +2,7 @@ import { PackageIcon } from "lucide-react";
 import { requireUsuario } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { UpsellPlan } from "../_components/upsell-plan";
 import { InventarioTabs } from "./inventario-tabs";
 import { getSedesActivas } from "@/lib/catalogos";
 
@@ -33,6 +34,19 @@ export default async function InventarioPage() {
       <Alert variant="destructive">
         <AlertDescription>No tienes permiso para ver esta página.</AlertDescription>
       </Alert>
+    );
+  }
+
+  const { data: tieneEntitlement } = await supabase.rpc("has_entitlement", {
+    modulo_code: "inventario",
+  });
+
+  if (!tieneEntitlement) {
+    return (
+      <UpsellPlan
+        tituloModulo="Inventario"
+        mensaje="El control de stock y costeo de insumos no está activo en tu clínica todavía. El registro de qué se aplicó a cada paciente (en Tratamientos) sigue funcionando normal — eso nunca se bloquea. Esta función se activa con el plan Pro. Pídele a tu administrador que la habilite."
+      />
     );
   }
 

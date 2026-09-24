@@ -4,6 +4,7 @@ import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requirePermiso as requirePermisoBase } from "@/lib/auth/requirePermiso";
+import { requireEntitlement } from "@/lib/auth/requireEntitlement";
 import { campoOpcional } from "@/lib/forms/opcional";
 import type { ActionState } from "@/lib/auth/actions";
 import { MOTIVOS_ENTRADA, MOTIVOS_SALIDA } from "./motivos";
@@ -47,6 +48,9 @@ export async function crearLote(
 
   const check = await requirePermiso("CREATE");
   if (!check.ok) return { error: check.error };
+
+  const checkPlan = await requireEntitlement("inventario");
+  if (!checkPlan.ok) return { error: checkPlan.error };
 
   const supabase = await createClient();
   const { data: lote, error: loteError } = await supabase
@@ -92,6 +96,9 @@ export async function registrarAjusteLote(id: string, cantidad: number, motivo: 
   const check = await requirePermiso("VOID");
   if (!check.ok) throw new Error(check.error);
 
+  const checkPlan = await requireEntitlement("inventario");
+  if (!checkPlan.ok) throw new Error(checkPlan.error);
+
   const supabase = await createClient();
   const { error } = await supabase.from("movimientos_insumos").insert({
     clinica_id: check.usuario.clinica_id,
@@ -130,6 +137,9 @@ export async function registrarMovimiento(
 
   const check = await requirePermiso("CREATE");
   if (!check.ok) return { error: check.error };
+
+  const checkPlan = await requireEntitlement("inventario");
+  if (!checkPlan.ok) return { error: checkPlan.error };
 
   const supabase = await createClient();
   const { data: lote } = await supabase
@@ -181,6 +191,9 @@ export async function registrarTraslado(
 
   const check = await requirePermiso("CREATE");
   if (!check.ok) return { error: check.error };
+
+  const checkPlan = await requireEntitlement("inventario");
+  if (!checkPlan.ok) return { error: checkPlan.error };
 
   const supabase = await createClient();
   const { data: loteOrigen } = await supabase

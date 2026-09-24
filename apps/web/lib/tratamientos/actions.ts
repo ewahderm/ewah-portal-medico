@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUsuario, esAdministrador } from "@/lib/auth/session";
 import { requirePermiso as requirePermisoBase } from "@/lib/auth/requirePermiso";
+import { requireEntitlement } from "@/lib/auth/requireEntitlement";
 import { campoOpcional } from "@/lib/forms/opcional";
 import { CATEGORIAS_ANEXO } from "./anexos";
 import { tieneInfoPendiente } from "@/lib/pacientes/completitud";
@@ -481,6 +482,9 @@ export async function subirAnexoTratamiento(
 
   const check = await requirePermiso("CREATE");
   if (!check.ok) throw new Error(check.error);
+
+  const checkPlan = await requireEntitlement("tratamientos", "anexos");
+  if (!checkPlan.ok) throw new Error(checkPlan.error);
 
   const archivo = formData.get("archivo");
   if (!(archivo instanceof File) || archivo.size === 0) {

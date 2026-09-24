@@ -194,6 +194,7 @@ export default async function PacienteDetallePage({
     { data: puedeRevertirConsumo },
     { data: puedeCrearCita },
     { data: puedeEditarCita },
+    { data: tieneEntitlementAnexos },
     tiposIdentificacion,
     generos,
     paises,
@@ -220,6 +221,7 @@ export default async function PacienteDetallePage({
     supabase.rpc("has_permission", { modulo_code: "inventario", permiso_code: "VOID" }),
     supabase.rpc("has_permission", { modulo_code: "citas", permiso_code: "CREATE" }),
     supabase.rpc("has_permission", { modulo_code: "citas", permiso_code: "EDIT" }),
+    supabase.rpc("has_entitlement", { modulo_code: "tratamientos", feature_code: "anexos" }),
     getTiposIdentificacionActivos(supabase),
     getGenerosActivos(supabase),
     getPaisesActivos(supabase),
@@ -487,6 +489,7 @@ export default async function PacienteDetallePage({
                           puedeSubir={!!puedeCrearTratamiento}
                           puedeEliminar={puedeEliminarArchivos}
                           tieneArchivos={t.tieneAnexos}
+                          tieneEntitlement={!!tieneEntitlementAnexos}
                         />
                         {!t.anulado && puedeCrearTratamiento && puedeAnularTratamiento ? (
                           <TratamientoDialog
@@ -599,6 +602,7 @@ export default async function PacienteDetallePage({
                 puedeRegistrarConsumo={!!puedeRegistrarConsumo}
                 puedeRevertirConsumo={!!puedeRevertirConsumo}
                 puedeEliminarArchivos={puedeEliminarArchivos}
+                tieneEntitlementAnexos={!!tieneEntitlementAnexos}
               />
             </CardContent>
           </Card>

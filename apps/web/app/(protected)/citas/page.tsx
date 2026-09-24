@@ -74,6 +74,7 @@ export default async function CitasPage({
     { data: puedeCrearTratamiento },
     { data: puedeRegistrarConsumo },
     { data: puedeRevertirConsumo },
+    { data: tieneEntitlementAnexos },
     { data: pacientesData },
     { data: profesionalesData },
     { data: consultoriosData },
@@ -88,6 +89,7 @@ export default async function CitasPage({
     supabase.rpc("has_permission", { modulo_code: "tratamientos", permiso_code: "CREATE" }),
     supabase.rpc("has_permission", { modulo_code: "inventario", permiso_code: "CREATE" }),
     supabase.rpc("has_permission", { modulo_code: "inventario", permiso_code: "VOID" }),
+    supabase.rpc("has_entitlement", { modulo_code: "tratamientos", feature_code: "anexos" }),
     supabase
       .from("pacientes")
       .select(
@@ -212,6 +214,7 @@ export default async function CitasPage({
         puedeRegistrarConsumo={!!puedeRegistrarConsumo}
         puedeRevertirConsumo={!!puedeRevertirConsumo}
         puedeEliminarArchivos={puedeEliminarArchivos}
+        tieneEntitlementAnexos={!!tieneEntitlementAnexos}
       />
     </div>
   );

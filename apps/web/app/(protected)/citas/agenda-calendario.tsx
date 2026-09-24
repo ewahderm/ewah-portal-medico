@@ -166,6 +166,7 @@ export function AgendaCalendario({
   puedeRegistrarConsumo,
   puedeRevertirConsumo,
   puedeEliminarArchivos,
+  tieneEntitlementAnexos,
 }: {
   citas: CitaRow[];
   vista: "day" | "week" | "month";
@@ -186,6 +187,9 @@ export function AgendaCalendario({
   puedeRegistrarConsumo: boolean;
   puedeRevertirConsumo: boolean;
   puedeEliminarArchivos: boolean;
+  /** Anexos es sub-feature de pago dentro de Tratamientos — se calcula una
+   * sola vez en citas/page.tsx y se pasa hacia abajo hasta CitaDetalleDialog. */
+  tieneEntitlementAnexos: boolean;
 }) {
   const router = useRouter();
   const [citaSeleccionada, setCitaSeleccionada] = useState<CitaRow | null>(null);
@@ -347,6 +351,7 @@ export function AgendaCalendario({
           puedeRegistrarConsumo={puedeRegistrarConsumo}
           puedeRevertirConsumo={puedeRevertirConsumo}
           puedeEliminarArchivos={puedeEliminarArchivos}
+          tieneEntitlementAnexos={tieneEntitlementAnexos}
         />
       ) : null}
 

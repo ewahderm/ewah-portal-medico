@@ -71,6 +71,7 @@ export default async function TratamientosPage() {
     { data: puedeAnular },
     { data: puedeRegistrarConsumo },
     { data: puedeRevertirConsumo },
+    { data: tieneEntitlementAnexos },
     { data: pacientesData },
     tiposTratamiento,
     { data: profesionales },
@@ -86,6 +87,7 @@ export default async function TratamientosPage() {
     supabase.rpc("has_permission", { modulo_code: "tratamientos", permiso_code: "VOID" }),
     supabase.rpc("has_permission", { modulo_code: "inventario", permiso_code: "CREATE" }),
     supabase.rpc("has_permission", { modulo_code: "inventario", permiso_code: "VOID" }),
+    supabase.rpc("has_entitlement", { modulo_code: "tratamientos", feature_code: "anexos" }),
     supabase
       .from("pacientes")
       .select(
@@ -239,6 +241,7 @@ export default async function TratamientosPage() {
                       puedeSubir={!!puedeCrear}
                       puedeEliminar={!!usuario.roles && usuario.roles.nivel === 1}
                       tieneArchivos={tratamientosConAnexos.has(t.id)}
+                      tieneEntitlement={!!tieneEntitlementAnexos}
                     />
                     {!t.anulado && puedeCrear && puedeAnular ? (
                       <TratamientoDialog
