@@ -1,5 +1,5 @@
 import { CheckIcon, XIcon } from "lucide-react";
-import { requireUsuario } from "@/lib/auth/session";
+import { requireUsuario, esAdministrador } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { REGISTRO_MODULOS } from "@/lib/modulos/registro";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -7,11 +7,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SolicitarPlanDialog } from "./solicitar-plan-dialog";
+import { CambiarPlanPruebaButton } from "./cambiar-plan-prueba-button";
 
 type Plan = { id: string; codigo: string; nombre: string; precio_mensual: number | null };
 
 export default async function SuscripcionPage() {
-  await requireUsuario();
+  const usuario = await requireUsuario();
   const supabase = await createClient();
 
   const { data: puedeVer } = await supabase.rpc("has_permission", {
@@ -131,11 +132,16 @@ export default async function SuscripcionPage() {
               </ul>
 
               {plan.id !== planActual?.id ? (
-                <SolicitarPlanDialog
-                  planCodigo={plan.codigo}
-                  planNombre={plan.nombre}
-                  trigger={<Button className="w-full">Solicitar este plan</Button>}
-                />
+                <div className="space-y-2">
+                  <SolicitarPlanDialog
+                    planCodigo={plan.codigo}
+                    planNombre={plan.nombre}
+                    trigger={<Button className="w-full">Solicitar este plan</Button>}
+                  />
+                  {esAdministrador(usuario) ? (
+                    <CambiarPlanPruebaButton planCodigo={plan.codigo} />
+                  ) : null}
+                </div>
               ) : null}
             </CardContent>
           </Card>

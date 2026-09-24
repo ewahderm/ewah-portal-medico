@@ -1,7 +1,9 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requirePermiso as requirePermisoBase } from "@/lib/auth/requirePermiso";
+import { getCurrentUsuario, esAdministrador } from "@/lib/auth/session";
 import { campoOpcional } from "@/lib/forms/opcional";
 import { enviarSolicitudCambioPlan } from "@/lib/email/suscripcionCorreo";
 import type { ActionState } from "@/lib/auth/actions";
@@ -44,4 +46,26 @@ export async function solicitarCambioPlan(
   });
 
   return null;
+}
+
+// Sin pasarela de pago todavía — este atajo deja probar el gating real
+// (Anexos/Inventario/Campañas) sin pedir un cambio manual por SQL cada
+// vez. Restringido a administrador y a la PROPIA clínica: la función de
+// base de datos (security definer) vuelve a validar ambas cosas, esto
+// solo da un mensaje claro antes de llegar ahí.
+export async function cambiarPlanPrueba(planCodigo: string) {
+  const usuario = await getCurrentUsuario();
+  if (!usuario) throw new Error("Sesión inválida.");
+  if (!esAdministrador(usuario)) {
+    throw new Error("Solo un administrador puede cambiar el plan de la clínica.");
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("fn_cambiar_plan_propia_clinica", {
+    p_plan_codigo: planCodigo,
+  });
+  if (error) throw new Error("No se pudo cambiar el plan.");
+
+  revalidatePath("/suscripcion");
+  revalidatePath("/dashboard");
 }
