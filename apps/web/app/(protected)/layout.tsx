@@ -13,7 +13,7 @@ export default async function ProtectedLayout({
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="border-b">
+      <header className="border-b print:hidden">
         <div className="mx-auto flex max-w-[1536px] items-center justify-between px-6 py-4">
           <nav className="flex items-center gap-6 text-sm font-medium">
             <Link href="/dashboard">
@@ -56,7 +56,9 @@ export default async function ProtectedLayout({
           </div>
         </div>
       </header>
-      <main className="mx-auto w-full max-w-[1536px] flex-1 px-6 py-8">{children}</main>
+      <main className="mx-auto w-full max-w-[1536px] flex-1 px-6 py-8 print:max-w-none print:p-0">
+        {children}
+      </main>
     </div>
   );
 }

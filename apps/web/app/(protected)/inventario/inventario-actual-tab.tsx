@@ -1,8 +1,16 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { AlertTriangleIcon, BoxesIcon, CalendarClockIcon, WalletIcon } from "lucide-react";
+import Link from "next/link";
+import {
+  AlertTriangleIcon,
+  BoxesIcon,
+  CalendarClockIcon,
+  QrCodeIcon,
+  WalletIcon,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Combobox } from "@/components/ui/combobox";
@@ -119,6 +127,20 @@ export function InventarioActualTab({
               value={sedeId}
               onValueChange={(v) => setSedeId(String(v ?? TODAS))}
             />
+            {lotesFiltrados.length > 0 ? (
+              <Button
+                variant="outline"
+                size="sm"
+                render={
+                  <Link
+                    href={`/inventario/etiquetas?ids=${lotesFiltrados.map((l) => l.id).join(",")}`}
+                    target="_blank"
+                  />
+                }
+              >
+                <QrCodeIcon /> Imprimir etiquetas visibles
+              </Button>
+            ) : null}
           </div>
         </CardHeader>
         <CardContent>
@@ -157,6 +179,13 @@ export function InventarioActualTab({
                     </TableCell>
                     <TableCell className="text-muted-foreground">{formatoMoneda(l.costo_unitario)}</TableCell>
                     <TableCell className="flex justify-end gap-2 text-right">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        render={<Link href={`/inventario/etiquetas?ids=${l.id}`} target="_blank" />}
+                      >
+                        <QrCodeIcon /> Etiqueta
+                      </Button>
                       {puedeTrasladar ? (
                         <TrasladoDialog
                           loteId={l.id}

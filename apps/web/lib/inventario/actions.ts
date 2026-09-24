@@ -11,7 +11,7 @@ import { MOTIVOS_ENTRADA, MOTIVOS_SALIDA } from "./motivos";
 
 export type InventarioActionState = { error?: string; warning?: string } | null;
 
-function requirePermiso(permiso: "CREATE" | "VOID") {
+function requirePermiso(permiso: "VIEW" | "CREATE" | "VOID") {
   return requirePermisoBase("inventario", permiso);
 }
 
@@ -112,6 +112,31 @@ export async function registrarAjusteLote(id: string, cantidad: number, motivo: 
   if (error) throw new Error("No se pudo registrar el ajuste.");
 
   revalidatePath("/inventario");
+}
+
+// Usado por la pantalla de escaneo (/inventario/escanear): el código QR de
+// la etiqueta solo contiene el id del lote — nunca datos sensibles — así
+// que cualquier "código inventado" que alguien intente pasar aquí
+// simplemente no encuentra nada (RLS ya limita la búsqueda a la propia
+// clínica, esto no necesita un chequeo de pertenencia aparte).
+export async function buscarLotePorId(id: string) {
+  const check = await requirePermiso("VIEW");
+  if (!check.ok) throw new Error(check.error);
+
+  const checkPlan = await requireEntitlement("inventario");
+  if (!checkPlan.ok) throw new Error(checkPlan.error);
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("lotes")
+    .select(
+      `id, numero_lote, fecha_vencimiento, cantidad_actual, activo, insumo_id, sede_id,
+       insumos(nombre, unidad_medida), sedes(nombre)`,
+    )
+    .eq("id", id)
+    .maybeSingle();
+
+  return data;
 }
 
 export async function registrarMovimiento(

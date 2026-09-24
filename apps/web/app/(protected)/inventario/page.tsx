@@ -1,7 +1,9 @@
-import { PackageIcon } from "lucide-react";
+import Link from "next/link";
+import { PackageIcon, QrCodeIcon } from "lucide-react";
 import { requireUsuario } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { UpsellPlan } from "../_components/upsell-plan";
 import { InventarioTabs } from "./inventario-tabs";
 import { getSedesActivas } from "@/lib/catalogos";
@@ -77,16 +79,21 @@ export default async function InventarioPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start gap-3">
-        <div className="flex size-11 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-          <PackageIcon className="size-6" />
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3">
+          <div className="flex size-11 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+            <PackageIcon className="size-6" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-semibold">Inventario</h1>
+            <p className="text-sm text-muted-foreground">
+              Control de existencias y movimientos de insumos por sede y de toda la clínica.
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl font-semibold">Inventario</h1>
-          <p className="text-sm text-muted-foreground">
-            Control de existencias y movimientos de insumos por sede y de toda la clínica.
-          </p>
-        </div>
+        <Button variant="outline" render={<Link href="/inventario/escanear" />}>
+          <QrCodeIcon /> Escanear
+        </Button>
       </div>
 
       <InventarioTabs
