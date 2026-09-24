@@ -24,30 +24,37 @@ type Insumo = {
   codigo: string | null;
   unidad_medida: string;
   proveedor_id: string | null;
-  registro_invima: string | null;
-  unidad_medida_invima: string | null;
-  fecha_vencimiento_registro_invima: string | null;
+  registro_sanitario: string | null;
+  unidad_medida_registro_sanitario: string | null;
+  fecha_vencimiento_registro_sanitario: string | null;
   referencia_reportada: string | null;
   presentacion_comercial_reportada: string | null;
-  reporte_invima: boolean;
+  reporte_regulatorio: boolean;
 };
 
 export function InsumoDialog({
   proveedores,
+  agenciaRegulatoria,
   editando,
   trigger,
 }: {
   proveedores: Opcion[];
+  /** "INVIMA" hoy — vive en `clinicas.agencia_regulatoria` para que una
+   * clínica en otro país (FDA, COFEPRIS...) vea su propia agencia sin
+   * tocar código. */
+  agenciaRegulatoria: string;
   editando?: Insumo;
   trigger: React.ReactElement;
 }) {
   const accion = editando ? editarInsumo : crearInsumo;
   const [state, formAction, pending] = useActionState(accion, null);
   const itemsProveedores = toItemsOpcional(proveedores, SIN_SELECCION, "Sin especificar");
-  // Controla si se muestran los campos de reporte INVIMA — la mayoría de
-  // insumos de consumo (agujas, batas) no aplican y no tiene sentido
+  // Controla si se muestran los campos de reporte regulatorio — la mayoría
+  // de insumos de consumo (agujas, batas) no aplican y no tiene sentido
   // pedirle a alguien que llene 4 campos que va a dejar en blanco.
-  const [reporteInvima, setReporteInvima] = useState(editando?.reporte_invima ?? false);
+  const [reporteRegulatorio, setReporteRegulatorio] = useState(
+    editando?.reporte_regulatorio ?? false,
+  );
 
   return (
     <Dialog>
@@ -77,7 +84,7 @@ export function InsumoDialog({
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label htmlFor="unidadMedida">Unidad de medida (inventario)</Label>
+              <Label htmlFor="unidadMedida">Unidad de medida (para el inventario)</Label>
               <Input
                 id="unidadMedida"
                 name="unidadMedida"
@@ -98,44 +105,46 @@ export function InsumoDialog({
 
           <label className="flex items-center gap-2 text-sm">
             <Checkbox
-              name="reporteInvima"
-              checked={reporteInvima}
-              onCheckedChange={(marcado) => setReporteInvima(marcado === true)}
+              name="reporteRegulatorio"
+              checked={reporteRegulatorio}
+              onCheckedChange={(marcado) => setReporteRegulatorio(marcado === true)}
             />
-            Este insumo aplica para reporte INVIMA
+            Este insumo requiere reporte a {agenciaRegulatoria}
           </label>
 
-          {reporteInvima ? (
+          {reporteRegulatorio ? (
             <div className="space-y-4 rounded-lg border p-3">
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label htmlFor="registroInvima">Registro INVIMA</Label>
+                  <Label htmlFor="registroSanitario">Registro {agenciaRegulatoria}</Label>
                   <Input
-                    id="registroInvima"
-                    name="registroInvima"
+                    id="registroSanitario"
+                    name="registroSanitario"
                     placeholder="INVIMA 2015DM-0013077"
-                    defaultValue={editando?.registro_invima ?? ""}
+                    defaultValue={editando?.registro_sanitario ?? ""}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="fechaVencimientoRegistroInvima">
+                  <Label htmlFor="fechaVencimientoRegistroSanitario">
                     Vencimiento del registro
                   </Label>
                   <Input
-                    id="fechaVencimientoRegistroInvima"
-                    name="fechaVencimientoRegistroInvima"
+                    id="fechaVencimientoRegistroSanitario"
+                    name="fechaVencimientoRegistroSanitario"
                     type="date"
-                    defaultValue={editando?.fecha_vencimiento_registro_invima ?? ""}
+                    defaultValue={editando?.fecha_vencimiento_registro_sanitario ?? ""}
                   />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="unidadMedidaInvima">Unidad de medida reportada a INVIMA</Label>
+                <Label htmlFor="unidadMedidaRegistroSanitario">
+                  Unidad de medida reportada a {agenciaRegulatoria}
+                </Label>
                 <Input
-                  id="unidadMedidaInvima"
-                  name="unidadMedidaInvima"
+                  id="unidadMedidaRegistroSanitario"
+                  name="unidadMedidaRegistroSanitario"
                   placeholder="Puede ser distinta a la unidad de inventario"
-                  defaultValue={editando?.unidad_medida_invima ?? ""}
+                  defaultValue={editando?.unidad_medida_registro_sanitario ?? ""}
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -144,6 +153,7 @@ export function InsumoDialog({
                   <Input
                     id="referenciaReportada"
                     name="referenciaReportada"
+                    placeholder="Código o referencia del fabricante"
                     defaultValue={editando?.referencia_reportada ?? ""}
                   />
                 </div>

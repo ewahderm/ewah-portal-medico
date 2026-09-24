@@ -33,38 +33,52 @@ export default async function ParametrosPage() {
     );
   }
 
-  const [resultados, sedes, tiposIdentificacion, proveedoresActivos, consultoriosData, insumosData, proveedoresData] =
-    await Promise.all([
-      Promise.all(
-        CATALOGOS.map(async (catalogo) => {
-          const { data } = await supabase
-            .from(catalogo.tabla)
-            .select("id, codigo, nombre, activo")
-            .order("orden");
-          return { ...catalogo, valores: data ?? [] };
-        }),
-      ),
-      getSedesActivas(supabase),
-      getTiposIdentificacionActivos(supabase),
-      getProveedoresActivos(supabase),
-      supabase
-        .from("consultorios")
-        .select("id, nombre, codigo, activo, sede_id, sedes(nombre)")
-        .order("orden"),
-      supabase
-        .from("insumos")
-        .select(
-          `id, nombre, codigo, unidad_medida, proveedor_id, registro_invima,
-           unidad_medida_invima, fecha_vencimiento_registro_invima,
-           referencia_reportada, presentacion_comercial_reportada, reporte_invima,
-           activo, proveedores(nombre)`,
-        )
-        .order("orden"),
-      supabase
-        .from("proveedores")
-        .select("id, nombre, tipo_identificacion_id, numero_identificacion, observaciones, activo, tipos_identificacion(nombre)")
-        .order("orden"),
-    ]);
+  const [
+    resultados,
+    sedes,
+    tiposIdentificacion,
+    proveedoresActivos,
+    consultoriosData,
+    insumosData,
+    proveedoresData,
+    clinicaData,
+  ] = await Promise.all([
+    Promise.all(
+      CATALOGOS.map(async (catalogo) => {
+        const { data } = await supabase
+          .from(catalogo.tabla)
+          .select("id, codigo, nombre, activo")
+          .order("orden");
+        return { ...catalogo, valores: data ?? [] };
+      }),
+    ),
+    getSedesActivas(supabase),
+    getTiposIdentificacionActivos(supabase),
+    getProveedoresActivos(supabase),
+    supabase
+      .from("consultorios")
+      .select("id, nombre, codigo, activo, sede_id, sedes(nombre)")
+      .order("orden"),
+    supabase
+      .from("insumos")
+      .select(
+        `id, nombre, codigo, unidad_medida, proveedor_id, registro_sanitario,
+         unidad_medida_registro_sanitario, fecha_vencimiento_registro_sanitario,
+         referencia_reportada, presentacion_comercial_reportada, reporte_regulatorio,
+         activo, proveedores(nombre)`,
+      )
+      .order("orden"),
+    supabase
+      .from("proveedores")
+      .select("id, nombre, tipo_identificacion_id, numero_identificacion, observaciones, activo, tipos_identificacion(nombre)")
+      .order("orden"),
+    supabase.from("clinicas").select("agencia_regulatoria").single(),
+  ]);
+
+  // "INVIMA" hoy — vive en clinicas.agencia_regulatoria para que una
+  // clínica en otro país (FDA, COFEPRIS...) vea su propia agencia sin
+  // tocar código.
+  const agenciaRegulatoria = clinicaData.data?.agencia_regulatoria ?? "INVIMA";
 
   const bespoke = [
     {
@@ -88,10 +102,11 @@ export default async function ParametrosPage() {
     {
       tabla: "insumos",
       nombre: "Insumos",
-      descripcion: "Catálogo de insumos que usa tu clínica, con proveedor y datos de reporte INVIMA.",
+      descripcion: `Catálogo de insumos que usa tu clínica, con proveedor y datos de reporte ${agenciaRegulatoria}.`,
       accion: (
         <InsumoDialog
           proveedores={proveedoresActivos}
+          agenciaRegulatoria={agenciaRegulatoria}
           trigger={<Button size="sm">Agregar insumo</Button>}
         />
       ),
@@ -99,6 +114,7 @@ export default async function ParametrosPage() {
         <InsumosTable
           valores={(insumosData.data ?? []) as unknown as InsumoRow[]}
           proveedores={proveedoresActivos}
+          agenciaRegulatoria={agenciaRegulatoria}
           editable
         />
       ),

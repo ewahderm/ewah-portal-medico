@@ -16,13 +16,13 @@ function datosInsumoDesdeForm(formData: FormData) {
     codigo: campoOpcional(formData, "codigo"),
     unidadMedida: String(formData.get("unidadMedida") ?? "").trim() || "unidad",
     proveedorId: valorOpcionalSelect(formData, "proveedorId"),
-    registroInvima: campoOpcional(formData, "registroInvima"),
-    unidadMedidaInvima: campoOpcional(formData, "unidadMedidaInvima"),
-    fechaVencimientoRegistroInvima: campoOpcional(formData, "fechaVencimientoRegistroInvima"),
+    registroSanitario: campoOpcional(formData, "registroSanitario"),
+    unidadMedidaRegistroSanitario: campoOpcional(formData, "unidadMedidaRegistroSanitario"),
+    fechaVencimientoRegistroSanitario: campoOpcional(formData, "fechaVencimientoRegistroSanitario"),
     referenciaReportada: campoOpcional(formData, "referenciaReportada"),
     presentacionComercialReportada: campoOpcional(formData, "presentacionComercialReportada"),
     // El checkbox solo manda el campo cuando está marcado — su ausencia es "false".
-    reporteInvima: formData.get("reporteInvima") === "on",
+    reporteRegulatorio: formData.get("reporteRegulatorio") === "on",
   };
 }
 
@@ -43,12 +43,12 @@ export async function crearInsumo(
     codigo: datos.codigo,
     unidad_medida: datos.unidadMedida,
     proveedor_id: datos.proveedorId,
-    registro_invima: datos.registroInvima,
-    unidad_medida_invima: datos.unidadMedidaInvima,
-    fecha_vencimiento_registro_invima: datos.fechaVencimientoRegistroInvima,
+    registro_sanitario: datos.registroSanitario,
+    unidad_medida_registro_sanitario: datos.unidadMedidaRegistroSanitario,
+    fecha_vencimiento_registro_sanitario: datos.fechaVencimientoRegistroSanitario,
     referencia_reportada: datos.referenciaReportada,
     presentacion_comercial_reportada: datos.presentacionComercialReportada,
-    reporte_invima: datos.reporteInvima,
+    reporte_regulatorio: datos.reporteRegulatorio,
   });
   if (error) {
     if (error.code === "23505") return { error: "Ya existe un insumo con ese código." };
@@ -80,12 +80,12 @@ export async function editarInsumo(
       codigo: datos.codigo,
       unidad_medida: datos.unidadMedida,
       proveedor_id: datos.proveedorId,
-      registro_invima: datos.registroInvima,
-      unidad_medida_invima: datos.unidadMedidaInvima,
-      fecha_vencimiento_registro_invima: datos.fechaVencimientoRegistroInvima,
+      registro_sanitario: datos.registroSanitario,
+      unidad_medida_registro_sanitario: datos.unidadMedidaRegistroSanitario,
+      fecha_vencimiento_registro_sanitario: datos.fechaVencimientoRegistroSanitario,
       referencia_reportada: datos.referenciaReportada,
       presentacion_comercial_reportada: datos.presentacionComercialReportada,
-      reporte_invima: datos.reporteInvima,
+      reporte_regulatorio: datos.reporteRegulatorio,
     })
     .eq("id", id);
   if (error) {

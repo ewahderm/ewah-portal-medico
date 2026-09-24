@@ -23,12 +23,12 @@ export type InsumoRow = {
   codigo: string | null;
   unidad_medida: string;
   proveedor_id: string | null;
-  registro_invima: string | null;
-  unidad_medida_invima: string | null;
-  fecha_vencimiento_registro_invima: string | null;
+  registro_sanitario: string | null;
+  unidad_medida_registro_sanitario: string | null;
+  fecha_vencimiento_registro_sanitario: string | null;
   referencia_reportada: string | null;
   presentacion_comercial_reportada: string | null;
-  reporte_invima: boolean;
+  reporte_regulatorio: boolean;
   activo: boolean;
   proveedores: { nombre: string } | null;
 };
@@ -36,10 +36,12 @@ export type InsumoRow = {
 export function InsumosTable({
   valores,
   proveedores,
+  agenciaRegulatoria,
   editable,
 }: {
   valores: InsumoRow[];
   proveedores: Opcion[];
+  agenciaRegulatoria: string;
   editable: boolean;
 }) {
   const [error, setError] = useState<string | null>(null);
@@ -72,7 +74,7 @@ export function InsumosTable({
             <TableHead>Nombre</TableHead>
             <TableHead>Unidad</TableHead>
             <TableHead>Proveedor</TableHead>
-            <TableHead>INVIMA</TableHead>
+            <TableHead>{agenciaRegulatoria}</TableHead>
             <TableHead className="text-right">Acciones</TableHead>
           </TableRow>
         </TableHeader>
@@ -85,8 +87,8 @@ export function InsumosTable({
                 {valor.proveedores?.nombre ?? "—"}
               </TableCell>
               <TableCell>
-                {valor.reporte_invima ? (
-                  <Badge variant="outline">{valor.registro_invima || "Sí"}</Badge>
+                {valor.reporte_regulatorio ? (
+                  <Badge variant="outline">{valor.registro_sanitario || "Sí"}</Badge>
                 ) : (
                   <span className="text-muted-foreground">No aplica</span>
                 )}
@@ -96,6 +98,7 @@ export function InsumosTable({
                   <>
                     <InsumoDialog
                       proveedores={proveedores}
+                      agenciaRegulatoria={agenciaRegulatoria}
                       editando={valor}
                       trigger={
                         <Button variant="outline" size="sm">
