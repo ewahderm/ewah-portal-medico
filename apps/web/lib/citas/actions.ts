@@ -56,6 +56,8 @@ async function detectarChoque(params: {
 type FilaCorreoCita = {
   fecha: string;
   hora_inicio: string;
+  hora_fin: string;
+  updated_at: string;
   pacientes: {
     primer_nombre: string;
     segundo_nombre: string | null;
@@ -65,12 +67,14 @@ type FilaCorreoCita = {
   } | null;
   tipos_tratamiento: { nombre: string } | null;
   profesional: { nombre: string } | null;
+  consultorios: { nombre: string; sedes: { nombre: string; direccion: string | null } | null } | null;
 };
 
-const SELECT_CORREO_CITA = `fecha, hora_inicio,
+const SELECT_CORREO_CITA = `fecha, hora_inicio, hora_fin, updated_at,
    pacientes(primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, email),
    tipos_tratamiento(nombre),
-   profesional:usuarios!citas_profesional_id_fkey(nombre)`;
+   profesional:usuarios!citas_profesional_id_fkey(nombre),
+   consultorios(nombre, sedes(nombre, direccion))`;
 
 // Se usa siempre a partir del id de una cita YA guardada (insert o update
 // exitosos), en una consulta aparte de la que crea/actualiza la cita: así,
@@ -95,15 +99,24 @@ async function enviarCorreoCitaPorId(
     const fila = data as unknown as FilaCorreoCita;
     if (!fila.pacientes) return;
 
+    const sede = fila.consultorios?.sedes;
+    const ubicacion = fila.consultorios
+      ? [fila.consultorios.nombre, sede?.nombre, sede?.direccion].filter(Boolean).join(", ")
+      : null;
+
     await enviarCorreoCita({
       email: fila.pacientes.email,
       nombrePaciente: nombreCompleto(fila.pacientes),
       tipo,
       fecha: fila.fecha,
       horaInicio: fila.hora_inicio,
+      horaFin: fila.hora_fin,
       nombreProfesional: fila.profesional?.nombre ?? "el equipo de EWAH",
       nombreTratamiento: fila.tipos_tratamiento?.nombre ?? "tu tratamiento",
       motivo,
+      citaId,
+      actualizadoEn: fila.updated_at,
+      ubicacion,
     });
   } catch (error) {
     console.error("[citas] No se pudo enviar el correo de la cita:", error);

@@ -1,6 +1,7 @@
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { getResendClient, REMITENTE_CORREO } from "./resend";
+import { generarIcsCita } from "./ics";
 
 export type TipoCorreoCita = "agendada" | "actualizada" | "cancelada";
 
@@ -13,11 +14,26 @@ export type EnviarCorreoCitaParams = {
   fecha: string;
   /** Hora en formato HH:mm o HH:mm:ss. */
   horaInicio: string;
+  horaFin: string;
   nombreProfesional: string;
   nombreTratamiento: string;
   /** Solo aplica (y solo se muestra) cuando tipo === "cancelada". */
   motivo?: string | null;
+  /** Id estable de la cita — hace que agendada/actualizada/cancelada
+   * actualicen el MISMO evento en el calendario del paciente en vez de
+   * crear uno duplicado por cada correo. */
+  citaId: string;
+  /** `updated_at` de la cita — se usa como SEQUENCE del .ics (ver ics.ts). */
+  actualizadoEn: string;
+  ubicacion?: string | null;
 };
+
+// Mismo remitente que ya se usa para el correo — el organizador del evento
+// de calendario es la misma identidad que firma el correo.
+function extraerEmailRemitente(remitente: string): string {
+  const match = remitente.match(/<([^>]+)>/);
+  return match ? match[1] : remitente;
+}
 
 function formatearFechaHora(fecha: string, horaInicio: string) {
   const fechaFormateada = format(parseISO(fecha), "EEEE d 'de' MMMM 'de' yyyy", { locale: es });
@@ -78,12 +94,36 @@ export async function enviarCorreoCita(params: EnviarCorreoCitaParams): Promise<
   const { asunto, cuerpo } = construirContenido(params);
   const texto = `Hola ${params.nombrePaciente},\n\n${cuerpo}\n\nFamilia EWAH By Dra. Lorena Pinzón`;
 
+  const cancelada = params.tipo === "cancelada";
+  const ics = generarIcsCita({
+    citaId: params.citaId,
+    actualizadoEn: params.actualizadoEn,
+    cancelada,
+    fecha: params.fecha,
+    horaInicio: params.horaInicio,
+    horaFin: params.horaFin,
+    resumen: `${params.nombreTratamiento} — EWAH`,
+    descripcion: `Profesional: ${params.nombreProfesional}\nTratamiento: ${params.nombreTratamiento}`,
+    ubicacion: params.ubicacion,
+    organizerEmail: extraerEmailRemitente(REMITENTE_CORREO),
+    organizerNombre: "EWAH By Dra. Lorena Pinzón",
+    attendeeEmail: params.email,
+    attendeeNombre: params.nombrePaciente,
+  });
+
   try {
     const { error } = await cliente.emails.send({
       from: REMITENTE_CORREO,
       to: params.email,
       subject: asunto,
       text: texto,
+      attachments: [
+        {
+          filename: cancelada ? "cancelacion.ics" : "cita.ics",
+          content: ics,
+          contentType: `text/calendar; charset=utf-8; method=${cancelada ? "CANCEL" : "REQUEST"}`,
+        },
+      ],
     });
     if (error) {
       console.error("[email] Resend rechazó el correo de la cita:", error);
