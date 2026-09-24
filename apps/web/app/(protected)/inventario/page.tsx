@@ -90,7 +90,7 @@ export default async function InventarioPage() {
             </p>
           </div>
         </div>
-        <Button variant="outline" render={<Link href="/inventario/escanear" />}>
+        <Button variant="outline" nativeButton={false} render={<Link href="/inventario/escanear" />}>
           <QrCodeIcon /> Escanear
         </Button>
       </div>

@@ -169,6 +169,7 @@ export function InventarioActualTab({
               <Button
                 variant="outline"
                 size="sm"
+                nativeButton={false}
                 render={
                   <Link
                     href={`/inventario/etiquetas?ids=${lotesFiltrados.map((l) => l.id).join(",")}`}
@@ -235,6 +236,7 @@ export function InventarioActualTab({
                       <Button
                         variant="outline"
                         size="sm"
+                        nativeButton={false}
                         render={<Link href={`/inventario/etiquetas?ids=${l.id}`} target="_blank" />}
                       >
                         <QrCodeIcon /> Etiqueta

@@ -163,7 +163,7 @@ export default async function PacientesPage({
                     </Badge>
                   </TableCell>
                   <TableCell className="flex justify-end gap-2 text-right">
-                    <Button variant="outline" size="sm" render={<Link href={`/pacientes/${p.id}`} />}>
+                    <Button variant="outline" size="sm" nativeButton={false} render={<Link href={`/pacientes/${p.id}`} />}>
                       Ver
                     </Button>
                     <PacienteDialog
