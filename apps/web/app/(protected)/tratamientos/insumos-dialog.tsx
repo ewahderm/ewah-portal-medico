@@ -30,6 +30,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { LoteScanner, type LoteEscaneado } from "../_components/lote-scanner";
 
 type Insumo = { id: string; nombre: string };
 type Lote = {
@@ -69,6 +70,13 @@ export function InsumosDialog({
   const [open, setOpen] = useState(false);
   const [consumos, setConsumos] = useState<Consumo[]>([]);
   const [insumoId, setInsumoId] = useState("");
+  // "escaneo" reemplaza los 2 comboboxes por el lector de QR/pistola —
+  // útil cuando la etiqueta impresa del vial/caja está a la mano durante
+  // la atención. loteEscaneado fuerza la selección del lote (ver key del
+  // Combobox más abajo); se limpia al volver a "manual" para no dejar un
+  // loteId escaneado colándose en un envío manual.
+  const [origen, setOrigen] = useState<"manual" | "escaneo">("manual");
+  const [loteEscaneado, setLoteEscaneado] = useState<LoteEscaneado | null>(null);
   const [state, setState] = useState<InventarioActionState>(null);
   const [errorReversa, setErrorReversa] = useState<string | null>(null);
   const [revirtiendoId, setRevirtiendoId] = useState<string | null>(null);
@@ -130,6 +138,17 @@ export function InsumosDialog({
     });
   }
 
+  function handleEscaneado(lote: LoteEscaneado) {
+    setInsumoId(lote.insumo_id);
+    setLoteEscaneado(lote);
+  }
+
+  function cambiarOrigen(nuevo: "manual" | "escaneo") {
+    setOrigen(nuevo);
+    setLoteEscaneado(null);
+    setInsumoId("");
+  }
+
   function handleRegistrarConsumo(formData: FormData) {
     formData.set("tratamientoId", tratamientoId);
     setState(null);
@@ -139,6 +158,13 @@ export function InsumosDialog({
       if (!resultado?.error) {
         const data = await listarConsumoTratamiento(tratamientoId);
         setConsumos(data as unknown as Consumo[]);
+        // El siguiente insumo puede ser otro vial/caja distinta — se pide
+        // un escaneo fresco en vez de arriesgar reusar el lote anterior
+        // con un stock que ya quedó desactualizado en pantalla.
+        if (origen === "escaneo") {
+          setLoteEscaneado(null);
+          setInsumoId("");
+        }
       }
     });
   }
@@ -269,38 +295,92 @@ export function InsumosDialog({
               </Alert>
             ) : null}
 
-            <div className="grid grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="insumoIdConsumo">Insumo</Label>
-                <Combobox
-                  id="insumoIdConsumo"
-                  items={toItems(insumos)}
-                  value={insumoId}
-                  onValueChange={(valor) => setInsumoId(String(valor ?? ""))}
-                  placeholder="Selecciona"
-                />
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>Insumo usado</Label>
+                <div className="flex gap-1">
+                  <Button
+                    type="button"
+                    size="xs"
+                    variant={origen === "manual" ? "default" : "outline"}
+                    onClick={() => cambiarOrigen("manual")}
+                  >
+                    Buscar manualmente
+                  </Button>
+                  <Button
+                    type="button"
+                    size="xs"
+                    variant={origen === "escaneo" ? "default" : "outline"}
+                    onClick={() => cambiarOrigen("escaneo")}
+                  >
+                    Escanear
+                  </Button>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="loteId">Lote</Label>
-                <Combobox
-                  key={insumoId}
-                  id="loteId"
-                  name="loteId"
-                  required
-                  disabled={lotesDelInsumo.length === 0}
-                  items={lotesDelInsumo.map((l) => ({
-                    value: l.id,
-                    label: `${l.numero_lote ?? "Sin número"} (stock: ${l.cantidad_actual})`,
-                  }))}
-                  placeholder={
-                    !insumoId
-                      ? "Elige un insumo primero"
-                      : lotesDelInsumo.length === 0
-                        ? "Sin lotes en esta sede"
-                        : "Selecciona"
-                  }
-                />
-              </div>
+
+              {origen === "manual" ? (
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="insumoIdConsumo" className="text-xs text-muted-foreground">
+                      Insumo
+                    </Label>
+                    <Combobox
+                      id="insumoIdConsumo"
+                      items={toItems(insumos)}
+                      value={insumoId}
+                      onValueChange={(valor) => setInsumoId(String(valor ?? ""))}
+                      placeholder="Selecciona"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="loteId" className="text-xs text-muted-foreground">
+                      Lote
+                    </Label>
+                    <Combobox
+                      key={insumoId}
+                      id="loteId"
+                      name="loteId"
+                      required
+                      disabled={lotesDelInsumo.length === 0}
+                      items={lotesDelInsumo.map((l) => ({
+                        value: l.id,
+                        label: `${l.numero_lote ?? "Sin número"} (stock: ${l.cantidad_actual})`,
+                      }))}
+                      placeholder={
+                        !insumoId
+                          ? "Elige un insumo primero"
+                          : lotesDelInsumo.length === 0
+                            ? "Sin lotes en esta sede"
+                            : "Selecciona"
+                      }
+                    />
+                  </div>
+                </div>
+              ) : loteEscaneado ? (
+                <div className="flex items-center justify-between rounded-lg border p-3">
+                  <div>
+                    <p className="text-sm font-medium">{loteEscaneado.insumos?.nombre ?? "—"}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Lote {loteEscaneado.numero_lote ?? "—"} · disponible:{" "}
+                      {loteEscaneado.cantidad_actual} {loteEscaneado.insumos?.unidad_medida ?? ""}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setLoteEscaneado(null)}
+                  >
+                    Escanear otro
+                  </Button>
+                </div>
+              ) : (
+                <LoteScanner sedeIdEsperada={sedeId} onEncontrado={handleEscaneado} autoFocus />
+              )}
+
+              {origen === "escaneo" && loteEscaneado ? (
+                <input type="hidden" name="loteId" value={loteEscaneado.id} />
+              ) : null}
             </div>
 
             <div className="grid grid-cols-2 gap-6">
@@ -319,7 +399,11 @@ export function InsumosDialog({
               <Input id="sitioAnatomico" name="sitioAnatomico" placeholder="Ej: tercio superior" />
             </div>
 
-            <Button type="submit" className="w-full" disabled={pending}>
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={pending || (origen === "escaneo" && !loteEscaneado)}
+            >
               {pending ? "Guardando..." : "Registrar consumo"}
             </Button>
           </form>

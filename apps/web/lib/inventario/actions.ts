@@ -114,12 +114,25 @@ export async function registrarAjusteLote(id: string, cantidad: number, motivo: 
   revalidatePath("/inventario");
 }
 
-// Usado por la pantalla de escaneo (/inventario/escanear): el código QR de
-// la etiqueta solo contiene el id del lote — nunca datos sensibles — así
-// que cualquier "código inventado" que alguien intente pasar aquí
-// simplemente no encuentra nada (RLS ya limita la búsqueda a la propia
-// clínica, esto no necesita un chequeo de pertenencia aparte).
-export async function buscarLotePorId(id: string) {
+export type LotePorId = {
+  id: string;
+  numero_lote: string | null;
+  fecha_vencimiento: string | null;
+  cantidad_actual: number;
+  activo: boolean;
+  insumo_id: string;
+  sede_id: string;
+  insumos: { nombre: string; unidad_medida: string } | null;
+  sedes: { nombre: string } | null;
+};
+
+// Usado por la pantalla de escaneo (/inventario/escanear) y por el registro
+// de consumo escaneado (InsumosDialog): el código QR de la etiqueta solo
+// contiene el id del lote — nunca datos sensibles — así que cualquier
+// "código inventado" que alguien intente pasar aquí simplemente no
+// encuentra nada (RLS ya limita la búsqueda a la propia clínica, esto no
+// necesita un chequeo de pertenencia aparte).
+export async function buscarLotePorId(id: string): Promise<LotePorId | null> {
   const check = await requirePermiso("VIEW");
   if (!check.ok) throw new Error(check.error);
 
@@ -136,7 +149,7 @@ export async function buscarLotePorId(id: string) {
     .eq("id", id)
     .maybeSingle();
 
-  return data;
+  return data as unknown as LotePorId | null;
 }
 
 export async function registrarMovimiento(

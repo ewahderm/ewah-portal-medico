@@ -1,8 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState, useTransition } from "react";
-import jsQR from "jsqr";
-import { CameraIcon, PackageSearchIcon, XIcon } from "lucide-react";
+import { useActionState, useState, useTransition } from "react";
 import { buscarLotePorId, registrarMovimiento } from "@/lib/inventario/actions";
 import { MOTIVOS_ENTRADA, MOTIVOS_SALIDA, MOTIVO_LABEL } from "@/lib/inventario/motivos";
 import { useCerrarAlExito } from "@/lib/forms/cerrarAlExito";
@@ -15,18 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Combobox } from "@/components/ui/combobox";
-
-type Lote = {
-  id: string;
-  numero_lote: string | null;
-  fecha_vencimiento: string | null;
-  cantidad_actual: number;
-  activo: boolean;
-  insumo_id: string;
-  sede_id: string;
-  insumos: { nombre: string; unidad_medida: string } | null;
-  sedes: { nombre: string } | null;
-};
+import { LoteScanner, type LoteEscaneado } from "../../_components/lote-scanner";
 
 const ITEMS_MOTIVO = [
   ...MOTIVOS_ENTRADA.map((m) => ({ value: m, label: `Ingreso — ${MOTIVO_LABEL[m]}` })),
@@ -34,100 +21,17 @@ const ITEMS_MOTIVO = [
 ];
 
 export function EscanearCliente({ puedeRegistrar }: { puedeRegistrar: boolean }) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const animacionRef = useRef<number | null>(null);
+  const [lote, setLote] = useState<LoteEscaneado | null>(null);
+  const [, startRefresco] = useTransition();
 
-  const [lote, setLote] = useState<Lote | null>(null);
-  const [errorBusqueda, setErrorBusqueda] = useState<string | null>(null);
-  const [pendingBusqueda, startBusqueda] = useTransition();
-  const [camaraActiva, setCamaraActiva] = useState(false);
-  const [errorCamara, setErrorCamara] = useState<string | null>(null);
-
-  function detenerCamara() {
-    if (animacionRef.current) cancelAnimationFrame(animacionRef.current);
-    animacionRef.current = null;
-    streamRef.current?.getTracks().forEach((track) => track.stop());
-    streamRef.current = null;
-    setCamaraActiva(false);
-  }
-
-  // Nunca dejar la cámara prendida si la persona navega a otra pantalla
-  // sin apagarla explícitamente.
-  useEffect(() => () => detenerCamara(), []);
-
-  function buscar(codigo: string) {
-    const id = codigo.trim();
-    if (!id) return;
-    setErrorBusqueda(null);
-    startBusqueda(async () => {
-      try {
-        const data = await buscarLotePorId(id);
-        if (!data) {
-          setLote(null);
-          setErrorBusqueda("No se encontró ningún lote con ese código.");
-          return;
-        }
-        setLote(data as unknown as Lote);
-      } catch (e) {
-        setLote(null);
-        setErrorBusqueda(e instanceof Error ? e.message : "No se pudo buscar el lote.");
-      } finally {
-        inputRef.current?.focus();
-      }
+  // Tras registrar un movimiento hay que volver a traer el lote — el
+  // objeto que ya se tiene en pantalla quedó con el stock viejo.
+  function refrescar() {
+    if (!lote) return;
+    startRefresco(async () => {
+      const actualizado = await buscarLotePorId(lote.id);
+      if (actualizado) setLote(actualizado);
     });
-  }
-
-  function handleSubmitCodigo(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const valor = inputRef.current?.value ?? "";
-    buscar(valor);
-    if (inputRef.current) inputRef.current.value = "";
-  }
-
-  function tick() {
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    if (!streamRef.current || !video || !canvas) return;
-
-    if (video.readyState === video.HAVE_ENOUGH_DATA) {
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      const ctx = canvas.getContext("2d");
-      if (ctx) {
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const imagen = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const codigo = jsQR(imagen.data, imagen.width, imagen.height);
-        if (codigo) {
-          detenerCamara();
-          buscar(codigo.data);
-          return;
-        }
-      }
-    }
-    animacionRef.current = requestAnimationFrame(tick);
-  }
-
-  async function iniciarCamara() {
-    setErrorCamara(null);
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" },
-      });
-      streamRef.current = stream;
-      setCamaraActiva(true);
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-      }
-      animacionRef.current = requestAnimationFrame(tick);
-    } catch {
-      setErrorCamara(
-        "No se pudo acceder a la cámara — revisa los permisos del navegador o usa el lector físico.",
-      );
-    }
   }
 
   return (
@@ -136,66 +40,24 @@ export function EscanearCliente({ puedeRegistrar }: { puedeRegistrar: boolean })
         <CardHeader>
           <CardTitle className="text-base font-medium">Escanear código</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <form onSubmit={handleSubmitCodigo} className="flex items-center gap-2">
-            <Input
-              ref={inputRef}
-              autoFocus
-              placeholder="Escanea con la pistola o pega el código aquí..."
-              className="flex-1"
-            />
-            <Button type="submit" disabled={pendingBusqueda}>
-              <PackageSearchIcon /> Buscar
-            </Button>
-            {camaraActiva ? (
-              <Button type="button" variant="outline" onClick={detenerCamara}>
-                <XIcon /> Cancelar cámara
-              </Button>
-            ) : (
-              <Button type="button" variant="outline" onClick={iniciarCamara}>
-                <CameraIcon /> Usar cámara
-              </Button>
-            )}
-          </form>
-
-          {errorCamara ? (
-            <Alert variant="destructive">
-              <AlertDescription>{errorCamara}</AlertDescription>
-            </Alert>
-          ) : null}
-
-          {camaraActiva ? (
-            <div className="relative mx-auto max-w-sm overflow-hidden rounded-lg border">
-              <video ref={videoRef} className="w-full" muted playsInline />
-              <canvas ref={canvasRef} className="hidden" />
-            </div>
-          ) : null}
-
-          {errorBusqueda ? (
-            <Alert variant="destructive">
-              <AlertDescription>{errorBusqueda}</AlertDescription>
-            </Alert>
-          ) : null}
+        <CardContent>
+          <LoteScanner onEncontrado={setLote} />
         </CardContent>
       </Card>
 
       {lote ? (
-        <LoteEncontrado
-          lote={lote}
-          puedeRegistrar={puedeRegistrar}
-          onActualizado={() => buscar(lote.id)}
-        />
+        <LoteEncontradoCard lote={lote} puedeRegistrar={puedeRegistrar} onActualizado={refrescar} />
       ) : null}
     </div>
   );
 }
 
-function LoteEncontrado({
+function LoteEncontradoCard({
   lote,
   puedeRegistrar,
   onActualizado,
 }: {
-  lote: Lote;
+  lote: LoteEscaneado;
   puedeRegistrar: boolean;
   onActualizado: () => void;
 }) {
