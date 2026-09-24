@@ -78,3 +78,12 @@ export async function getEpsActivos(supabase: Supabase) {
   const { data } = await supabase.from("eps").select("id, nombre").eq("activo", true).order("orden");
   return data ?? [];
 }
+
+export async function getProveedoresActivos(supabase: Supabase) {
+  const { data } = await supabase
+    .from("proveedores")
+    .select("id, nombre")
+    .eq("activo", true)
+    .order("orden");
+  return data ?? [];
+}

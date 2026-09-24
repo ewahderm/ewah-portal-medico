@@ -47,12 +47,6 @@ export const CATALOGOS: CatalogoConfig[] = [
     esGlobal: false,
   },
   {
-    tabla: "consultorios",
-    nombre: "Consultorios",
-    descripcion: "Salas/consultorios de tu clínica, usados para agendar citas.",
-    esGlobal: false,
-  },
-  {
     tabla: "sedes",
     nombre: "Sedes",
     descripcion: "Sucursales físicas de tu clínica.",
@@ -64,13 +58,15 @@ export const CATALOGOS: CatalogoConfig[] = [
     descripcion: "Formas de pago que acepta tu clínica (efectivo, tarjeta, transferencia...).",
     esGlobal: false,
   },
-  {
-    tabla: "insumos",
-    nombre: "Insumos",
-    descripcion: "Catálogo de insumos que usa tu clínica (toxina botulínica, ácido hialurónico, guantes...).",
-    esGlobal: false,
-  },
 ];
+
+// Consultorios, Insumos y Proveedores se sacaron de esta lista a propósito:
+// el motor genérico de arriba solo soporta nombre+código, y estos 3 ya
+// necesitan campos propios (sede, unidad de medida, datos INVIMA, tipo/
+// número de identificación) que un formulario genérico no puede cubrir —
+// tienen su propio diálogo y tabla (ver *-dialog.tsx / *-table.tsx en este
+// mismo directorio), pero se siguen viendo como pestañas más de Parámetros
+// en app/(protected)/parametros/page.tsx.
 
 export function getCatalogo(tabla: string): CatalogoConfig | undefined {
   return CATALOGOS.find((c) => c.tabla === tabla);
