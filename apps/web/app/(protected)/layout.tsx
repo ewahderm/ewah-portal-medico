@@ -40,6 +40,9 @@ export default async function ProtectedLayout({
             <Link href="/parametros" className="text-muted-foreground hover:text-foreground">
               Parámetros
             </Link>
+            <Link href="/suscripcion" className="text-muted-foreground hover:text-foreground">
+              Suscripción
+            </Link>
           </nav>
           <div className="flex items-center gap-4 text-sm">
             <span className="text-muted-foreground">
