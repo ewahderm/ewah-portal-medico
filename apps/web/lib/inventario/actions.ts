@@ -89,6 +89,24 @@ export async function crearLote(
   return null;
 }
 
+// Un lote no se elimina nunca (append-only, igual que todo lo demás en
+// Inventario) — "desactivar" es la forma de sacarlo de circulación cuando
+// se agotó o se dio de baja, sin perder su historial de movimientos. No
+// existía ninguna forma de hacerlo desde la UI hasta ahora.
+export async function toggleLote(id: string, activo: boolean) {
+  const check = await requirePermiso("VOID");
+  if (!check.ok) throw new Error(check.error);
+
+  const checkPlan = await requireEntitlement("inventario");
+  if (!checkPlan.ok) throw new Error(checkPlan.error);
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("lotes").update({ activo }).eq("id", id);
+  if (error) throw new Error("No se pudo actualizar el lote.");
+
+  revalidatePath("/inventario");
+}
+
 export async function registrarAjusteLote(id: string, cantidad: number, motivo: string) {
   if (!motivo.trim()) throw new Error("El motivo del ajuste es obligatorio.");
   if (cantidad === 0) throw new Error("La cantidad del ajuste no puede ser cero.");

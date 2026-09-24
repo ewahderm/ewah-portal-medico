@@ -120,9 +120,27 @@ export function LoteScanner({
 
   async function iniciarCamara() {
     setErrorCamara(null);
+
+    // getUserMedia solo existe en un "contexto seguro" (https://, o
+    // localhost) — si alguien entra por http:// a una IP de red local (ej.
+    // celular apuntando al computador del consultorio por wifi), el
+    // navegador ni siquiera expone la API, y el error genérico de más
+    // abajo no explicaría por qué. Detectarlo aparte da un mensaje que sí
+    // sirve para diagnosticarlo.
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setErrorCamara(
+        "Este navegador no permite usar la cámara aquí — solo funciona entrando por https:// (o localhost). Usa el lector físico mientras tanto.",
+      );
+      return;
+    }
+
     try {
+      // {ideal: "environment"} en vez del string suelto: es una preferencia
+      // (la cámara trasera si existe), nunca un requisito que pueda
+      // rechazar la petición completa en un equipo sin cámara trasera
+      // (una laptop, por ejemplo).
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" },
+        video: { facingMode: { ideal: "environment" } },
       });
       streamRef.current = stream;
       setCamaraActiva(true);
@@ -131,21 +149,31 @@ export function LoteScanner({
         await videoRef.current.play();
       }
       animacionRef.current = requestAnimationFrame(tick);
-    } catch {
-      setErrorCamara(
-        "No se pudo acceder a la cámara — revisa los permisos del navegador o usa el lector físico.",
-      );
+    } catch (e) {
+      const nombre = e instanceof Error ? e.name : "";
+      const mensaje =
+        nombre === "NotAllowedError"
+          ? "El navegador bloqueó el acceso a la cámara — revisa los permisos del sitio (ícono de candado en la barra de direcciones) y vuelve a intentar."
+          : nombre === "NotFoundError"
+            ? "No se encontró ninguna cámara en este dispositivo."
+            : "No se pudo acceder a la cámara — revisa los permisos del navegador o usa el lector físico.";
+      setErrorCamara(mensaje);
     }
   }
 
   return (
     <div className="space-y-3">
+      <p className="text-xs text-muted-foreground">
+        Apunta la pistola láser o la cámara al QR de la etiqueta impresa del lote (Inventario →
+        botón &quot;Etiqueta&quot;). No es un código que se sepa de memoria — este campo solo sirve
+        escaneando o con la cámara.
+      </p>
       <div className="flex items-center gap-2">
         <Input
           ref={inputRef}
           autoFocus={autoFocus}
           onKeyDown={handleKeyDownCodigo}
-          placeholder="Escanea con la pistola o pega el código aquí..."
+          placeholder="Esperando el escaneo de la pistola..."
           className="flex-1"
         />
         <Button type="button" size="sm" disabled={pendingBusqueda} onClick={buscarDesdeInput}>

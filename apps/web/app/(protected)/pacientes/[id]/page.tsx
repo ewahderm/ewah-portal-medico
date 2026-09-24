@@ -445,13 +445,13 @@ export default async function PacienteDetallePage({
                   {tratamientos.map((t) => (
                     <TableRow key={t.id}>
                       <TableCell className="text-muted-foreground">{t.fecha}</TableCell>
-                      <TableCell>
+                      <TableCell className="max-w-xs">
                         <div className="flex flex-col gap-0.5">
                           <span className={t.anulado ? "text-muted-foreground line-through" : ""}>
                             {t.tipos_tratamiento?.nombre ?? "—"}
                           </span>
                           {t.anulado ? (
-                            <span className="text-xs text-muted-foreground">
+                            <span className="whitespace-normal break-words text-xs text-muted-foreground">
                               Anulado{t.anulado_motivo ? `: ${t.anulado_motivo}` : ""}
                             </span>
                           ) : null}
@@ -680,7 +680,7 @@ export default async function PacienteDetallePage({
                     <TableRow key={c.id}>
                       <TableCell className="text-muted-foreground">{c.fecha}</TableCell>
                       <TableCell>{TIPO_CONTACTO_LABEL[c.tipo] ?? c.tipo}</TableCell>
-                      <TableCell className="max-w-xs">{c.nota}</TableCell>
+                      <TableCell className="max-w-xs whitespace-normal break-words">{c.nota}</TableCell>
                       <TableCell className="text-muted-foreground">
                         {c.resultado ? (RESULTADO_LABEL[c.resultado] ?? c.resultado) : "—"}
                       </TableCell>

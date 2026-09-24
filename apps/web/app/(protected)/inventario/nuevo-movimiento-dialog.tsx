@@ -5,6 +5,8 @@ import { useActionState } from "react";
 import { PlusIcon } from "lucide-react";
 import { registrarMovimiento } from "@/lib/inventario/actions";
 import { MOTIVOS_ENTRADA, MOTIVOS_SALIDA, MOTIVO_LABEL } from "@/lib/inventario/motivos";
+import { useCerrarAlExito } from "@/lib/forms/cerrarAlExito";
+import { toast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -43,6 +45,17 @@ export function NuevoMovimientoDialog({ insumos, lotes }: { insumos: Insumo[]; l
     () => lotes.filter((l) => l.insumo_id === insumoId),
     [lotes, insumoId],
   );
+
+  // Un warning (ej. stock negativo) SÍ guardó el movimiento — la lista ya
+  // quedó revalidada server-side — pero no cierra solo: la persona necesita
+  // leer la advertencia antes de que el diálogo desaparezca. Sin error ni
+  // warning, cierra y avisa con un toast (mismo patrón que el resto de la
+  // app: cita agendada, solicitud de plan, etc.).
+  useCerrarAlExito(pending, !state?.error && !state?.warning, () => {
+    setOpen(false);
+    setInsumoId("");
+    toast.add({ title: "Movimiento registrado", type: "success" });
+  });
 
   return (
     <Dialog

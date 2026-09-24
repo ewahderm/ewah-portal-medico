@@ -190,7 +190,7 @@ export default async function TratamientosPage() {
                       ) : null}
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="max-w-xs">
                     <div className="flex flex-col gap-0.5">
                       <span
                         className={t.anulado ? "text-muted-foreground line-through" : ""}
@@ -198,7 +198,7 @@ export default async function TratamientosPage() {
                         {t.tipos_tratamiento?.nombre ?? "—"}
                       </span>
                       {t.anulado ? (
-                        <span className="text-xs text-muted-foreground">
+                        <span className="whitespace-normal break-words text-xs text-muted-foreground">
                           Anulado{t.anulado_motivo ? `: ${t.anulado_motivo}` : ""}
                         </span>
                       ) : null}
@@ -211,7 +211,7 @@ export default async function TratamientosPage() {
                   <TableCell className="text-muted-foreground">
                     {formatoMoneda(t.costo)}
                   </TableCell>
-                  <TableCell className="max-w-xs text-muted-foreground">
+                  <TableCell className="max-w-xs whitespace-normal break-words text-muted-foreground">
                     {t.notas ?? "—"}
                   </TableCell>
                   {/* Sin flex-wrap a propósito: en una tabla de layout "auto"

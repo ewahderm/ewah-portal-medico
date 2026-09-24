@@ -219,7 +219,7 @@ export function MovimientosTab({
                   </TableCell>
                   <TableCell className="text-muted-foreground">{m.lotes?.numero_lote ?? "—"}</TableCell>
                   <TableCell className="text-muted-foreground">{m.lotes?.sedes?.nombre ?? "—"}</TableCell>
-                  <TableCell className="text-muted-foreground">
+                  <TableCell className="max-w-xs whitespace-normal break-words text-muted-foreground">
                     {m.tratamientos?.pacientes
                       ? `${m.tratamientos.pacientes.primer_nombre} ${m.tratamientos.pacientes.primer_apellido}`
                       : (m.motivo ?? m.sitio_anatomico ?? "—")}

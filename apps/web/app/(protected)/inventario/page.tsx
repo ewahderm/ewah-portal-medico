@@ -69,7 +69,6 @@ export default async function InventarioPage() {
         `id, numero_lote, fecha_vencimiento, cantidad_actual, costo_unitario, proveedor, activo, sede_id, insumo_id,
          insumos(nombre, unidad_medida), sedes(nombre)`,
       )
-      .eq("activo", true)
       .order("fecha_vencimiento", { ascending: true, nullsFirst: false }),
   ]);
 
