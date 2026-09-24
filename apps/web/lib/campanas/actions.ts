@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requirePermiso as requirePermisoBase } from "@/lib/auth/requirePermiso";
+import { requireEntitlement } from "@/lib/auth/requireEntitlement";
 import { valorOpcionalSelect, campoOpcional } from "@/lib/forms/opcional";
 import type { ActionState } from "@/lib/auth/actions";
 
@@ -46,6 +47,9 @@ export async function crearCampana(
   const check = await requirePermiso("CREATE");
   if (!check.ok) return { error: check.error };
 
+  const checkPlan = await requireEntitlement("campanas");
+  if (!checkPlan.ok) return { error: checkPlan.error };
+
   const supabase = await createClient();
   const { error } = await supabase.from("campanas").insert({
     clinica_id: check.usuario.clinica_id,
@@ -85,6 +89,9 @@ export async function actualizarCampana(
   const check = await requirePermiso("EDIT");
   if (!check.ok) return { error: check.error };
 
+  const checkPlan = await requireEntitlement("campanas");
+  if (!checkPlan.ok) return { error: checkPlan.error };
+
   const supabase = await createClient();
   const { error } = await supabase
     .from("campanas")
@@ -107,6 +114,9 @@ export async function actualizarCampana(
 export async function toggleActivoCampana(id: string, activo: boolean) {
   const check = await requirePermiso("EDIT");
   if (!check.ok) throw new Error(check.error);
+
+  const checkPlan = await requireEntitlement("campanas");
+  if (!checkPlan.ok) throw new Error(checkPlan.error);
 
   const supabase = await createClient();
   const { error } = await supabase.from("campanas").update({ activo }).eq("id", id);
