@@ -1,7 +1,10 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { inviteStaff } from "@/lib/rbac/actions";
+import { KeyRoundIcon, MailIcon } from "lucide-react";
+import { crearUsuarioConPassword, inviteStaff } from "@/lib/rbac/actions";
+import { useCerrarAlExito } from "@/lib/forms/cerrarAlExito";
+import { toast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,16 +22,62 @@ type Rol = { id: string; nombre: string };
 
 export function InviteDialog({ roles }: { roles: Rol[] }) {
   const [open, setOpen] = useState(false);
-  const [state, formAction, pending] = useActionState(inviteStaff, null);
+  const [conCorreo, setConCorreo] = useState(false);
+
+  const [stateInvitar, accionInvitar, pendingInvitar] = useActionState(inviteStaff, null);
+  const [stateCrear, accionCrear, pendingCrear] = useActionState(crearUsuarioConPassword, null);
+
+  const state = conCorreo ? stateInvitar : stateCrear;
+  const pending = conCorreo ? pendingInvitar : pendingCrear;
+
+  useCerrarAlExito(pending, !state?.error, () => {
+    setOpen(false);
+    toast.add({
+      title: conCorreo ? "Invitación enviada" : "Usuario creado",
+      type: "success",
+    });
+  });
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button>Invitar usuario</Button>} />
+      <DialogTrigger render={<Button>Agregar usuario</Button>} />
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Invitar usuario</DialogTitle>
+          <DialogTitle>Agregar usuario</DialogTitle>
         </DialogHeader>
-        <form action={formAction} className="space-y-4">
+
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant={conCorreo ? "outline" : "default"}
+            onClick={() => setConCorreo(false)}
+          >
+            <KeyRoundIcon /> Con contraseña
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant={conCorreo ? "default" : "outline"}
+            onClick={() => setConCorreo(true)}
+          >
+            <MailIcon /> Invitar por correo
+          </Button>
+        </div>
+
+        <p className="text-xs text-muted-foreground">
+          {conCorreo
+            ? "Le llega un correo para que defina su propia contraseña. Requiere que el servicio de correo esté configurado con un dominio propio."
+            : "Tú defines la contraseña y se la entregas a la persona. No envía ningún correo — funciona siempre."}
+        </p>
+
+        {/* Un form por modo (key distinta) a propósito: así cambiar de modo no
+            arrastra el estado ni el error del otro camino. */}
+        <form
+          key={conCorreo ? "correo" : "password"}
+          action={conCorreo ? accionInvitar : accionCrear}
+          className="space-y-4"
+        >
           {state?.error ? (
             <Alert variant="destructive">
               <AlertDescription>{state.error}</AlertDescription>
@@ -56,8 +105,32 @@ export function InviteDialog({ roles }: { roles: Rol[] }) {
             />
           </div>
 
+          {conCorreo ? null : (
+            <div className="space-y-2">
+              <Label htmlFor="password">Contraseña temporal</Label>
+              <Input
+                id="password"
+                name="password"
+                type="text"
+                required
+                minLength={8}
+                placeholder="Mínimo 8 caracteres"
+              />
+              <p className="text-xs text-muted-foreground">
+                Se muestra en pantalla para que puedas copiarla y entregarla. La persona puede
+                cambiarla después desde su perfil.
+              </p>
+            </div>
+          )}
+
           <Button type="submit" className="w-full" disabled={pending}>
-            {pending ? "Enviando invitación..." : "Enviar invitación"}
+            {pending
+              ? conCorreo
+                ? "Enviando invitación..."
+                : "Creando usuario..."
+              : conCorreo
+                ? "Enviar invitación"
+                : "Crear usuario"}
           </Button>
         </form>
       </DialogContent>

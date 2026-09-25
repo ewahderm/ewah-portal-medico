@@ -7,6 +7,94 @@ import { getCurrentUsuario, esAdministrador } from "@/lib/auth/session";
 import type { ActionState } from "@/lib/auth/actions";
 import { siteUrl } from "@/lib/site-url";
 
+/**
+ * Guardas compartidas entre las dos formas de dar de alta a alguien
+ * (invitación por correo y creación directa con contraseña): solo un
+ * Administrador puede hacerlo, y el rol elegido tiene que ser de SU propia
+ * clínica — si no, un admin podría colgar a alguien de un rol de otro tenant.
+ */
+async function validarAltaDeUsuario(rolId: string) {
+  const usuario = await getCurrentUsuario();
+  if (!usuario) return { ok: false as const, error: "Sesión inválida." };
+  if (!esAdministrador(usuario)) {
+    return { ok: false as const, error: "Solo un Administrador puede crear usuarios." };
+  }
+
+  const supabase = await createClient();
+  const { data: rol } = await supabase
+    .from("roles")
+    .select("id, clinica_id")
+    .eq("id", rolId)
+    .single();
+
+  if (!rol || rol.clinica_id !== usuario.clinica_id) {
+    return { ok: false as const, error: "Rol inválido." };
+  }
+
+  return { ok: true as const, usuario };
+}
+
+/**
+ * Alta sin correo: el Administrador define la contraseña y se la entrega a la
+ * persona. Existe porque la invitación por correo depende del servicio de
+ * email de Supabase, que en plan gratuito solo entrega a miembros de la
+ * organización — eso hacía imposible dar de alta (y probar) otros roles.
+ * Además es como opera de verdad una clínica pequeña: el administrador crea
+ * la cuenta del personal y le pasa las credenciales.
+ */
+export async function crearUsuarioConPassword(
+  _prevState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const nombre = String(formData.get("nombre") ?? "").trim();
+  const email = String(formData.get("email") ?? "")
+    .trim()
+    .toLowerCase();
+  const rolId = String(formData.get("rolId") ?? "");
+  const password = String(formData.get("password") ?? "");
+
+  if (!nombre || !email || !rolId || !password) {
+    return { error: "Completa todos los campos." };
+  }
+
+  if (password.length < 8) {
+    return { error: "La contraseña debe tener al menos 8 caracteres." };
+  }
+
+  const check = await validarAltaDeUsuario(rolId);
+  if (!check.ok) return { error: check.error };
+
+  const admin = createAdminClient();
+  // email_confirm: true — sin esto la cuenta queda esperando una confirmación
+  // por correo que nunca llega, que es justo lo que este camino evita.
+  const { data: creado, error: createError } = await admin.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: { nombre },
+  });
+
+  if (createError || !creado.user) {
+    return { error: createError?.message ?? "No se pudo crear el usuario." };
+  }
+
+  const { error: insertError } = await admin.from("usuarios").insert({
+    id: creado.user.id,
+    clinica_id: check.usuario.clinica_id,
+    rol_id: rolId,
+    nombre,
+    email,
+  });
+
+  if (insertError) {
+    await admin.auth.admin.deleteUser(creado.user.id);
+    return { error: "No se pudo crear el usuario. ¿Ya existe con ese correo?" };
+  }
+
+  revalidatePath("/usuarios");
+  return null;
+}
+
 export async function inviteStaff(
   _prevState: ActionState,
   formData: FormData,
@@ -21,22 +109,9 @@ export async function inviteStaff(
     return { error: "Completa todos los campos." };
   }
 
-  const usuario = await getCurrentUsuario();
-  if (!usuario) return { error: "Sesión inválida." };
-  if (!esAdministrador(usuario)) {
-    return { error: "Solo un Administrador puede invitar usuarios." };
-  }
-
-  const supabase = await createClient();
-  const { data: rol } = await supabase
-    .from("roles")
-    .select("id, clinica_id")
-    .eq("id", rolId)
-    .single();
-
-  if (!rol || rol.clinica_id !== usuario.clinica_id) {
-    return { error: "Rol inválido." };
-  }
+  const check = await validarAltaDeUsuario(rolId);
+  if (!check.ok) return { error: check.error };
+  const usuario = check.usuario;
 
   const admin = createAdminClient();
   const { data: invited, error: inviteError } = await admin.auth.admin.inviteUserByEmail(
