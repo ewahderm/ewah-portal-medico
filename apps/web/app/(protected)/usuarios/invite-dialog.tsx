@@ -65,11 +65,24 @@ export function InviteDialog({ roles }: { roles: Rol[] }) {
           </Button>
         </div>
 
-        <p className="text-xs text-muted-foreground">
-          {conCorreo
-            ? "Le llega un correo para que defina su propia contraseña. Requiere que el servicio de correo esté configurado con un dominio propio."
-            : "Tú defines la contraseña y se la entregas a la persona. No envía ningún correo — funciona siempre."}
-        </p>
+        {conCorreo ? (
+          // Advertencia prominente y no texto pequeño a propósito: si el SMTP
+          // no está configurado, este camino crea una cuenta que NUNCA podrá
+          // entrar (queda sin contraseña y el correo para definirla no llega),
+          // y eso ya pasó en la práctica.
+          <Alert>
+            <AlertDescription>
+              Si el servicio de correo todavía no está configurado con un dominio propio, la
+              invitación no llega y la cuenta queda sin poder entrar. En ese caso usa &quot;Con
+              contraseña&quot;.
+            </AlertDescription>
+          </Alert>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            Tú defines la contraseña y se la entregas a la persona. No envía ningún correo —
+            funciona siempre.
+          </p>
+        )}
 
         {/* Un form por modo (key distinta) a propósito: así cambiar de modo no
             arrastra el estado ni el error del otro camino. */}
