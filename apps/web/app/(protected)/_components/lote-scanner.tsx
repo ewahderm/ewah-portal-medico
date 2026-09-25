@@ -103,7 +103,10 @@ export function LoteScanner({
     if (video.readyState === video.HAVE_ENOUGH_DATA) {
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
-      const ctx = canvas.getContext("2d");
+      // willReadFrequently: este canvas hace getImageData en cada frame
+      // (loop de escaneo QR) — sin el hint, Chrome fuerza una lectura GPU→CPU
+      // más lenta en cada llamada y lo advierte por consola.
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
       if (ctx) {
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         const imagen = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -196,12 +199,22 @@ export function LoteScanner({
         </Alert>
       ) : null}
 
-      {camaraActiva ? (
-        <div className="relative mx-auto max-w-sm overflow-hidden rounded-lg border">
-          <video ref={videoRef} className="w-full" muted playsInline />
-          <canvas ref={canvasRef} className="hidden" />
-        </div>
-      ) : null}
+      {/* Montado siempre (nunca condicionado a camaraActiva) y solo oculto por
+          CSS: si el <video> se monta/desmonta con el estado, videoRef.current
+          sigue siendo null en el mismo tick síncrono en que iniciarCamara()
+          llama a setCamaraActiva(true) y le intenta asignar el stream — React
+          todavía no re-renderizó. Mantenerlo siempre en el DOM evita esa
+          carrera y deja que iniciarCamara() le asigne el stream de una. */}
+      <div
+        className={
+          camaraActiva
+            ? "relative mx-auto max-w-sm overflow-hidden rounded-lg border"
+            : "hidden"
+        }
+      >
+        <video ref={videoRef} className="w-full" muted playsInline />
+        <canvas ref={canvasRef} className="hidden" />
+      </div>
 
       {errorBusqueda ? (
         <Alert variant="destructive">
