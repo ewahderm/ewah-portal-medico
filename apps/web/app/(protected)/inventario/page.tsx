@@ -14,7 +14,6 @@ type LoteRow = {
   fecha_vencimiento: string | null;
   cantidad_actual: number;
   costo_unitario: number | null;
-  proveedor: string | null;
   sede_id: string;
   insumo_id: string;
   activo: boolean;
@@ -66,7 +65,7 @@ export default async function InventarioPage() {
     supabase
       .from("lotes")
       .select(
-        `id, numero_lote, fecha_vencimiento, cantidad_actual, costo_unitario, proveedor, activo, sede_id, insumo_id,
+        `id, numero_lote, fecha_vencimiento, cantidad_actual, costo_unitario, activo, sede_id, insumo_id,
          insumos(nombre, unidad_medida), sedes(nombre)`,
       )
       .order("fecha_vencimiento", { ascending: true, nullsFirst: false }),

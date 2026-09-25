@@ -187,7 +187,7 @@ export function MovimientosTab({
           <CardTitle className="text-base font-medium">
             Historial de movimientos {movimientos.length > 0 ? `(${movimientos.length})` : ""}
           </CardTitle>
-          <NuevoMovimientoDialog insumos={insumos} lotes={lotes} />
+          <NuevoMovimientoDialog insumos={insumos} lotes={lotes} sedes={sedes} />
         </CardHeader>
         <CardContent>
           <Table>

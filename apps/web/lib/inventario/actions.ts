@@ -6,7 +6,6 @@ import { createClient } from "@/lib/supabase/server";
 import { requirePermiso as requirePermisoBase } from "@/lib/auth/requirePermiso";
 import { requireEntitlement } from "@/lib/auth/requireEntitlement";
 import { campoOpcional } from "@/lib/forms/opcional";
-import type { ActionState } from "@/lib/auth/actions";
 import { MOTIVOS_ENTRADA, MOTIVOS_SALIDA } from "./motivos";
 
 export type InventarioActionState = { error?: string; warning?: string } | null;
@@ -15,16 +14,20 @@ function requirePermiso(permiso: "VIEW" | "CREATE" | "VOID") {
   return requirePermisoBase("inventario", permiso);
 }
 
+// Devuelve el id del lote recién creado para que quien lo llame pueda
+// seleccionarlo de una (el diálogo de movimiento crea el lote justo para
+// usarlo acto seguido). Sin error = éxito, igual que ActionState.
+export type CrearLoteState = { error?: string; loteId?: string } | null;
+
 export async function crearLote(
-  _prevState: ActionState,
+  _prevState: CrearLoteState,
   formData: FormData,
-): Promise<ActionState> {
+): Promise<CrearLoteState> {
   const insumoId = String(formData.get("insumoId") ?? "");
   const sedeId = String(formData.get("sedeId") ?? "");
   const numeroLote = String(formData.get("numeroLote") ?? "").trim();
   const motivoEntrada = String(formData.get("motivoEntrada") ?? "");
   const fechaVencimiento = campoOpcional(formData, "fechaVencimiento");
-  const proveedor = campoOpcional(formData, "proveedor");
   const costoTexto = campoOpcional(formData, "costoUnitario");
   const cantidadTexto = String(formData.get("cantidadRecibida") ?? "").trim();
 
@@ -61,7 +64,9 @@ export async function crearLote(
       sede_id: sedeId,
       numero_lote: numeroLote,
       fecha_vencimiento: fechaVencimiento,
-      proveedor,
+      // Sin proveedor: vive en el insumo (insumos.proveedor_id), no en el
+      // lote — el proveedor de un producto no cambia lote a lote. Ver la
+      // migración 0031.
       costo_unitario: costoUnitario,
       created_by: check.usuario.id,
     })
@@ -86,7 +91,7 @@ export async function crearLote(
   }
 
   revalidatePath("/inventario");
-  return null;
+  return { loteId: lote.id };
 }
 
 // Un lote no se elimina nunca (append-only, igual que todo lo demás en

@@ -20,6 +20,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Combobox } from "@/components/ui/combobox";
+import { CrearLoteDialog } from "./crear-lote-dialog";
+import type { Opcion } from "@/lib/forms/opciones";
 
 type Lote = {
   id: string;
@@ -36,9 +38,18 @@ const ITEMS_MOTIVO = [
   ...MOTIVOS_SALIDA.map((m) => ({ value: m, label: `Salida — ${MOTIVO_LABEL[m]}` })),
 ];
 
-export function NuevoMovimientoDialog({ insumos, lotes }: { insumos: Insumo[]; lotes: Lote[] }) {
+export function NuevoMovimientoDialog({
+  insumos,
+  lotes,
+  sedes,
+}: {
+  insumos: Insumo[];
+  lotes: Lote[];
+  sedes: Opcion[];
+}) {
   const [open, setOpen] = useState(false);
   const [insumoId, setInsumoId] = useState("");
+  const [loteId, setLoteId] = useState("");
   const [state, formAction, pending] = useActionState(registrarMovimiento, null);
 
   const lotesDelInsumo = useMemo(
@@ -54,6 +65,7 @@ export function NuevoMovimientoDialog({ insumos, lotes }: { insumos: Insumo[]; l
   useCerrarAlExito(pending, !state?.error && !state?.warning, () => {
     setOpen(false);
     setInsumoId("");
+    setLoteId("");
     toast.add({ title: "Movimiento registrado", type: "success" });
   });
 
@@ -62,7 +74,10 @@ export function NuevoMovimientoDialog({ insumos, lotes }: { insumos: Insumo[]; l
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
-        if (!next) setInsumoId("");
+        if (!next) {
+          setInsumoId("");
+          setLoteId("");
+        }
       }}
     >
       <DialogTrigger
@@ -95,7 +110,10 @@ export function NuevoMovimientoDialog({ insumos, lotes }: { insumos: Insumo[]; l
               id="insumoIdMovimiento"
               items={insumos.map((i) => ({ value: i.id, label: i.nombre }))}
               value={insumoId}
-              onValueChange={(valor) => setInsumoId(String(valor ?? ""))}
+              onValueChange={(valor) => {
+                setInsumoId(String(valor ?? ""));
+                setLoteId("");
+              }}
               placeholder="Escriba para buscar insumo..."
             />
           </div>
@@ -112,19 +130,40 @@ export function NuevoMovimientoDialog({ insumos, lotes }: { insumos: Insumo[]; l
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="loteId">Lote</Label>
+            <div className="flex items-center justify-between gap-2">
+              <Label htmlFor="loteId">Lote</Label>
+              {/* Salida del callejón sin salida: si el insumo todavía no tiene
+                  lotes, antes el campo quedaba deshabilitado y tocaba salirse
+                  a la pestaña de Recepción. Ahora el lote se crea aquí mismo y
+                  queda seleccionado. */}
+              {insumoId ? (
+                <CrearLoteDialog
+                  insumos={insumos}
+                  sedes={sedes}
+                  insumoIdFijo={insumoId}
+                  onCreado={(nuevoLoteId) => setLoteId(nuevoLoteId)}
+                />
+              ) : null}
+            </div>
             <Combobox
-              key={insumoId}
               id="loteId"
               name="loteId"
               required
               disabled={lotesDelInsumo.length === 0}
+              value={loteId}
+              onValueChange={(valor) => setLoteId(String(valor ?? ""))}
               items={lotesDelInsumo.map((l) => ({
                 value: l.id,
                 label: `${l.numero_lote} — ${l.sedes?.nombre ?? "—"} (stock: ${l.cantidad_actual})`,
               }))}
               placeholder={!insumoId ? "Primero seleccione un insumo" : "Selecciona"}
             />
+            {insumoId && lotesDelInsumo.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                Este insumo todavía no tiene lotes. Crea uno con el botón de arriba para poder
+                registrar el movimiento.
+              </p>
+            ) : null}
           </div>
 
           <div className="space-y-2">

@@ -37,7 +37,6 @@ type LoteRow = {
   fecha_vencimiento: string | null;
   cantidad_actual: number;
   costo_unitario: number | null;
-  proveedor: string | null;
   sede_id: string;
   activo: boolean;
   insumos: { nombre: string; unidad_medida: string } | null;
