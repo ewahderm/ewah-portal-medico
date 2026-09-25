@@ -95,6 +95,66 @@ export async function crearUsuarioConPassword(
   return null;
 }
 
+/**
+ * Asigna una contraseña nueva a alguien que ya existe. Hace falta para dos
+ * casos reales: (1) las cuentas creadas por invitación que nunca pudieron
+ * definir su contraseña porque el correo no llegó — quedaban inservibles,
+ * sin forma de recuperarlas, y (2) el olvido de contraseña de siempre.
+ *
+ * De paso desbloquea la cuenta y pone los intentos fallidos en cero: si
+ * alguien quedó bloqueado por fallar 5 veces, lo que necesita es justamente
+ * una contraseña nueva, y dejarlo bloqueado obligaría a una segunda acción.
+ */
+export async function restablecerPassword(
+  _prevState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const usuarioId = String(formData.get("usuarioId") ?? "");
+  const password = String(formData.get("password") ?? "");
+
+  if (!usuarioId || !password) return { error: "Completa todos los campos." };
+  if (password.length < 8) {
+    return { error: "La contraseña debe tener al menos 8 caracteres." };
+  }
+
+  const admin = await getCurrentUsuario();
+  if (!admin) return { error: "Sesión inválida." };
+  if (!esAdministrador(admin)) {
+    return { error: "Solo un Administrador puede restablecer contraseñas." };
+  }
+
+  // Sin este chequeo, un Administrador podría cambiarle la contraseña a un
+  // usuario de OTRA clínica y tomarle la cuenta: `usuarioId` viene del
+  // cliente y el cliente admin salta el RLS.
+  const supabaseAdmin = createAdminClient();
+  const { data: objetivo } = await supabaseAdmin
+    .from("usuarios")
+    .select("id, clinica_id")
+    .eq("id", usuarioId)
+    .maybeSingle();
+
+  if (!objetivo || objetivo.clinica_id !== admin.clinica_id) {
+    return { error: "Usuario inválido." };
+  }
+
+  const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(usuarioId, {
+    password,
+    email_confirm: true,
+  });
+
+  if (updateError) {
+    return { error: updateError.message };
+  }
+
+  await supabaseAdmin
+    .from("usuarios")
+    .update({ bloqueado: false, intentos_login: 0, fecha_bloqueo: null })
+    .eq("id", usuarioId);
+
+  revalidatePath("/usuarios");
+  return null;
+}
+
 export async function inviteStaff(
   _prevState: ActionState,
   formData: FormData,

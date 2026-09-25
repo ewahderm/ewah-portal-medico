@@ -14,6 +14,7 @@ import {
 import { InviteDialog } from "./invite-dialog";
 import { CreateRolDialog } from "./create-rol-dialog";
 import { PermissionMatrixDialog } from "./permission-matrix-dialog";
+import { ResetPasswordDialog } from "./reset-password-dialog";
 
 export default async function UsuariosPage() {
   const usuario = await requireUsuario();
@@ -89,6 +90,7 @@ export default async function UsuariosPage() {
                 <TableHead>Correo</TableHead>
                 <TableHead>Rol</TableHead>
                 <TableHead>Estado</TableHead>
+                <TableHead />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -106,11 +108,14 @@ export default async function UsuariosPage() {
                       <Badge variant="outline">Desactivado</Badge>
                     )}
                   </TableCell>
+                  <TableCell className="text-right">
+                    <ResetPasswordDialog usuarioId={u.id} nombre={u.nombre} />
+                  </TableCell>
                 </TableRow>
               ))}
               {(usuarios ?? []).length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center text-muted-foreground">
+                  <TableCell colSpan={5} className="text-center text-muted-foreground">
                     Todavía no hay usuarios registrados.
                   </TableCell>
                 </TableRow>
