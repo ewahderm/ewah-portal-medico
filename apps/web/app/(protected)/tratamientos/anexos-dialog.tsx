@@ -9,6 +9,7 @@ import {
   urlFirmadaAnexo,
 } from "@/lib/tratamientos/actions";
 import { CATEGORIAS_ANEXO, CATEGORIA_ANEXO_LABEL } from "@/lib/tratamientos/anexos";
+import { comprimirImagen } from "@/lib/media/comprimirImagen";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -77,6 +78,10 @@ export function AnexosDialog({
     setError(null);
     startTransition(async () => {
       try {
+        // Sin efecto si es un PDF — comprimirImagen solo toca tipos
+        // image/*, un PDF se sube igual que antes.
+        const archivo = formData.get("archivo");
+        if (archivo instanceof File) formData.set("archivo", await comprimirImagen(archivo));
         await subirAnexoTratamiento(tratamientoId, categoria, formData);
         setObservaciones("");
         cargar();

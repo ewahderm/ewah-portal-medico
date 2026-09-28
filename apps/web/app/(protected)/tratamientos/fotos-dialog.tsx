@@ -9,6 +9,7 @@ import {
   eliminarFotoTratamiento,
   urlFirmadaFoto,
 } from "@/lib/tratamientos/actions";
+import { comprimirImagen } from "@/lib/media/comprimirImagen";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -74,6 +75,8 @@ export function FotosDialog({
     setError(null);
     startTransition(async () => {
       try {
+        const foto = formData.get("foto");
+        if (foto instanceof File) formData.set("foto", await comprimirImagen(foto));
         await crearRegistroFoto(tratamientoId, etiqueta as "antes" | "despues", formData);
         setObservaciones("");
         cargar();
@@ -87,6 +90,8 @@ export function FotosDialog({
     setError(null);
     startTransition(async () => {
       try {
+        const foto = formData.get("foto");
+        if (foto instanceof File) formData.set("foto", await comprimirImagen(foto));
         await completarFotoRegistro(registro.id, tratamientoId, lado, formData);
         cargar();
       } catch (e) {
