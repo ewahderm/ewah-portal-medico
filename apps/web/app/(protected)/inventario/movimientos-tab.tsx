@@ -4,12 +4,14 @@ import { useEffect, useState, useTransition } from "react";
 import { SearchIcon, XIcon } from "lucide-react";
 import { listarMovimientos } from "@/lib/inventario/actions";
 import { MOTIVOS_ENTRADA, MOTIVOS_SALIDA, MOTIVO_LABEL } from "@/lib/inventario/motivos";
+import { totalPaginas as calcularTotalPaginas } from "@/lib/pagination";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Combobox } from "@/components/ui/combobox";
+import { Pagination } from "@/components/ui/pagination";
 import {
   Table,
   TableBody,
@@ -95,6 +97,8 @@ export function MovimientosTab({
   lotes: LoteResumen[];
 }) {
   const [movimientos, setMovimientos] = useState<Movimiento[]>([]);
+  const [total, setTotal] = useState(0);
+  const [pagina, setPagina] = useState(1);
   const [insumoId, setInsumoId] = useState(TODOS);
   const [sedeId, setSedeId] = useState(TODOS);
   const [filtroTipo, setFiltroTipo] = useState(TODOS);
@@ -102,18 +106,25 @@ export function MovimientosTab({
   const [hasta, setHasta] = useState("");
   const [pending, startTransition] = useTransition();
 
-  function buscar() {
+  function buscar(paginaDestino = 1) {
     const { tipo, motivo } = parseFiltroTipo(filtroTipo);
     startTransition(async () => {
-      const data = await listarMovimientos({
+      const { movimientos: data, total: totalEncontrado, pagina: paginaReal } = await listarMovimientos({
         insumoId: insumoId === TODOS ? undefined : insumoId,
         sedeId: sedeId === TODOS ? undefined : sedeId,
         tipo,
         motivo,
         desde: desde || undefined,
         hasta: hasta || undefined,
+        pagina: paginaDestino,
       });
       setMovimientos(data as unknown as Movimiento[]);
+      setTotal(totalEncontrado);
+      // No siempre es paginaDestino: si esa página ya no existe (los
+      // filtros cambiaron mientras se estaba en la 3), listarMovimientos se
+      // corrige sola a la 1 — se refleja aquí para no dejar el control de
+      // paginación mostrando un número que ya no es real.
+      setPagina(paginaReal);
     });
   }
 
@@ -175,7 +186,7 @@ export function MovimientosTab({
             <Button variant="outline" onClick={limpiar}>
               <XIcon /> Limpiar
             </Button>
-            <Button onClick={buscar} disabled={pending}>
+            <Button onClick={() => buscar()} disabled={pending}>
               <SearchIcon /> {pending ? "Buscando..." : "Buscar"}
             </Button>
           </div>
@@ -185,7 +196,7 @@ export function MovimientosTab({
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-base font-medium">
-            Historial de movimientos {movimientos.length > 0 ? `(${movimientos.length})` : ""}
+            Historial de movimientos {total > 0 ? `(${total})` : ""}
           </CardTitle>
           <NuevoMovimientoDialog insumos={insumos} lotes={lotes} sedes={sedes} />
         </CardHeader>
@@ -236,6 +247,11 @@ export function MovimientosTab({
               ) : null}
             </TableBody>
           </Table>
+          <Pagination
+            pagina={pagina}
+            totalPaginas={calcularTotalPaginas(total)}
+            onCambiarPagina={(p) => buscar(p)}
+          />
         </CardContent>
       </Card>
     </div>

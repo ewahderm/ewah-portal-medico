@@ -1,9 +1,16 @@
+import { redirect } from "next/navigation";
 import { requireUsuario, esAdministrador } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { nombreCompleto } from "@/lib/pacientes/nombre";
 import { formatoMoneda } from "@/lib/format";
 import { getSedesActivas, getMediosPagoActivos, getTiposTratamientoActivos } from "@/lib/catalogos";
 import { tieneInfoPendiente } from "@/lib/pacientes/completitud";
+import {
+  paginaDesde,
+  rangoPagina,
+  totalPaginas as calcularTotalPaginas,
+  esRangoFueraDeLimite,
+} from "@/lib/pagination";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,6 +29,7 @@ import { RevertirAnulacionButton } from "./revertir-anulacion-button";
 import { FotosDialog } from "./fotos-dialog";
 import { AnexosDialog } from "./anexos-dialog";
 import { InsumosDialog } from "./insumos-dialog";
+import { Pagination } from "@/components/ui/pagination";
 
 type TratamientoRow = {
   id: string;
@@ -49,8 +57,14 @@ type TratamientoRow = {
   sedes: { nombre: string } | null;
 };
 
-export default async function TratamientosPage() {
+export default async function TratamientosPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
   const usuario = await requireUsuario();
+  const { page } = await searchParams;
+  const pagina = paginaDesde(page);
   const supabase = await createClient();
 
   const { data: puedeVer } = await supabase.rpc("has_permission", {
@@ -64,6 +78,28 @@ export default async function TratamientosPage() {
         <AlertDescription>No tienes permiso para ver esta página.</AlertDescription>
       </Alert>
     );
+  }
+
+  // Quién puede ver anulados se decide por rol, no por un toggle en la UI —
+  // se resuelve antes del Promise.all para poder filtrarlo en la consulta
+  // misma (necesario para que el total paginado sea correcto).
+  const puedeVerAnulados = esAdministrador(usuario);
+  let historialQuery = supabase
+    .from("tratamientos")
+    .select(
+      `id, fecha, edad_paciente, costo, notas, cufe, anulado, anulado_motivo, corrige_a,
+       paciente_id, tipo_tratamiento_id, profesional_id, sede_id, medio_pago_id,
+       pacientes(primer_nombre, segundo_nombre, primer_apellido, segundo_apellido),
+       tipos_tratamiento(nombre),
+       sedes(nombre),
+       profesional:usuarios!tratamientos_profesional_id_fkey(nombre)`,
+      { count: "exact" },
+    )
+    .order("fecha", { ascending: false })
+    .order("created_at", { ascending: false });
+
+  if (!puedeVerAnulados) {
+    historialQuery = historialQuery.eq("anulado", false);
   }
 
   const [
@@ -81,7 +117,7 @@ export default async function TratamientosPage() {
     { data: lotesData },
     { data: fotosData },
     { data: anexosData },
-    { data: tratamientos },
+    { data: tratamientos, count: totalTratamientos, error: errorHistorial },
   ] = await Promise.all([
     supabase.rpc("has_permission", { modulo_code: "tratamientos", permiso_code: "CREATE" }),
     supabase.rpc("has_permission", { modulo_code: "tratamientos", permiso_code: "VOID" }),
@@ -106,25 +142,21 @@ export default async function TratamientosPage() {
       .eq("activo", true),
     supabase.from("tratamiento_fotos").select("tratamiento_id"),
     supabase.from("tratamiento_anexos").select("tratamiento_id"),
-    supabase
-      .from("tratamientos")
-      .select(
-        `id, fecha, edad_paciente, costo, notas, cufe, anulado, anulado_motivo, corrige_a,
-         paciente_id, tipo_tratamiento_id, profesional_id, sede_id, medio_pago_id,
-         pacientes(primer_nombre, segundo_nombre, primer_apellido, segundo_apellido),
-         tipos_tratamiento(nombre),
-         sedes(nombre),
-         profesional:usuarios!tratamientos_profesional_id_fkey(nombre)`,
-      )
-      .order("fecha", { ascending: false })
-      .order("created_at", { ascending: false }),
+    historialQuery.range(...rangoPagina(pagina)),
   ]);
 
-  const puedeVerAnulados = esAdministrador(usuario);
-  const historialCompleto = (tratamientos ?? []) as unknown as TratamientoRow[];
-  const historial = puedeVerAnulados
-    ? historialCompleto
-    : historialCompleto.filter((t) => !t.anulado);
+  // Alguien dejó ?page=9 en favoritos y luego esa página dejó de existir
+  // (se anularon tratamientos, cambió el rol que filtra anulados, etc.):
+  // Supabase devuelve un error de rango en vez de una lista vacía, y sin
+  // este chequeo se veía como "todavía no hay tratamientos registrados" —
+  // engañoso, había datos, solo la página pedida no existía. Se corrige
+  // volviendo a la página 1, que un .range() nunca puede rechazar.
+  if (esRangoFueraDeLimite(errorHistorial) && pagina > 1) {
+    redirect("/tratamientos");
+  }
+
+  const historial = (tratamientos ?? []) as unknown as TratamientoRow[];
+  const paginas = calcularTotalPaginas(totalTratamientos ?? 0);
   const pacientes = (pacientesData ?? []).map((p) => ({ id: p.id, nombre: nombreCompleto(p) }));
   const pacientesPendientes = new Set(
     (pacientesData ?? []).filter(tieneInfoPendiente).map((p) => p.id),
@@ -315,6 +347,7 @@ export default async function TratamientosPage() {
               ) : null}
             </TableBody>
           </Table>
+          <Pagination pagina={pagina} totalPaginas={paginas} basePath="/tratamientos" />
         </CardContent>
       </Card>
     </div>

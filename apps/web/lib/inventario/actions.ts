@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requirePermiso as requirePermisoBase } from "@/lib/auth/requirePermiso";
 import { requireEntitlement } from "@/lib/auth/requireEntitlement";
 import { campoOpcional } from "@/lib/forms/opcional";
+import { rangoPagina, esRangoFueraDeLimite } from "@/lib/pagination";
 import { MOTIVOS_ENTRADA, MOTIVOS_SALIDA } from "./motivos";
 
 export type InventarioActionState = { error?: string; warning?: string } | null;
@@ -399,6 +400,7 @@ export async function listarMovimientos(filtros: {
   motivo?: string;
   desde?: string;
   hasta?: string;
+  pagina?: number;
 }) {
   const supabase = await createClient();
   const embedLote = filtros.insumoId || filtros.sedeId ? "lotes!inner" : "lotes";
@@ -410,9 +412,9 @@ export async function listarMovimientos(filtros: {
        ${embedLote}(numero_lote, insumo_id, sede_id, insumos(nombre, unidad_medida), sedes(nombre)),
        tratamientos(fecha, pacientes(primer_nombre, primer_apellido)),
        creador:usuarios!movimientos_insumos_created_by_fkey(nombre)`,
+      { count: "exact" },
     )
-    .order("created_at", { ascending: false })
-    .limit(200);
+    .order("created_at", { ascending: false });
 
   if (filtros.insumoId) query = query.eq("lotes.insumo_id", filtros.insumoId);
   if (filtros.sedeId) query = query.eq("lotes.sede_id", filtros.sedeId);
@@ -421,8 +423,19 @@ export async function listarMovimientos(filtros: {
   if (filtros.desde) query = query.gte("created_at", filtros.desde);
   if (filtros.hasta) query = query.lte("created_at", `${filtros.hasta}T23:59:59`);
 
-  const { data } = await query;
-  return data ?? [];
+  const paginaPedida = filtros.pagina ?? 1;
+  const { data, count, error } = await query.range(...rangoPagina(paginaPedida));
+
+  // Los filtros pueden cambiar entre una carga y la siguiente (alguien
+  // ajusta el rango de fechas mientras está en la página 3) y esa página
+  // deja de existir — Supabase devuelve un error de rango, no una lista
+  // vacía. En vez de dejarlo pasar, se reconstruye la consulta completa
+  // (mismos filtros) pidiendo la página 1, que nunca puede fallar por esto.
+  if (esRangoFueraDeLimite(error) && paginaPedida > 1) {
+    return listarMovimientos({ ...filtros, pagina: 1 });
+  }
+
+  return { movimientos: data ?? [], total: count ?? 0, pagina: paginaPedida };
 }
 
 export async function listarConsumoTratamiento(tratamientoId: string) {

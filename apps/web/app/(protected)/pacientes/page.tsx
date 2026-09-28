@@ -1,8 +1,15 @@
 import { requireUsuario } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
 import { normalizarBusqueda } from "@/lib/pacientes/normalizar";
 import { nombreCompleto } from "@/lib/pacientes/nombre";
 import { tieneInfoPendiente, camposFaltantes } from "@/lib/pacientes/completitud";
+import {
+  paginaDesde,
+  rangoPagina,
+  totalPaginas as calcularTotalPaginas,
+  esRangoFueraDeLimite,
+} from "@/lib/pagination";
 import {
   getTiposIdentificacionActivos,
   getGenerosActivos,
@@ -27,14 +34,16 @@ import {
 import Link from "next/link";
 import { PacienteDialog } from "./paciente-dialog";
 import { ToggleActivoButton } from "./toggle-activo-button";
+import { Pagination } from "@/components/ui/pagination";
 
 export default async function PacientesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; page?: string }>;
 }) {
   await requireUsuario();
-  const { q } = await searchParams;
+  const { q, page } = await searchParams;
+  const pagina = paginaDesde(page);
   const supabase = await createClient();
 
   const { data: puedeVer } = await supabase.rpc("has_permission", {
@@ -81,6 +90,7 @@ export default async function PacientesPage({
     .from("pacientes")
     .select(
       "id, tipo_identificacion_id, numero_identificacion, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, fecha_nacimiento, genero_id, nacionalidad_id, pais_residencia_id, canal_captacion_id, campana_id, eps_id, email, telefono1, telefono2, activo",
+      { count: "exact" },
     )
     .order("primer_apellido");
 
@@ -88,7 +98,17 @@ export default async function PacientesPage({
     query = query.ilike("busqueda", `%${normalizarBusqueda(q)}%`);
   }
 
-  const { data: pacientes } = await query;
+  const { data: pacientes, count, error: errorPacientes } = await query.range(...rangoPagina(pagina));
+
+  // Misma corrección que en Tratamientos: una página que ya no existe
+  // (ej. una búsqueda que redujo el resultado) da error de rango en vez de
+  // lista vacía — se vuelve a page=1 conservando la búsqueda en vez de
+  // mostrar "no se encontraron pacientes" de forma engañosa.
+  if (esRangoFueraDeLimite(errorPacientes) && pagina > 1) {
+    redirect(q ? `/pacientes?q=${encodeURIComponent(q)}` : "/pacientes");
+  }
+
+  const paginas = calcularTotalPaginas(count ?? 0);
 
   return (
     <div className="space-y-6">
@@ -188,6 +208,12 @@ export default async function PacientesPage({
               ) : null}
             </TableBody>
           </Table>
+          <Pagination
+            pagina={pagina}
+            totalPaginas={paginas}
+            basePath="/pacientes"
+            parametros={{ q }}
+          />
         </CardContent>
       </Card>
     </div>
