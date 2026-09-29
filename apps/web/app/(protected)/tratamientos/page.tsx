@@ -29,6 +29,7 @@ import { RevertirAnulacionButton } from "./revertir-anulacion-button";
 import { FotosDialog } from "./fotos-dialog";
 import { AnexosDialog } from "./anexos-dialog";
 import { InsumosDialog } from "./insumos-dialog";
+import { FiltrosTratamientos } from "./filtros-tratamientos";
 import { Pagination } from "@/components/ui/pagination";
 
 type TratamientoRow = {
@@ -60,11 +61,31 @@ type TratamientoRow = {
 export default async function TratamientosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{
+    page?: string;
+    profesionalId?: string;
+    sedeId?: string;
+    pacienteId?: string;
+    tipoTratamientoId?: string;
+    desde?: string;
+    hasta?: string;
+  }>;
 }) {
   const usuario = await requireUsuario();
-  const { page } = await searchParams;
+  const {
+    page,
+    profesionalId,
+    sedeId,
+    pacienteId,
+    tipoTratamientoId,
+    desde,
+    hasta,
+  } = await searchParams;
   const pagina = paginaDesde(page);
+  // Se reusa tal cual en el link de "Limpiar", en cada link de <Pagination>
+  // (para que cambiar de página no bote los filtros activos) y en el
+  // redirect de recuperación cuando la página pedida quedó fuera de rango.
+  const filtrosActivos = { profesionalId, sedeId, pacienteId, tipoTratamientoId, desde, hasta };
   const supabase = await createClient();
 
   const { data: puedeVer } = await supabase.rpc("has_permission", {
@@ -101,6 +122,12 @@ export default async function TratamientosPage({
   if (!puedeVerAnulados) {
     historialQuery = historialQuery.eq("anulado", false);
   }
+  if (profesionalId) historialQuery = historialQuery.eq("profesional_id", profesionalId);
+  if (sedeId) historialQuery = historialQuery.eq("sede_id", sedeId);
+  if (pacienteId) historialQuery = historialQuery.eq("paciente_id", pacienteId);
+  if (tipoTratamientoId) historialQuery = historialQuery.eq("tipo_tratamiento_id", tipoTratamientoId);
+  if (desde) historialQuery = historialQuery.gte("fecha", desde);
+  if (hasta) historialQuery = historialQuery.lte("fecha", hasta);
 
   const [
     { data: puedeCrear },
@@ -152,7 +179,11 @@ export default async function TratamientosPage({
   // engañoso, había datos, solo la página pedida no existía. Se corrige
   // volviendo a la página 1, que un .range() nunca puede rechazar.
   if (esRangoFueraDeLimite(errorHistorial) && pagina > 1) {
-    redirect("/tratamientos");
+    const params = new URLSearchParams();
+    for (const [clave, valor] of Object.entries(filtrosActivos)) {
+      if (valor) params.set(clave, valor);
+    }
+    redirect(params.size ? `/tratamientos?${params.toString()}` : "/tratamientos");
   }
 
   const historial = (tratamientos ?? []) as unknown as TratamientoRow[];
@@ -189,6 +220,14 @@ export default async function TratamientosPage({
           />
         ) : null}
       </div>
+
+      <FiltrosTratamientos
+        profesionales={profesionales ?? []}
+        sedes={sedes ?? []}
+        pacientes={pacientes}
+        tiposTratamiento={tiposTratamiento ?? []}
+        valores={filtrosActivos}
+      />
 
       <Card>
         <CardHeader>
@@ -347,7 +386,12 @@ export default async function TratamientosPage({
               ) : null}
             </TableBody>
           </Table>
-          <Pagination pagina={pagina} totalPaginas={paginas} basePath="/tratamientos" />
+          <Pagination
+            pagina={pagina}
+            totalPaginas={paginas}
+            basePath="/tratamientos"
+            parametros={filtrosActivos}
+          />
         </CardContent>
       </Card>
     </div>
