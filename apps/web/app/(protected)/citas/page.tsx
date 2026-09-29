@@ -50,7 +50,7 @@ export default async function CitasPage({
   } = await searchParams;
   const fechaISO = fechaParam || hoyISO();
   const fecha = parsearFechaISO(fechaISO);
-  const vista: Vista = vistaParam === "week" || vistaParam === "month" ? vistaParam : "day";
+  const vista: Vista = vistaParam === "day" || vistaParam === "month" ? vistaParam : "week";
   const supabase = await createClient();
 
   const { data: puedeVer } = await supabase.rpc("has_permission", {
