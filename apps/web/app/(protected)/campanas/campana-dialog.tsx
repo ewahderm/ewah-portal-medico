@@ -79,7 +79,7 @@ export function CampanaDialog({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="fechaInicio">Fecha de inicio (opcional)</Label>
               <Input

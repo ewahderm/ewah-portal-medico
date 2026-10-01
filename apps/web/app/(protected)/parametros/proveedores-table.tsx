@@ -63,8 +63,8 @@ export function ProveedoresTable({
         <TableHeader>
           <TableRow>
             <TableHead>Nombre</TableHead>
-            <TableHead>Tipo ID</TableHead>
-            <TableHead>Número de identificación</TableHead>
+            <TableHead className="hidden md:table-cell">Tipo ID</TableHead>
+            <TableHead className="hidden md:table-cell">Número de identificación</TableHead>
             <TableHead className="text-right">Acciones</TableHead>
           </TableRow>
         </TableHeader>
@@ -72,10 +72,10 @@ export function ProveedoresTable({
           {valores.map((valor) => (
             <TableRow key={valor.id}>
               <TableCell>{valor.nombre}</TableCell>
-              <TableCell className="text-muted-foreground">
+              <TableCell className="hidden text-muted-foreground md:table-cell">
                 {valor.tipos_identificacion?.nombre ?? "—"}
               </TableCell>
-              <TableCell className="text-muted-foreground">
+              <TableCell className="hidden text-muted-foreground md:table-cell">
                 {valor.numero_identificacion ?? "—"}
               </TableCell>
               <TableCell className="flex justify-end gap-2 text-right">

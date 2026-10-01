@@ -6,6 +6,7 @@ import {
   CalendarDaysIcon,
   SyringeIcon,
   PhoneCallIcon,
+  PencilIcon,
 } from "lucide-react";
 import { requireUsuario, esAdministrador } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
@@ -435,9 +436,9 @@ export default async function PacienteDetallePage({
                   <TableRow>
                     <TableHead>Fecha</TableHead>
                     <TableHead>Tratamiento</TableHead>
-                    <TableHead>Sede</TableHead>
-                    <TableHead>Profesional</TableHead>
-                    <TableHead>Valor</TableHead>
+                    <TableHead className="hidden md:table-cell">Sede</TableHead>
+                    <TableHead className="hidden md:table-cell">Profesional</TableHead>
+                    <TableHead className="hidden md:table-cell">Valor</TableHead>
                     <TableHead />
                   </TableRow>
                 </TableHeader>
@@ -445,9 +446,11 @@ export default async function PacienteDetallePage({
                   {tratamientos.map((t) => (
                     <TableRow key={t.id}>
                       <TableCell className="text-muted-foreground">{t.fecha}</TableCell>
-                      <TableCell className="max-w-xs">
+                      <TableCell className="max-w-[55vw] md:max-w-xs">
                         <div className="flex flex-col gap-0.5">
-                          <span className={t.anulado ? "text-muted-foreground line-through" : ""}>
+                          <span
+                            className={`truncate ${t.anulado ? "text-muted-foreground line-through" : ""}`}
+                          >
                             {t.tipos_tratamiento?.nombre ?? "—"}
                           </span>
                           {t.anulado ? (
@@ -457,13 +460,13 @@ export default async function PacienteDetallePage({
                           ) : null}
                         </div>
                       </TableCell>
-                      <TableCell className="text-muted-foreground">
+                      <TableCell className="hidden text-muted-foreground md:table-cell">
                         {t.sedes?.nombre ?? "—"}
                       </TableCell>
-                      <TableCell className="text-muted-foreground">
+                      <TableCell className="hidden text-muted-foreground md:table-cell">
                         {t.profesional?.nombre ?? "—"}
                       </TableCell>
-                      <TableCell className="text-muted-foreground">
+                      <TableCell className="hidden text-muted-foreground md:table-cell">
                         {formatoMoneda(t.costo)}
                       </TableCell>
                       {/* Sin flex-wrap a propósito: ver el comentario en
@@ -513,8 +516,9 @@ export default async function PacienteDetallePage({
                               cufe: t.cufe,
                             }}
                             trigger={
-                              <Button variant="outline" size="sm">
-                                Editar
+                              <Button variant="outline" size="sm" aria-label="Editar">
+                                <PencilIcon className="md:hidden" />
+                                <span className="hidden md:inline">Editar</span>
                               </Button>
                             }
                           />
@@ -542,8 +546,9 @@ export default async function PacienteDetallePage({
                               cufe: t.cufe,
                             }}
                             trigger={
-                              <Button variant="outline" size="sm">
-                                Corregir
+                              <Button variant="outline" size="sm" aria-label="Corregir">
+                                <PencilIcon className="md:hidden" />
+                                <span className="hidden md:inline">Corregir</span>
                               </Button>
                             }
                           />

@@ -59,7 +59,7 @@ export function CatalogoTable({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Código</TableHead>
+            <TableHead className="hidden md:table-cell">Código</TableHead>
             <TableHead>Nombre</TableHead>
             <TableHead className="text-right">Activo</TableHead>
           </TableRow>
@@ -67,7 +67,7 @@ export function CatalogoTable({
         <TableBody>
           {valores.map((valor) => (
             <TableRow key={valor.id}>
-              <TableCell className="font-mono text-xs text-muted-foreground">
+              <TableCell className="hidden font-mono text-xs text-muted-foreground md:table-cell">
                 {valor.codigo ?? "—"}
               </TableCell>
               <TableCell>{valor.nombre}</TableCell>

@@ -55,7 +55,7 @@ export function ContactoDialog({ pacienteId }: { pacienteId: string }) {
             </Alert>
           ) : null}
 
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="tipo">Tipo de contacto</Label>
               <Combobox id="tipo" name="tipo" required items={TIPOS} placeholder="Selecciona" />
@@ -82,7 +82,7 @@ export function ContactoDialog({ pacienteId }: { pacienteId: string }) {
             <Combobox id="resultado" name="resultado" items={RESULTADOS} defaultValue={SIN_SELECCION} />
           </div>
 
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="proximaAccionFecha">Próxima acción (opcional)</Label>
               <Input id="proximaAccionFecha" name="proximaAccionFecha" type="date" />

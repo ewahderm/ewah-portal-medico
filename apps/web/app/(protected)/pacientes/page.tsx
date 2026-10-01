@@ -148,8 +148,8 @@ export default async function PacientesPage({
             <TableHeader>
               <TableRow>
                 <TableHead>Paciente</TableHead>
-                <TableHead>Identificación</TableHead>
-                <TableHead>Contacto</TableHead>
+                <TableHead className="hidden md:table-cell">Identificación</TableHead>
+                <TableHead className="hidden md:table-cell">Contacto</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead />
               </TableRow>
@@ -157,24 +157,25 @@ export default async function PacientesPage({
             <TableBody>
               {(pacientes ?? []).map((p) => (
                 <TableRow key={p.id}>
-                  <TableCell className="font-medium">
-                    <div className="flex items-center gap-1.5">
-                      {nombreCompleto(p)}
+                  <TableCell className="max-w-[45vw] font-medium md:max-w-none">
+                    <div className="flex min-w-0 items-center gap-1.5">
+                      <span className="truncate">{nombreCompleto(p)}</span>
                       {tieneInfoPendiente(p) ? (
                         <Badge
                           variant="outline"
-                          className="text-amber-600"
+                          className="shrink-0 text-amber-600"
                           title={`Falta: ${camposFaltantes(p).join(", ")}`}
                         >
-                          Información pendiente
+                          <span className="md:hidden">Pendiente</span>
+                          <span className="hidden md:inline">Información pendiente</span>
                         </Badge>
                       ) : null}
                     </div>
                   </TableCell>
-                  <TableCell className="text-muted-foreground">
+                  <TableCell className="hidden text-muted-foreground md:table-cell">
                     {p.numero_identificacion ?? "—"}
                   </TableCell>
-                  <TableCell className="text-muted-foreground">
+                  <TableCell className="hidden text-muted-foreground md:table-cell">
                     {p.telefono1 ?? p.email ?? "—"}
                   </TableCell>
                   <TableCell>

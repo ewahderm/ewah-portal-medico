@@ -3,6 +3,19 @@ import { requireUsuario } from "@/lib/auth/session";
 import { logout } from "@/lib/auth/actions";
 import { Button } from "@/components/ui/button";
 import { EwahLogo } from "@/components/ewah-logo";
+import { MobileNav } from "./_components/mobile-nav";
+
+const NAV_ITEMS = [
+  { href: "/pacientes", label: "Pacientes" },
+  { href: "/tratamientos", label: "Tratamientos" },
+  { href: "/citas", label: "Agenda" },
+  { href: "/inventario", label: "Inventario" },
+  { href: "/campanas", label: "Campañas" },
+  { href: "/medio-ambiente", label: "Medio Ambiente" },
+  { href: "/usuarios", label: "Usuarios" },
+  { href: "/parametros", label: "Parámetros" },
+  { href: "/suscripcion", label: "Suscripción" },
+];
 
 export default async function ProtectedLayout({
   children,
@@ -19,35 +32,19 @@ export default async function ProtectedLayout({
             <Link href="/dashboard">
               <EwahLogo variant="dark" />
             </Link>
-            <Link href="/pacientes" className="text-muted-foreground hover:text-foreground">
-              Pacientes
-            </Link>
-            <Link href="/tratamientos" className="text-muted-foreground hover:text-foreground">
-              Tratamientos
-            </Link>
-            <Link href="/citas" className="text-muted-foreground hover:text-foreground">
-              Agenda
-            </Link>
-            <Link href="/inventario" className="text-muted-foreground hover:text-foreground">
-              Inventario
-            </Link>
-            <Link href="/campanas" className="text-muted-foreground hover:text-foreground">
-              Campañas
-            </Link>
-            <Link href="/medio-ambiente" className="text-muted-foreground hover:text-foreground">
-              Medio Ambiente
-            </Link>
-            <Link href="/usuarios" className="text-muted-foreground hover:text-foreground">
-              Usuarios
-            </Link>
-            <Link href="/parametros" className="text-muted-foreground hover:text-foreground">
-              Parámetros
-            </Link>
-            <Link href="/suscripcion" className="text-muted-foreground hover:text-foreground">
-              Suscripción
-            </Link>
+            <div className="hidden items-center gap-6 md:flex">
+              {NAV_ITEMS.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </div>
           </nav>
-          <div className="flex items-center gap-4 text-sm">
+          <div className="hidden items-center gap-4 text-sm md:flex">
             <span className="text-muted-foreground">
               {usuario.nombre} · {usuario.roles?.nombre}
             </span>
@@ -57,6 +54,12 @@ export default async function ProtectedLayout({
               </Button>
             </form>
           </div>
+          <MobileNav
+            items={NAV_ITEMS}
+            nombreUsuario={usuario.nombre}
+            rolUsuario={usuario.roles?.nombre}
+            logoutAction={logout}
+          />
         </div>
       </header>
       <main className="mx-auto w-full max-w-[1536px] flex-1 px-6 py-8 print:max-w-none print:p-0">

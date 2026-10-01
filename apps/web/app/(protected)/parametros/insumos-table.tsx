@@ -72,9 +72,9 @@ export function InsumosTable({
         <TableHeader>
           <TableRow>
             <TableHead>Nombre</TableHead>
-            <TableHead>Unidad</TableHead>
-            <TableHead>Proveedor</TableHead>
-            <TableHead>{agenciaRegulatoria}</TableHead>
+            <TableHead className="hidden md:table-cell">Unidad</TableHead>
+            <TableHead className="hidden md:table-cell">Proveedor</TableHead>
+            <TableHead className="hidden md:table-cell">{agenciaRegulatoria}</TableHead>
             <TableHead className="text-right">Acciones</TableHead>
           </TableRow>
         </TableHeader>
@@ -82,11 +82,13 @@ export function InsumosTable({
           {valores.map((valor) => (
             <TableRow key={valor.id}>
               <TableCell>{valor.nombre}</TableCell>
-              <TableCell className="text-muted-foreground">{valor.unidad_medida}</TableCell>
-              <TableCell className="text-muted-foreground">
+              <TableCell className="hidden text-muted-foreground md:table-cell">
+                {valor.unidad_medida}
+              </TableCell>
+              <TableCell className="hidden text-muted-foreground md:table-cell">
                 {valor.proveedores?.nombre ?? "—"}
               </TableCell>
-              <TableCell>
+              <TableCell className="hidden md:table-cell">
                 {valor.reporte_regulatorio ? (
                   <Badge variant="outline">{valor.registro_sanitario || "Sí"}</Badge>
                 ) : (

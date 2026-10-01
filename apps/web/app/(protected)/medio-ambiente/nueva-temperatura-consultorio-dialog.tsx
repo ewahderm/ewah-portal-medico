@@ -78,7 +78,7 @@ export function NuevaTemperaturaConsultorioDialog({
             </Alert>
           ) : null}
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="sedeId">Sede</Label>
               <Combobox
@@ -107,7 +107,7 @@ export function NuevaTemperaturaConsultorioDialog({
 
           <FechaJornadaFields />
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="temperaturaCelsius">Temperatura (°C)</Label>
               <Input

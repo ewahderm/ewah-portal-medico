@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { DownloadIcon } from "lucide-react";
+import { DownloadIcon, ImageIcon } from "lucide-react";
 import {
   listarFotosTratamiento,
   crearRegistroFoto,
@@ -134,8 +134,9 @@ export function FotosDialog({
     >
       <DialogTrigger
         render={
-          <Button variant="outline" size="sm" className="relative">
-            Fotos
+          <Button variant="outline" size="sm" className="relative" aria-label="Fotos">
+            <ImageIcon className="md:hidden" />
+            <span className="hidden md:inline">Fotos</span>
             {tieneArchivos ? (
               <>
                 <span
@@ -246,7 +247,7 @@ function RegistroFotos({
 }) {
   return (
     <div className="space-y-2 rounded-lg border p-3">
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <SlotFoto
           titulo="Antes"
           url={registro.urlAntes}

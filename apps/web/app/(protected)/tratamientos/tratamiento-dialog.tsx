@@ -228,7 +228,7 @@ export function TratamientoDialog({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="profesionalId">Profesional</Label>
               <Combobox
@@ -252,7 +252,7 @@ export function TratamientoDialog({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="sedeId">Sede</Label>
               <Combobox

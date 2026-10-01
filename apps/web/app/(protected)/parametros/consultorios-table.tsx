@@ -62,8 +62,8 @@ export function ConsultoriosTable({
         <TableHeader>
           <TableRow>
             <TableHead>Nombre</TableHead>
-            <TableHead>Sede</TableHead>
-            <TableHead>Código</TableHead>
+            <TableHead className="hidden md:table-cell">Sede</TableHead>
+            <TableHead className="hidden md:table-cell">Código</TableHead>
             <TableHead className="text-right">Acciones</TableHead>
           </TableRow>
         </TableHeader>
@@ -71,8 +71,10 @@ export function ConsultoriosTable({
           {valores.map((valor) => (
             <TableRow key={valor.id}>
               <TableCell>{valor.nombre}</TableCell>
-              <TableCell className="text-muted-foreground">{valor.sedes?.nombre ?? "—"}</TableCell>
-              <TableCell className="font-mono text-xs text-muted-foreground">
+              <TableCell className="hidden text-muted-foreground md:table-cell">
+                {valor.sedes?.nombre ?? "—"}
+              </TableCell>
+              <TableCell className="hidden font-mono text-xs text-muted-foreground md:table-cell">
                 {valor.codigo ?? "—"}
               </TableCell>
               <TableCell className="flex justify-end gap-2 text-right">

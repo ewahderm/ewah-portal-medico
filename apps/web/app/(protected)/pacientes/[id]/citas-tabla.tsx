@@ -71,9 +71,9 @@ export function CitasTabla({
         <TableHeader>
           <TableRow>
             <TableHead>Fecha</TableHead>
-            <TableHead>Hora</TableHead>
+            <TableHead className="hidden md:table-cell">Hora</TableHead>
             <TableHead>Tratamiento</TableHead>
-            <TableHead>Profesional</TableHead>
+            <TableHead className="hidden md:table-cell">Profesional</TableHead>
             <TableHead>Estado</TableHead>
             <TableHead />
           </TableRow>
@@ -82,9 +82,11 @@ export function CitasTabla({
           {citas.map((c) => (
             <TableRow key={c.id}>
               <TableCell className="text-muted-foreground">{c.fecha}</TableCell>
-              <TableCell className="text-muted-foreground">{c.hora_inicio.slice(0, 5)}</TableCell>
+              <TableCell className="hidden text-muted-foreground md:table-cell">
+                {c.hora_inicio.slice(0, 5)}
+              </TableCell>
               <TableCell>{c.tipos_tratamiento?.nombre ?? "—"}</TableCell>
-              <TableCell className="text-muted-foreground">
+              <TableCell className="hidden text-muted-foreground md:table-cell">
                 {c.profesional?.nombre ?? "—"}
               </TableCell>
               <TableCell>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { BanIcon } from "lucide-react";
 import { anularTratamiento } from "@/lib/tratamientos/actions";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -37,8 +38,9 @@ export function AnularDialog({ id }: { id: string }) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger
         render={
-          <Button variant="outline" size="sm">
-            Anular
+          <Button variant="outline" size="sm" aria-label="Anular">
+            <BanIcon className="md:hidden" />
+            <span className="hidden md:inline">Anular</span>
           </Button>
         }
       />

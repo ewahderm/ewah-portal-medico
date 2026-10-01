@@ -68,7 +68,7 @@ export function PacienteRapidoDialog({
             </Alert>
           ) : null}
 
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="primerNombreRapido">Nombre</Label>
               <Input id="primerNombreRapido" name="primerNombre" required />

@@ -171,9 +171,9 @@ export function ExtintoresTab({
             <TableHeader>
               <TableRow>
                 <TableHead>Ubicación</TableHead>
-                <TableHead>Sede</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead>N° serie</TableHead>
+                <TableHead className="hidden md:table-cell">Sede</TableHead>
+                <TableHead className="hidden md:table-cell">Tipo</TableHead>
+                <TableHead className="hidden md:table-cell">N° serie</TableHead>
                 <TableHead>Vencimiento</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
@@ -185,9 +185,15 @@ export function ExtintoresTab({
                 return (
                   <TableRow key={e.id}>
                     <TableCell className="font-medium">{e.ubicacion}</TableCell>
-                    <TableCell className="text-muted-foreground">{e.sedes?.nombre ?? "—"}</TableCell>
-                    <TableCell className="text-muted-foreground">{e.tipos_extintor?.nombre ?? "—"}</TableCell>
-                    <TableCell className="text-muted-foreground">{e.numero_serie ?? "—"}</TableCell>
+                    <TableCell className="hidden text-muted-foreground md:table-cell">
+                      {e.sedes?.nombre ?? "—"}
+                    </TableCell>
+                    <TableCell className="hidden text-muted-foreground md:table-cell">
+                      {e.tipos_extintor?.nombre ?? "—"}
+                    </TableCell>
+                    <TableCell className="hidden text-muted-foreground md:table-cell">
+                      {e.numero_serie ?? "—"}
+                    </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1.5">
                         {e.fecha_vencimiento}

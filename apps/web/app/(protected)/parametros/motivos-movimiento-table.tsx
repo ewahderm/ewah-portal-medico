@@ -60,7 +60,7 @@ export function MotivosMovimientoTable({
           <TableRow>
             <TableHead>Nombre</TableHead>
             <TableHead>Categoría</TableHead>
-            <TableHead>Código</TableHead>
+            <TableHead className="hidden md:table-cell">Código</TableHead>
             <TableHead className="text-right">Acciones</TableHead>
           </TableRow>
         </TableHeader>
@@ -73,7 +73,9 @@ export function MotivosMovimientoTable({
                   {valor.categoria === "entrada" ? "Entrada" : "Salida"}
                 </Badge>
               </TableCell>
-              <TableCell className="font-mono text-xs text-muted-foreground">{valor.codigo}</TableCell>
+              <TableCell className="hidden font-mono text-xs text-muted-foreground md:table-cell">
+                {valor.codigo}
+              </TableCell>
               <TableCell className="flex justify-end gap-2 text-right">
                 {editable ? (
                   <>

@@ -87,8 +87,8 @@ export default async function UsuariosPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Nombre</TableHead>
-                <TableHead>Correo</TableHead>
-                <TableHead>Rol</TableHead>
+                <TableHead className="hidden md:table-cell">Correo</TableHead>
+                <TableHead className="hidden md:table-cell">Rol</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead />
               </TableRow>
@@ -97,8 +97,8 @@ export default async function UsuariosPage() {
               {(usuarios ?? []).map((u) => (
                 <TableRow key={u.id}>
                   <TableCell>{u.nombre}</TableCell>
-                  <TableCell>{u.email}</TableCell>
-                  <TableCell>{rolNombreById.get(u.rol_id)}</TableCell>
+                  <TableCell className="hidden md:table-cell">{u.email}</TableCell>
+                  <TableCell className="hidden md:table-cell">{rolNombreById.get(u.rol_id)}</TableCell>
                   <TableCell>
                     {u.bloqueado ? (
                       <Badge variant="destructive">Bloqueado</Badge>
@@ -135,7 +135,7 @@ export default async function UsuariosPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Rol</TableHead>
-                <TableHead>Descripción</TableHead>
+                <TableHead className="hidden md:table-cell">Descripción</TableHead>
                 <TableHead />
               </TableRow>
             </TableHeader>
@@ -143,7 +143,7 @@ export default async function UsuariosPage() {
               {(roles ?? []).map((rol) => (
                 <TableRow key={rol.id}>
                   <TableCell className="font-medium">{rol.nombre}</TableCell>
-                  <TableCell className="text-muted-foreground">
+                  <TableCell className="hidden text-muted-foreground md:table-cell">
                     {rol.nivel === 1
                       ? "Acceso total (Administrador)"
                       : (rol.descripcion ?? "—")}

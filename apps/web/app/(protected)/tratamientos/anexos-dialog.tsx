@@ -132,10 +132,12 @@ export function AnexosDialog({
           <Button
             variant="outline"
             size="sm"
+            aria-label="Anexos"
             className={`relative ${!tieneEntitlement ? "border-primary/20" : ""}`}
           >
             {!tieneEntitlement ? <LockIcon className="size-3.5 text-primary" /> : null}
-            Anexos
+            <FileTextIcon className="md:hidden" />
+            <span className="hidden md:inline">Anexos</span>
             {!tieneEntitlement ? (
               <Badge className="border border-primary/20 bg-primary/10 px-1.5 text-[9px] font-semibold tracking-wide text-primary uppercase">
                 Pro
@@ -172,7 +174,7 @@ export function AnexosDialog({
               </Alert>
             ) : null}
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {anexos.map((anexo) =>
                 anexo.url ? (
                   <div key={anexo.id} className="group relative rounded-lg border p-2">

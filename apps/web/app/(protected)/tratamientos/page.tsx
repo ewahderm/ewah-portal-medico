@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { PencilIcon } from "lucide-react";
 import { requireUsuario, esAdministrador } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { nombreCompleto } from "@/lib/pacientes/nombre";
@@ -240,10 +241,10 @@ export default async function TratamientosPage({
                 <TableHead>Fecha</TableHead>
                 <TableHead>Paciente</TableHead>
                 <TableHead>Tratamiento</TableHead>
-                <TableHead>Sede</TableHead>
-                <TableHead>Profesional</TableHead>
-                <TableHead>Valor</TableHead>
-                <TableHead>Observaciones</TableHead>
+                <TableHead className="hidden md:table-cell">Sede</TableHead>
+                <TableHead className="hidden md:table-cell">Profesional</TableHead>
+                <TableHead className="hidden md:table-cell">Valor</TableHead>
+                <TableHead className="hidden md:table-cell">Observaciones</TableHead>
                 <TableHead />
               </TableRow>
             </TableHeader>
@@ -251,20 +252,23 @@ export default async function TratamientosPage({
               {historial.map((t) => (
                 <TableRow key={t.id}>
                   <TableCell className="text-muted-foreground">{t.fecha}</TableCell>
-                  <TableCell className="font-medium">
-                    <div className="flex items-center gap-1.5">
-                      {t.pacientes ? nombreCompleto(t.pacientes) : "—"}
+                  <TableCell className="max-w-[38vw] font-medium md:max-w-none">
+                    <div className="flex min-w-0 items-center gap-1.5">
+                      <span className="truncate">
+                        {t.pacientes ? nombreCompleto(t.pacientes) : "—"}
+                      </span>
                       {pacientesPendientes.has(t.paciente_id) ? (
-                        <Badge variant="outline" className="text-amber-600">
-                          Información pendiente
+                        <Badge variant="outline" className="shrink-0 text-amber-600">
+                          <span className="md:hidden">Pendiente</span>
+                          <span className="hidden md:inline">Información pendiente</span>
                         </Badge>
                       ) : null}
                     </div>
                   </TableCell>
-                  <TableCell className="max-w-xs">
+                  <TableCell className="max-w-[38vw] md:max-w-xs">
                     <div className="flex flex-col gap-0.5">
                       <span
-                        className={t.anulado ? "text-muted-foreground line-through" : ""}
+                        className={`truncate ${t.anulado ? "text-muted-foreground line-through" : ""}`}
                       >
                         {t.tipos_tratamiento?.nombre ?? "—"}
                       </span>
@@ -275,14 +279,16 @@ export default async function TratamientosPage({
                       ) : null}
                     </div>
                   </TableCell>
-                  <TableCell className="text-muted-foreground">{t.sedes?.nombre ?? "—"}</TableCell>
-                  <TableCell className="text-muted-foreground">
+                  <TableCell className="hidden text-muted-foreground md:table-cell">
+                    {t.sedes?.nombre ?? "—"}
+                  </TableCell>
+                  <TableCell className="hidden text-muted-foreground md:table-cell">
                     {t.profesional?.nombre ?? "—"}
                   </TableCell>
-                  <TableCell className="text-muted-foreground">
+                  <TableCell className="hidden text-muted-foreground md:table-cell">
                     {formatoMoneda(t.costo)}
                   </TableCell>
-                  <TableCell className="max-w-xs whitespace-normal break-words text-muted-foreground">
+                  <TableCell className="hidden max-w-xs whitespace-normal break-words text-muted-foreground md:table-cell">
                     {t.notas ?? "—"}
                   </TableCell>
                   {/* Sin flex-wrap a propósito: en una tabla de layout "auto"
@@ -336,8 +342,9 @@ export default async function TratamientosPage({
                           cufe: t.cufe,
                         }}
                         trigger={
-                          <Button variant="outline" size="sm">
-                            Editar
+                          <Button variant="outline" size="sm" aria-label="Editar">
+                            <PencilIcon className="md:hidden" />
+                            <span className="hidden md:inline">Editar</span>
                           </Button>
                         }
                       />
@@ -365,8 +372,9 @@ export default async function TratamientosPage({
                           cufe: t.cufe,
                         }}
                         trigger={
-                          <Button variant="outline" size="sm">
-                            Corregir
+                          <Button variant="outline" size="sm" aria-label="Corregir">
+                            <PencilIcon className="md:hidden" />
+                            <span className="hidden md:inline">Corregir</span>
                           </Button>
                         }
                       />

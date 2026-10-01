@@ -191,11 +191,11 @@ export function InventarioActualTab({
             <TableHeader>
               <TableRow>
                 <TableHead>Insumo</TableHead>
-                <TableHead>Sede</TableHead>
-                <TableHead>Lote</TableHead>
+                <TableHead className="hidden md:table-cell">Sede</TableHead>
+                <TableHead className="hidden md:table-cell">Lote</TableHead>
                 <TableHead>Vencimiento</TableHead>
                 <TableHead>Stock actual</TableHead>
-                <TableHead>Costo unitario</TableHead>
+                <TableHead className="hidden md:table-cell">Costo unitario</TableHead>
                 {puedeAjustar ? <TableHead>Activo</TableHead> : null}
                 <TableHead />
               </TableRow>
@@ -207,8 +207,12 @@ export function InventarioActualTab({
                 return (
                   <TableRow key={l.id} className={!activo ? "opacity-60" : ""}>
                     <TableCell className="font-medium">{l.insumos?.nombre ?? "—"}</TableCell>
-                    <TableCell className="text-muted-foreground">{l.sedes?.nombre ?? "—"}</TableCell>
-                    <TableCell className="text-muted-foreground">{l.numero_lote}</TableCell>
+                    <TableCell className="hidden text-muted-foreground md:table-cell">
+                      {l.sedes?.nombre ?? "—"}
+                    </TableCell>
+                    <TableCell className="hidden text-muted-foreground md:table-cell">
+                      {l.numero_lote}
+                    </TableCell>
                     <TableCell>
                       {l.fecha_vencimiento ? (
                         <Badge variant={dias !== null && dias <= 30 ? "destructive" : "outline"}>
@@ -222,7 +226,9 @@ export function InventarioActualTab({
                       {l.cantidad_actual < 0 ? <AlertTriangleIcon className="mr-1 inline size-3.5" /> : null}
                       {l.cantidad_actual} {l.insumos?.unidad_medida ?? ""}
                     </TableCell>
-                    <TableCell className="text-muted-foreground">{formatoMoneda(l.costo_unitario)}</TableCell>
+                    <TableCell className="hidden text-muted-foreground md:table-cell">
+                      {formatoMoneda(l.costo_unitario)}
+                    </TableCell>
                     {puedeAjustar ? (
                       <TableCell>
                         <Switch

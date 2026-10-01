@@ -71,7 +71,7 @@ export function InsumoDialog({
             </Alert>
           ) : null}
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="nombre">Nombre</Label>
               <Input id="nombre" name="nombre" defaultValue={editando?.nombre} required />
@@ -82,7 +82,7 @@ export function InsumoDialog({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="unidadMedida">Unidad de medida (para el inventario)</Label>
               <Input
@@ -114,7 +114,7 @@ export function InsumoDialog({
 
           {reporteRegulatorio ? (
             <div className="space-y-4 rounded-lg border p-3">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="registroSanitario">Registro {agenciaRegulatoria}</Label>
                   <Input
@@ -147,7 +147,7 @@ export function InsumoDialog({
                   defaultValue={editando?.unidad_medida_registro_sanitario ?? ""}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="referenciaReportada">Referencia reportada</Label>
                   <Input

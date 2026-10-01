@@ -97,7 +97,7 @@ export function PacienteDialog({
             </Alert>
           ) : null}
 
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="tipoIdentificacionId">Tipo de identificación</Label>
               <Combobox
@@ -121,7 +121,7 @@ export function PacienteDialog({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="primerNombre">Primer nombre</Label>
               <Input
@@ -141,7 +141,7 @@ export function PacienteDialog({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="primerApellido">Primer apellido</Label>
               <Input
@@ -161,7 +161,7 @@ export function PacienteDialog({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="fechaNacimiento">Fecha de nacimiento</Label>
               <Input
@@ -183,7 +183,7 @@ export function PacienteDialog({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="nacionalidadId">Nacionalidad</Label>
               <Combobox
@@ -206,7 +206,7 @@ export function PacienteDialog({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="canalCaptacionId">¿Cómo nos conoció?</Label>
               <Combobox
@@ -251,7 +251,7 @@ export function PacienteDialog({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="telefono1">Teléfono principal</Label>
               <Input

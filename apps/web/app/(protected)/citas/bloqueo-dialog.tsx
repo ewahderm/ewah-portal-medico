@@ -112,7 +112,7 @@ export function BloqueoDialog({
                 {todosSeleccionados ? "Ninguno" : "Todos"}
               </button>
             </div>
-            <div className="grid max-h-40 grid-cols-2 gap-x-4 gap-y-2 overflow-y-auto rounded-lg border border-input p-3">
+            <div className="grid max-h-40 grid-cols-1 gap-x-4 gap-y-2 overflow-y-auto rounded-lg border border-input p-3 sm:grid-cols-2">
               {profesionales.map((p) => (
                 <label key={p.id} className="flex items-center gap-2 text-sm">
                   <Checkbox
@@ -127,7 +127,7 @@ export function BloqueoDialog({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="sedeIdFiltro">Sede</Label>
               <Combobox
@@ -170,7 +170,7 @@ export function BloqueoDialog({
           </label>
 
           {!todoElDia ? (
-            <div className="grid grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="horaInicio">Hora inicio</Label>
                 <Combobox

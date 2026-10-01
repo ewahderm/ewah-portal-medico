@@ -71,7 +71,7 @@ export function ExtintorDialog({
             </Alert>
           ) : null}
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="sedeId">Sede</Label>
               <Combobox
@@ -105,7 +105,7 @@ export function ExtintorDialog({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="numeroSerie">N° de serie (opcional)</Label>
               <Input id="numeroSerie" name="numeroSerie" defaultValue={editando?.numero_serie ?? ""} />

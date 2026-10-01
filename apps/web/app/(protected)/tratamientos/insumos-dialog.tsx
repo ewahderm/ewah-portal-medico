@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useMemo, useState, useTransition } from "react";
+import { SyringeIcon } from "lucide-react";
 import {
   registrarConsumo,
   listarConsumoTratamiento,
@@ -179,8 +180,9 @@ export function InsumosDialog({
     >
       <DialogTrigger
         render={
-          <Button variant="outline" size="sm">
-            Insumos
+          <Button variant="outline" size="sm" aria-label="Insumos">
+            <SyringeIcon className="md:hidden" />
+            <span className="hidden md:inline">Insumos</span>
           </Button>
         }
       />
@@ -319,7 +321,7 @@ export function InsumosDialog({
               </div>
 
               {origen === "manual" ? (
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="insumoIdConsumo" className="text-xs text-muted-foreground">
                       Insumo
@@ -383,7 +385,7 @@ export function InsumosDialog({
               ) : null}
             </div>
 
-            <div className="grid grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="cantidad">Cantidad usada</Label>
                 <Input id="cantidad" name="cantidad" type="number" min="0" step="0.01" required />
