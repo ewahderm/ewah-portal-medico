@@ -385,11 +385,18 @@ export async function registrarConsumo(
   if (!check.ok) return { error: check.error };
 
   const supabase = await createClient();
-  const { data: lote } = await supabase
-    .from("lotes")
-    .select("cantidad_actual")
-    .eq("id", loteId)
-    .maybeSingle();
+  const [{ data: lote }, { data: tratamiento }] = await Promise.all([
+    supabase.from("lotes").select("cantidad_actual").eq("id", loteId).maybeSingle(),
+    supabase.from("tratamientos").select("fecha").eq("id", tratamientoId).maybeSingle(),
+  ]);
+
+  // El consumo se registra en el sistema cuando alguien alcanza a capturarlo,
+  // pero el insumo se usó en la fecha del tratamiento — pueden ser días
+  // distintos (captura tardía). created_at debe reflejar cuándo se aplicó,
+  // no cuándo se tipeó, porque de eso dependen los filtros de fecha y los
+  // reportes de Inventario (ver listarMovimientos). Hora fija (mediodía
+  // Colombia) para no cruzar de día al convertir date -> timestamptz.
+  const fechaUso = tratamiento?.fecha ? `${tratamiento.fecha}T12:00:00-05:00` : undefined;
 
   const { error } = await supabase.from("movimientos_insumos").insert({
     clinica_id: check.usuario.clinica_id,
@@ -402,6 +409,7 @@ export async function registrarConsumo(
     sitio_anatomico: sitioAnatomico,
     motivo,
     created_by: check.usuario.id,
+    ...(fechaUso ? { created_at: fechaUso } : {}),
   });
 
   if (error) return { error: "No se pudo registrar el consumo." };
