@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { SearchIcon, XIcon } from "lucide-react";
 import { listarTemperaturasConsultorio } from "@/lib/medio-ambiente/actions";
 import { totalPaginas as calcularTotalPaginas } from "@/lib/pagination";
@@ -33,25 +33,38 @@ type Registro = {
   creador: { nombre: string } | null;
 };
 
+type Consultorio = { id: string; nombre: string; sede_id: string };
+
 export function TemperaturaConsultorioTab({
+  sedes,
   consultorios,
   puedeCrear,
 }: {
-  consultorios: Opcion[];
+  sedes: Opcion[];
+  consultorios: Consultorio[];
   puedeCrear: boolean;
 }) {
   const [registros, setRegistros] = useState<Registro[]>([]);
   const [total, setTotal] = useState(0);
   const [pagina, setPagina] = useState(1);
+  const [sedeId, setSedeId] = useState(TODOS);
   const [consultorioId, setConsultorioId] = useState(TODOS);
   const [desde, setDesde] = useState("");
   const [hasta, setHasta] = useState("");
   const [pending, startTransition] = useTransition();
 
+  // El filtro de consultorio solo tiene sentido dentro de la sede elegida —
+  // mismo motivo que en el formulario de creación.
+  const consultoriosDeLaSede = useMemo(
+    () => (sedeId === TODOS ? consultorios : consultorios.filter((c) => c.sede_id === sedeId)),
+    [consultorios, sedeId],
+  );
+
   function buscar(paginaDestino = 1) {
     startTransition(async () => {
       const { registros: data, total: totalEncontrado, pagina: paginaReal } =
         await listarTemperaturasConsultorio({
+          sedeId: sedeId === TODOS ? undefined : sedeId,
           consultorioId: consultorioId === TODOS ? undefined : consultorioId,
           desde: desde || undefined,
           hasta: hasta || undefined,
@@ -69,6 +82,7 @@ export function TemperaturaConsultorioTab({
   }, []);
 
   function limpiar() {
+    setSedeId(TODOS);
     setConsultorioId(TODOS);
     setDesde("");
     setHasta("");
@@ -83,13 +97,25 @@ export function TemperaturaConsultorioTab({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
+            <div className="space-y-1.5">
+              <Label>Sede</Label>
+              <Combobox
+                items={[{ value: TODOS, label: "Todas" }, ...sedes.map((s) => ({ value: s.id, label: s.nombre }))]}
+                value={sedeId}
+                onValueChange={(v) => {
+                  setSedeId(String(v ?? TODOS));
+                  setConsultorioId(TODOS);
+                }}
+              />
+            </div>
             <div className="space-y-1.5">
               <Label>Consultorio</Label>
               <Combobox
+                key={sedeId}
                 items={[
                   { value: TODOS, label: "Todos" },
-                  ...consultorios.map((c) => ({ value: c.id, label: c.nombre })),
+                  ...consultoriosDeLaSede.map((c) => ({ value: c.id, label: c.nombre })),
                 ]}
                 value={consultorioId}
                 onValueChange={(v) => setConsultorioId(String(v ?? TODOS))}
@@ -121,7 +147,11 @@ export function TemperaturaConsultorioTab({
             Registros {total > 0 ? `(${total})` : ""}
           </CardTitle>
           {puedeCrear ? (
-            <NuevaTemperaturaConsultorioDialog consultorios={consultorios} onCreado={() => buscar()} />
+            <NuevaTemperaturaConsultorioDialog
+              sedes={sedes}
+              consultorios={consultorios}
+              onCreado={() => buscar()}
+            />
           ) : null}
         </CardHeader>
         <CardContent>

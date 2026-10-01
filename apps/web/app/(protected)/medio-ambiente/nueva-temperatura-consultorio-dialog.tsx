@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useActionState } from "react";
 import { PlusIcon } from "lucide-react";
 import { crearTemperaturaConsultorio } from "@/lib/medio-ambiente/actions";
@@ -22,14 +22,26 @@ import {
 import { Combobox } from "@/components/ui/combobox";
 import { toItems, type Opcion } from "@/lib/forms/opciones";
 
+type Consultorio = { id: string; nombre: string; sede_id: string };
+
 export function NuevaTemperaturaConsultorioDialog({
+  sedes,
   consultorios,
   onCreado,
 }: {
-  consultorios: Opcion[];
+  sedes: Opcion[];
+  consultorios: Consultorio[];
   onCreado: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [sedeId, setSedeId] = useState("");
+
+  // El consultorio depende de la sede — no tiene sentido ofrecer consultorios
+  // de otra sede. Mismo patrón que NuevaLimpiezaDialog.
+  const consultoriosDeLaSede = useMemo(
+    () => consultorios.filter((c) => c.sede_id === sedeId),
+    [consultorios, sedeId],
+  );
 
   // El input queda en hora LOCAL (lo que la persona ve en su reloj); el
   // wrapper lo convierte a ISO/UTC real antes de llamar a la server
@@ -51,7 +63,13 @@ export function NuevaTemperaturaConsultorioDialog({
   });
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) setSedeId("");
+      }}
+    >
       <DialogTrigger
         render={
           <Button>
@@ -71,15 +89,31 @@ export function NuevaTemperaturaConsultorioDialog({
             </Alert>
           ) : null}
 
-          <div className="space-y-2">
-            <Label htmlFor="consultorioId">Consultorio</Label>
-            <Combobox
-              id="consultorioId"
-              name="consultorioId"
-              required
-              items={toItems(consultorios)}
-              placeholder="Buscar consultorio..."
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="sedeId">Sede</Label>
+              <Combobox
+                id="sedeId"
+                name="sedeId"
+                required
+                items={toItems(sedes)}
+                value={sedeId}
+                onValueChange={(v) => setSedeId(String(v ?? ""))}
+                placeholder="Buscar sede..."
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="consultorioId">Consultorio</Label>
+              <Combobox
+                id="consultorioId"
+                name="consultorioId"
+                key={sedeId}
+                required
+                disabled={!sedeId}
+                items={toItems(consultoriosDeLaSede)}
+                placeholder={!sedeId ? "Primero elige la sede" : "Buscar consultorio..."}
+              />
+            </div>
           </div>
 
           <div className="space-y-2">

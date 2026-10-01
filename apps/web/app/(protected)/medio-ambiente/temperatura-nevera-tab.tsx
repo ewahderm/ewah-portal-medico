@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { SearchIcon, XIcon } from "lucide-react";
 import { listarTemperaturasNevera } from "@/lib/medio-ambiente/actions";
 import { totalPaginas as calcularTotalPaginas } from "@/lib/pagination";
@@ -23,30 +23,47 @@ import type { Opcion } from "@/lib/forms/opciones";
 
 const TODOS = "__todos__";
 
+type Nevera = { id: string; nombre: string; sede_id: string };
+
 type Registro = {
   id: string;
   registrado_en: string;
-  nevera: string;
   temperatura_celsius: number;
   observaciones: string | null;
   sedes: { nombre: string } | null;
+  neveras: { nombre: string } | null;
   creador: { nombre: string } | null;
 };
 
-export function TemperaturaNeveraTab({ sedes, puedeCrear }: { sedes: Opcion[]; puedeCrear: boolean }) {
+export function TemperaturaNeveraTab({
+  sedes,
+  neveras,
+  puedeCrear,
+}: {
+  sedes: Opcion[];
+  neveras: Nevera[];
+  puedeCrear: boolean;
+}) {
   const [registros, setRegistros] = useState<Registro[]>([]);
   const [total, setTotal] = useState(0);
   const [pagina, setPagina] = useState(1);
   const [sedeId, setSedeId] = useState(TODOS);
+  const [neveraId, setNeveraId] = useState(TODOS);
   const [desde, setDesde] = useState("");
   const [hasta, setHasta] = useState("");
   const [pending, startTransition] = useTransition();
+
+  const neverasDeLaSede = useMemo(
+    () => (sedeId === TODOS ? neveras : neveras.filter((n) => n.sede_id === sedeId)),
+    [neveras, sedeId],
+  );
 
   function buscar(paginaDestino = 1) {
     startTransition(async () => {
       const { registros: data, total: totalEncontrado, pagina: paginaReal } =
         await listarTemperaturasNevera({
           sedeId: sedeId === TODOS ? undefined : sedeId,
+          neveraId: neveraId === TODOS ? undefined : neveraId,
           desde: desde || undefined,
           hasta: hasta || undefined,
           pagina: paginaDestino,
@@ -64,6 +81,7 @@ export function TemperaturaNeveraTab({ sedes, puedeCrear }: { sedes: Opcion[]; p
 
   function limpiar() {
     setSedeId(TODOS);
+    setNeveraId(TODOS);
     setDesde("");
     setHasta("");
   }
@@ -77,13 +95,28 @@ export function TemperaturaNeveraTab({ sedes, puedeCrear }: { sedes: Opcion[]; p
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
             <div className="space-y-1.5">
               <Label>Sede</Label>
               <Combobox
                 items={[{ value: TODOS, label: "Todas" }, ...sedes.map((s) => ({ value: s.id, label: s.nombre }))]}
                 value={sedeId}
-                onValueChange={(v) => setSedeId(String(v ?? TODOS))}
+                onValueChange={(v) => {
+                  setSedeId(String(v ?? TODOS));
+                  setNeveraId(TODOS);
+                }}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Nevera</Label>
+              <Combobox
+                key={sedeId}
+                items={[
+                  { value: TODOS, label: "Todas" },
+                  ...neverasDeLaSede.map((n) => ({ value: n.id, label: n.nombre })),
+                ]}
+                value={neveraId}
+                onValueChange={(v) => setNeveraId(String(v ?? TODOS))}
               />
             </div>
             <div className="space-y-1.5">
@@ -111,7 +144,9 @@ export function TemperaturaNeveraTab({ sedes, puedeCrear }: { sedes: Opcion[]; p
           <CardTitle className="text-base font-medium">
             Registros {total > 0 ? `(${total})` : ""}
           </CardTitle>
-          {puedeCrear ? <NuevaTemperaturaNeveraDialog sedes={sedes} onCreado={() => buscar()} /> : null}
+          {puedeCrear ? (
+            <NuevaTemperaturaNeveraDialog sedes={sedes} neveras={neveras} onCreado={() => buscar()} />
+          ) : null}
         </CardHeader>
         <CardContent>
           <Table>
@@ -132,7 +167,7 @@ export function TemperaturaNeveraTab({ sedes, puedeCrear }: { sedes: Opcion[]; p
                     {new Date(r.registrado_en).toLocaleString("es-CO")}
                   </TableCell>
                   <TableCell className="text-muted-foreground">{r.sedes?.nombre ?? "—"}</TableCell>
-                  <TableCell className="font-medium">{r.nevera}</TableCell>
+                  <TableCell className="font-medium">{r.neveras?.nombre ?? "—"}</TableCell>
                   <TableCell>{r.temperatura_celsius} °C</TableCell>
                   <TableCell className="max-w-xs whitespace-normal break-words text-muted-foreground">
                     {r.observaciones ?? "—"}

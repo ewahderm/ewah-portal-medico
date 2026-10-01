@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useActionState } from "react";
 import { PlusIcon } from "lucide-react";
 import { crearTemperaturaNevera } from "@/lib/medio-ambiente/actions";
@@ -22,14 +22,26 @@ import {
 import { Combobox } from "@/components/ui/combobox";
 import { toItems, type Opcion } from "@/lib/forms/opciones";
 
+type Nevera = { id: string; nombre: string; sede_id: string };
+
 export function NuevaTemperaturaNeveraDialog({
   sedes,
+  neveras,
   onCreado,
 }: {
   sedes: Opcion[];
+  neveras: Nevera[];
   onCreado: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [sedeId, setSedeId] = useState("");
+
+  // La nevera depende de la sede, igual que el consultorio — se administra
+  // como catálogo en Parámetros, ya no es texto libre.
+  const neverasDeLaSede = useMemo(
+    () => neveras.filter((n) => n.sede_id === sedeId),
+    [neveras, sedeId],
+  );
 
   const [state, formAction, pending] = useActionState(
     async (prevState: Awaited<ReturnType<typeof crearTemperaturaNevera>>, formData: FormData) => {
@@ -47,7 +59,13 @@ export function NuevaTemperaturaNeveraDialog({
   });
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) setSedeId("");
+      }}
+    >
       <DialogTrigger
         render={
           <Button>
@@ -70,11 +88,27 @@ export function NuevaTemperaturaNeveraDialog({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label htmlFor="sedeId">Sede</Label>
-              <Combobox id="sedeId" name="sedeId" required items={toItems(sedes)} placeholder="Buscar sede..." />
+              <Combobox
+                id="sedeId"
+                name="sedeId"
+                required
+                items={toItems(sedes)}
+                value={sedeId}
+                onValueChange={(v) => setSedeId(String(v ?? ""))}
+                placeholder="Buscar sede..."
+              />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="nevera">Nevera</Label>
-              <Input id="nevera" name="nevera" defaultValue="Principal" />
+              <Label htmlFor="neveraId">Nevera</Label>
+              <Combobox
+                id="neveraId"
+                name="neveraId"
+                key={sedeId}
+                required
+                disabled={!sedeId}
+                items={toItems(neverasDeLaSede)}
+                placeholder={!sedeId ? "Primero elige la sede" : "Buscar nevera..."}
+              />
             </div>
           </div>
 

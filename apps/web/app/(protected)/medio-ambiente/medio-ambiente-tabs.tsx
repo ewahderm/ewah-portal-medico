@@ -10,10 +10,12 @@ import { LimpiezaTab } from "./limpieza-tab";
 import type { Opcion } from "@/lib/forms/opciones";
 
 type Consultorio = { id: string; nombre: string; sede_id: string };
+type Nevera = { id: string; nombre: string; sede_id: string };
 
 export function MedioAmbienteTabs({
   sedes,
   consultorios,
+  neveras,
   tiposExtintor,
   puedeCrear,
   puedeEditar,
@@ -21,6 +23,7 @@ export function MedioAmbienteTabs({
 }: {
   sedes: Opcion[];
   consultorios: Consultorio[];
+  neveras: Nevera[];
   tiposExtintor: Opcion[];
   puedeCrear: boolean;
   puedeEditar: boolean;
@@ -47,11 +50,11 @@ export function MedioAmbienteTabs({
       </TabsList>
 
       <TabsContent value="temperatura" className="pt-4">
-        <TemperaturaConsultorioTab consultorios={consultorios} puedeCrear={puedeCrear} />
+        <TemperaturaConsultorioTab sedes={sedes} consultorios={consultorios} puedeCrear={puedeCrear} />
       </TabsContent>
 
       <TabsContent value="neveras" className="pt-4">
-        <TemperaturaNeveraTab sedes={sedes} puedeCrear={puedeCrear} />
+        <TemperaturaNeveraTab sedes={sedes} neveras={neveras} puedeCrear={puedeCrear} />
       </TabsContent>
 
       <TabsContent value="residuos" className="pt-4">

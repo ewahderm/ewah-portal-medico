@@ -63,21 +63,28 @@ export async function crearTemperaturaConsultorio(
 }
 
 export async function listarTemperaturasConsultorio(filtros: {
+  sedeId?: string;
   consultorioId?: string;
   desde?: string;
   hasta?: string;
   pagina?: number;
 }) {
   const supabase = await createClient();
+  // El filtro por sede no es una columna propia (la tabla solo guarda
+  // consultorio_id) — se filtra a través del join, por eso el embed necesita
+  // "!inner" solo cuando ese filtro está activo (igual patrón que
+  // listarMovimientos en inventario/actions.ts).
+  const embedConsultorio = filtros.sedeId ? "consultorios!inner" : "consultorios";
   let query = supabase
     .from("registros_temperatura_consultorio")
     .select(
       `id, registrado_en, temperatura_celsius, humedad_porcentaje, observaciones,
-       consultorios(nombre), creador:usuarios!registros_temperatura_consultorio_created_by_fkey(nombre)`,
+       ${embedConsultorio}(nombre, sede_id), creador:usuarios!registros_temperatura_consultorio_created_by_fkey(nombre)`,
       { count: "exact" },
     )
     .order("registrado_en", { ascending: false });
 
+  if (filtros.sedeId) query = query.eq("consultorios.sede_id", filtros.sedeId);
   if (filtros.consultorioId) query = query.eq("consultorio_id", filtros.consultorioId);
   if (filtros.desde) query = query.gte("registrado_en", filtros.desde);
   if (filtros.hasta) query = query.lte("registrado_en", `${filtros.hasta}T23:59:59`);
@@ -100,13 +107,13 @@ export async function crearTemperaturaNevera(
   formData: FormData,
 ): Promise<MedioAmbienteActionState> {
   const sedeId = String(formData.get("sedeId") ?? "");
-  const nevera = String(formData.get("nevera") ?? "").trim() || "Principal";
+  const neveraId = String(formData.get("neveraId") ?? "");
   const registradoEn = String(formData.get("registradoEn") ?? "");
   const temperaturaCelsius = numeroDesdeForm(formData, "temperaturaCelsius");
   const observaciones = campoOpcional(formData, "observaciones");
 
-  if (!sedeId || !registradoEn || temperaturaCelsius === null) {
-    return { error: "Sede, fecha/hora y temperatura son obligatorios." };
+  if (!sedeId || !neveraId || !registradoEn || temperaturaCelsius === null) {
+    return { error: "Sede, nevera, fecha/hora y temperatura son obligatorios." };
   }
 
   const check = await requirePermiso("CREATE");
@@ -116,7 +123,7 @@ export async function crearTemperaturaNevera(
   const { error } = await supabase.from("registros_temperatura_nevera").insert({
     clinica_id: check.usuario.clinica_id,
     sede_id: sedeId,
-    nevera,
+    nevera_id: neveraId,
     registrado_en: registradoEn,
     temperatura_celsius: temperaturaCelsius,
     observaciones,
@@ -131,6 +138,7 @@ export async function crearTemperaturaNevera(
 
 export async function listarTemperaturasNevera(filtros: {
   sedeId?: string;
+  neveraId?: string;
   desde?: string;
   hasta?: string;
   pagina?: number;
@@ -139,13 +147,14 @@ export async function listarTemperaturasNevera(filtros: {
   let query = supabase
     .from("registros_temperatura_nevera")
     .select(
-      `id, registrado_en, nevera, temperatura_celsius, observaciones,
-       sedes(nombre), creador:usuarios!registros_temperatura_nevera_created_by_fkey(nombre)`,
+      `id, registrado_en, temperatura_celsius, observaciones,
+       sedes(nombre), neveras(nombre), creador:usuarios!registros_temperatura_nevera_created_by_fkey(nombre)`,
       { count: "exact" },
     )
     .order("registrado_en", { ascending: false });
 
   if (filtros.sedeId) query = query.eq("sede_id", filtros.sedeId);
+  if (filtros.neveraId) query = query.eq("nevera_id", filtros.neveraId);
   if (filtros.desde) query = query.gte("registrado_en", filtros.desde);
   if (filtros.hasta) query = query.lte("registrado_en", `${filtros.hasta}T23:59:59`);
 

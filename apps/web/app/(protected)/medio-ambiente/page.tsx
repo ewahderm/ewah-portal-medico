@@ -1,7 +1,12 @@
 import { LeafIcon } from "lucide-react";
 import { requireUsuario } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
-import { getSedesActivas, getConsultoriosActivos, getTiposExtintorActivos } from "@/lib/catalogos";
+import {
+  getSedesActivas,
+  getConsultoriosActivos,
+  getNeverasActivas,
+  getTiposExtintorActivos,
+} from "@/lib/catalogos";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { MedioAmbienteTabs } from "./medio-ambiente-tabs";
 
@@ -22,12 +27,13 @@ export default async function MedioAmbientePage() {
     );
   }
 
-  const [{ data: puedeCrear }, { data: puedeEditar }, sedes, consultorios, tiposExtintor] =
+  const [{ data: puedeCrear }, { data: puedeEditar }, sedes, consultorios, neveras, tiposExtintor] =
     await Promise.all([
       supabase.rpc("has_permission", { modulo_code: "medio_ambiente", permiso_code: "CREATE" }),
       supabase.rpc("has_permission", { modulo_code: "medio_ambiente", permiso_code: "EDIT" }),
       getSedesActivas(supabase),
       getConsultoriosActivos(supabase),
+      getNeverasActivas(supabase),
       getTiposExtintorActivos(supabase),
     ]);
 
@@ -50,6 +56,7 @@ export default async function MedioAmbientePage() {
       <MedioAmbienteTabs
         sedes={sedes}
         consultorios={consultorios}
+        neveras={neveras}
         tiposExtintor={tiposExtintor}
         puedeCrear={!!puedeCrear}
         puedeEditar={!!puedeEditar}

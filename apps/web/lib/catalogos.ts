@@ -97,6 +97,15 @@ export async function getConsultoriosActivos(supabase: Supabase) {
   return data ?? [];
 }
 
+export async function getNeverasActivas(supabase: Supabase) {
+  const { data } = await supabase
+    .from("neveras")
+    .select("id, nombre, sede_id")
+    .eq("activo", true)
+    .order("orden");
+  return data ?? [];
+}
+
 export async function getTiposExtintorActivos(supabase: Supabase) {
   const { data } = await supabase
     .from("tipos_extintor")
