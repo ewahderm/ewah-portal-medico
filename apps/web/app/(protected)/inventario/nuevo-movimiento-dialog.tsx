@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import { useActionState } from "react";
 import { PlusIcon } from "lucide-react";
 import { registrarMovimiento } from "@/lib/inventario/actions";
-import { MOTIVOS_ENTRADA, MOTIVOS_SALIDA, MOTIVO_LABEL } from "@/lib/inventario/motivos";
 import { useCerrarAlExito } from "@/lib/forms/cerrarAlExito";
 import { toast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
@@ -33,24 +32,30 @@ type Lote = {
 };
 type Insumo = { id: string; nombre: string };
 
-const ITEMS_MOTIVO = [
-  ...MOTIVOS_ENTRADA.map((m) => ({ value: m, label: `Ingreso — ${MOTIVO_LABEL[m]}` })),
-  ...MOTIVOS_SALIDA.map((m) => ({ value: m, label: `Salida — ${MOTIVO_LABEL[m]}` })),
-];
-
 export function NuevoMovimientoDialog({
   insumos,
   lotes,
   sedes,
+  motivosEntrada,
+  motivosSalida,
 }: {
   insumos: Insumo[];
   lotes: Lote[];
   sedes: Opcion[];
+  motivosEntrada: Opcion[];
+  motivosSalida: Opcion[];
 }) {
   const [open, setOpen] = useState(false);
   const [insumoId, setInsumoId] = useState("");
   const [loteId, setLoteId] = useState("");
   const [state, formAction, pending] = useActionState(registrarMovimiento, null);
+  const itemsMotivo = useMemo(
+    () => [
+      ...motivosEntrada.map((m) => ({ value: m.id, label: `Ingreso — ${m.nombre}` })),
+      ...motivosSalida.map((m) => ({ value: m.id, label: `Salida — ${m.nombre}` })),
+    ],
+    [motivosEntrada, motivosSalida],
+  );
 
   const lotesDelInsumo = useMemo(
     () => lotes.filter((l) => l.insumo_id === insumoId),
@@ -124,7 +129,7 @@ export function NuevoMovimientoDialog({
               id="motivoMovimiento"
               name="motivoMovimiento"
               required
-              items={ITEMS_MOTIVO}
+              items={itemsMotivo}
               placeholder="Escriba tipo de movimiento..."
             />
           </div>
@@ -140,6 +145,7 @@ export function NuevoMovimientoDialog({
                 <CrearLoteDialog
                   insumos={insumos}
                   sedes={sedes}
+                  motivosEntrada={motivosEntrada}
                   insumoIdFijo={insumoId}
                   onCreado={(nuevoLoteId) => setLoteId(nuevoLoteId)}
                 />

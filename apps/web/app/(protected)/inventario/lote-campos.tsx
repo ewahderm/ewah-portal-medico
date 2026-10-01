@@ -1,12 +1,9 @@
 "use client";
 
-import { MOTIVOS_ENTRADA, MOTIVO_LABEL } from "@/lib/inventario/motivos";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Combobox } from "@/components/ui/combobox";
 import { toItems, type Opcion } from "@/lib/forms/opciones";
-
-const ITEMS_MOTIVO_ENTRADA = MOTIVOS_ENTRADA.map((m) => ({ value: m, label: MOTIVO_LABEL[m] }));
 
 /**
  * Campos de "recepción de un lote" — sin <form> ni botón propio a propósito,
@@ -19,11 +16,13 @@ const ITEMS_MOTIVO_ENTRADA = MOTIVOS_ENTRADA.map((m) => ({ value: m, label: MOTI
 export function LoteCampos({
   insumos,
   sedes,
+  motivosEntrada,
   insumoIdFijo,
   columnas = 2,
 }: {
   insumos: Opcion[];
   sedes: Opcion[];
+  motivosEntrada: Opcion[];
   /** Si se indica, el insumo no se puede cambiar (ya viene elegido desde el
    * movimiento) y viaja como campo oculto. */
   insumoIdFijo?: string;
@@ -89,7 +88,7 @@ export function LoteCampos({
             id="motivoEntrada"
             name="motivoEntrada"
             required
-            items={ITEMS_MOTIVO_ENTRADA}
+            items={toItems(motivosEntrada)}
             placeholder="Selecciona"
           />
         </div>

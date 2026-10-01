@@ -7,12 +7,32 @@ import { requirePermiso as requirePermisoBase } from "@/lib/auth/requirePermiso"
 import { requireEntitlement } from "@/lib/auth/requireEntitlement";
 import { campoOpcional } from "@/lib/forms/opcional";
 import { rangoPagina, esRangoFueraDeLimite } from "@/lib/pagination";
-import { MOTIVOS_ENTRADA, MOTIVOS_SALIDA } from "./motivos";
 
 export type InventarioActionState = { error?: string; warning?: string } | null;
 
 function requirePermiso(permiso: "VIEW" | "CREATE" | "VOID") {
   return requirePermisoBase("inventario", permiso);
+}
+
+// Los motivos de dropdown (compra, desecho, etc.) son un catálogo editable
+// por clínica (motivos_movimiento_inventario) — ya no un enum fijo en
+// código, así que hay que resolver su categoría (entrada/salida) en BD para
+// saber qué signo aplicar al stock. Si el código no existe o está desactivado
+// para esta clínica, se trata como inválido (alguien pudo mandar un valor
+// viejo que el admin ya desactivó, o un valor inventado a mano).
+async function categoriaMotivo(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  clinicaId: string,
+  codigo: string,
+): Promise<"entrada" | "salida" | null> {
+  const { data } = await supabase
+    .from("motivos_movimiento_inventario")
+    .select("categoria")
+    .eq("clinica_id", clinicaId)
+    .eq("codigo", codigo)
+    .eq("activo", true)
+    .maybeSingle();
+  return (data?.categoria as "entrada" | "salida" | undefined) ?? null;
 }
 
 // Devuelve el id del lote recién creado para que quien lo llame pueda
@@ -32,12 +52,8 @@ export async function crearLote(
   const costoTexto = campoOpcional(formData, "costoUnitario");
   const cantidadTexto = String(formData.get("cantidadRecibida") ?? "").trim();
 
-  if (!insumoId || !sedeId || !numeroLote || !cantidadTexto) {
-    return { error: "Insumo, sede, número de lote y cantidad recibida son obligatorios." };
-  }
-
-  if (!MOTIVOS_ENTRADA.includes(motivoEntrada as (typeof MOTIVOS_ENTRADA)[number])) {
-    return { error: "Elige un motivo de ingreso válido." };
+  if (!insumoId || !sedeId || !numeroLote || !cantidadTexto || !motivoEntrada) {
+    return { error: "Insumo, sede, número de lote, motivo y cantidad recibida son obligatorios." };
   }
 
   const cantidad = Number(cantidadTexto);
@@ -57,6 +73,10 @@ export async function crearLote(
   if (!checkPlan.ok) return { error: checkPlan.error };
 
   const supabase = await createClient();
+
+  const categoria = await categoriaMotivo(supabase, check.usuario.clinica_id, motivoEntrada);
+  if (categoria !== "entrada") return { error: "Elige un motivo de ingreso válido." };
+
   const { data: lote, error: loteError } = await supabase
     .from("lotes")
     .insert({
@@ -185,10 +205,7 @@ export async function registrarMovimiento(
   const cantidadTexto = String(formData.get("cantidad") ?? "").trim();
   const observaciones = campoOpcional(formData, "observaciones");
 
-  const esEntrada = (MOTIVOS_ENTRADA as readonly string[]).includes(motivo);
-  const esSalida = (MOTIVOS_SALIDA as readonly string[]).includes(motivo);
-
-  if (!loteId || !cantidadTexto || (!esEntrada && !esSalida)) {
+  if (!loteId || !cantidadTexto || !motivo) {
     return { error: "Lote, tipo de movimiento y cantidad son obligatorios." };
   }
 
@@ -204,6 +221,11 @@ export async function registrarMovimiento(
   if (!checkPlan.ok) return { error: checkPlan.error };
 
   const supabase = await createClient();
+
+  const categoria = await categoriaMotivo(supabase, check.usuario.clinica_id, motivo);
+  if (!categoria) return { error: "Elige un tipo de movimiento válido." };
+  const esSalida = categoria === "salida";
+
   const { data: lote } = await supabase
     .from("lotes")
     .select("cantidad_actual")
@@ -213,7 +235,7 @@ export async function registrarMovimiento(
   const { error } = await supabase.from("movimientos_insumos").insert({
     clinica_id: check.usuario.clinica_id,
     lote_id: loteId,
-    tipo: esEntrada ? "entrada" : "salida",
+    tipo: categoria,
     motivo_movimiento: motivo,
     cantidad,
     motivo: observaciones,

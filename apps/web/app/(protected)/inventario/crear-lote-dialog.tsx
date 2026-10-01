@@ -30,11 +30,13 @@ import type { Opcion } from "@/lib/forms/opciones";
 export function CrearLoteDialog({
   insumos,
   sedes,
+  motivosEntrada,
   insumoIdFijo,
   onCreado,
 }: {
   insumos: Opcion[];
   sedes: Opcion[];
+  motivosEntrada: Opcion[];
   insumoIdFijo?: string;
   onCreado?: (loteId: string) => void;
 }) {
@@ -73,6 +75,7 @@ export function CrearLoteDialog({
             <LoteCampos
               insumos={insumos}
               sedes={sedes}
+              motivosEntrada={motivosEntrada}
               insumoIdFijo={insumoIdFijo}
               columnas={1}
             />

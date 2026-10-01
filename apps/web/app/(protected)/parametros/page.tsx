@@ -26,6 +26,8 @@ import { InsumosTable, type InsumoRow } from "./insumos-table";
 import { InsumoDialog } from "./insumo-dialog";
 import { ProveedoresTable, type ProveedorRow } from "./proveedores-table";
 import { ProveedorDialog } from "./proveedor-dialog";
+import { MotivosMovimientoTable, type MotivoMovimientoRow } from "./motivos-movimiento-table";
+import { MotivoMovimientoDialog } from "./motivo-movimiento-dialog";
 import { getSedesActivas, getTiposIdentificacionActivos, getProveedoresActivos } from "@/lib/catalogos";
 
 // Mismo nombre/ícono que ya usa el launcher del dashboard
@@ -80,6 +82,7 @@ export default async function ParametrosPage() {
     neverasData,
     insumosData,
     proveedoresData,
+    motivosMovimientoData,
     clinicaData,
     modulosActivosData,
   ] = await Promise.all([
@@ -115,6 +118,11 @@ export default async function ParametrosPage() {
     supabase
       .from("proveedores")
       .select("id, nombre, tipo_identificacion_id, numero_identificacion, observaciones, activo, tipos_identificacion(nombre)")
+      .order("orden"),
+    supabase
+      .from("motivos_movimiento_inventario")
+      .select("id, nombre, categoria, codigo, activo")
+      .order("categoria")
       .order("orden"),
     supabase.from("clinicas").select("agencia_regulatoria").single(),
     supabase
@@ -207,6 +215,21 @@ export default async function ParametrosPage() {
         <ProveedoresTable
           valores={(proveedoresData.data ?? []) as unknown as ProveedorRow[]}
           tiposIdentificacion={tiposIdentificacion}
+          editable
+        />
+      ),
+    },
+    {
+      tabla: "motivos_movimiento_inventario",
+      nombre: "Motivos de movimiento",
+      descripcion: "Razones de entrada/salida de inventario que aparecen al registrar un movimiento (compra, desecho, obsequio...).",
+      modulo: "inventario" as ModuloCatalogo,
+      accion: (
+        <MotivoMovimientoDialog trigger={<Button size="sm">Agregar motivo</Button>} />
+      ),
+      tabla_ui: (
+        <MotivosMovimientoTable
+          valores={(motivosMovimientoData.data ?? []) as unknown as MotivoMovimientoRow[]}
           editable
         />
       ),

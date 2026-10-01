@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { SearchIcon, XIcon } from "lucide-react";
 import { listarMovimientos } from "@/lib/inventario/actions";
-import { MOTIVOS_ENTRADA, MOTIVOS_SALIDA, MOTIVO_LABEL } from "@/lib/inventario/motivos";
+import { MOTIVO_LABEL_SISTEMA } from "@/lib/inventario/motivos";
 import { totalPaginas as calcularTotalPaginas } from "@/lib/pagination";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,15 +53,6 @@ type Movimiento = {
 
 const TODOS = "__todos__";
 
-const OPCIONES_TIPO = [
-  { value: TODOS, label: "Todos" },
-  ...MOTIVOS_ENTRADA.map((m) => ({ value: `entrada:${m}`, label: `Ingreso — ${MOTIVO_LABEL[m]}` })),
-  { value: "ajuste", label: "Ajuste" },
-  ...MOTIVOS_SALIDA.map((m) => ({ value: `salida:${m}`, label: `Salida — ${MOTIVO_LABEL[m]}` })),
-  { value: "salida:consumo_tratamiento", label: "Salida — Consumo en tratamiento" },
-  { value: "traslado", label: "Traslado entre sedes" },
-];
-
 function parseFiltroTipo(valor: string): { tipo?: string; motivo?: string } {
   if (valor === TODOS) return {};
   if (valor === "ajuste") return { tipo: "ajuste" };
@@ -70,13 +61,13 @@ function parseFiltroTipo(valor: string): { tipo?: string; motivo?: string } {
   return { tipo, motivo };
 }
 
-function labelMovimiento(m: Movimiento) {
+function labelMovimiento(m: Movimiento, etiquetas: Record<string, string>) {
   if (m.motivo_movimiento === "traslado") {
     return m.tipo === "entrada" ? "Traslado — recibido" : "Traslado — enviado";
   }
   if (m.motivo_movimiento) {
     const prefijo = m.tipo === "entrada" ? "Ingreso" : "Salida";
-    return `${prefijo} — ${MOTIVO_LABEL[m.motivo_movimiento] ?? m.motivo_movimiento}`;
+    return `${prefijo} — ${etiquetas[m.motivo_movimiento] ?? m.motivo_movimiento}`;
   }
   return m.cantidad >= 0 ? "Ingreso — Ajuste" : "Salida — Ajuste";
 }
@@ -91,11 +82,31 @@ export function MovimientosTab({
   insumos,
   sedes,
   lotes,
+  motivosEntrada,
+  motivosSalida,
 }: {
   insumos: Insumo[];
   sedes: Opcion[];
   lotes: LoteResumen[];
+  motivosEntrada: Opcion[];
+  motivosSalida: Opcion[];
 }) {
+  const opcionesTipo = useMemo(
+    () => [
+      { value: TODOS, label: "Todos" },
+      ...motivosEntrada.map((m) => ({ value: `entrada:${m.id}`, label: `Ingreso — ${m.nombre}` })),
+      { value: "ajuste", label: "Ajuste" },
+      ...motivosSalida.map((m) => ({ value: `salida:${m.id}`, label: `Salida — ${m.nombre}` })),
+      { value: "salida:consumo_tratamiento", label: "Salida — Consumo en tratamiento" },
+      { value: "traslado", label: "Traslado entre sedes" },
+    ],
+    [motivosEntrada, motivosSalida],
+  );
+  const etiquetasMotivo = useMemo(() => {
+    const mapa = { ...MOTIVO_LABEL_SISTEMA };
+    for (const m of [...motivosEntrada, ...motivosSalida]) mapa[m.id] = m.nombre;
+    return mapa;
+  }, [motivosEntrada, motivosSalida]);
   const [movimientos, setMovimientos] = useState<Movimiento[]>([]);
   const [total, setTotal] = useState(0);
   const [pagina, setPagina] = useState(1);
@@ -169,7 +180,7 @@ export function MovimientosTab({
             </div>
             <div className="space-y-1.5">
               <Label>Tipo de movimiento</Label>
-              <Combobox items={OPCIONES_TIPO} value={filtroTipo} onValueChange={(v) => setFiltroTipo(String(v ?? TODOS))} />
+              <Combobox items={opcionesTipo} value={filtroTipo} onValueChange={(v) => setFiltroTipo(String(v ?? TODOS))} />
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1.5">
@@ -198,7 +209,13 @@ export function MovimientosTab({
           <CardTitle className="text-base font-medium">
             Historial de movimientos {total > 0 ? `(${total})` : ""}
           </CardTitle>
-          <NuevoMovimientoDialog insumos={insumos} lotes={lotes} sedes={sedes} />
+          <NuevoMovimientoDialog
+            insumos={insumos}
+            lotes={lotes}
+            sedes={sedes}
+            motivosEntrada={motivosEntrada}
+            motivosSalida={motivosSalida}
+          />
         </CardHeader>
         <CardContent>
           <Table>
@@ -222,7 +239,7 @@ export function MovimientosTab({
                   </TableCell>
                   <TableCell className="font-medium">{m.lotes?.insumos?.nombre ?? "—"}</TableCell>
                   <TableCell>
-                    <Badge variant={varianteMovimiento(m)}>{labelMovimiento(m)}</Badge>
+                    <Badge variant={varianteMovimiento(m)}>{labelMovimiento(m, etiquetasMotivo)}</Badge>
                   </TableCell>
                   <TableCell className={m.tipo === "salida" ? "text-destructive" : ""}>
                     {m.tipo === "salida" ? "-" : "+"}

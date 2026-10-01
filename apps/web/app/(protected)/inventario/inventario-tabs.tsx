@@ -25,12 +25,16 @@ export function InventarioTabs({
   insumos,
   sedes,
   lotes,
+  motivosEntrada,
+  motivosSalida,
   puedeCrear,
   puedeAjustar,
 }: {
   insumos: Opcion[];
   sedes: Opcion[];
   lotes: LoteRow[];
+  motivosEntrada: Opcion[];
+  motivosSalida: Opcion[];
   puedeCrear: boolean;
   puedeAjustar: boolean;
 }) {
@@ -64,12 +68,18 @@ export function InventarioTabs({
 
       {puedeCrear ? (
         <TabsContent value="recepcion" className="pt-4">
-          <RecepcionLoteForm insumos={insumos} sedes={sedes} />
+          <RecepcionLoteForm insumos={insumos} sedes={sedes} motivosEntrada={motivosEntrada} />
         </TabsContent>
       ) : null}
 
       <TabsContent value="movimientos" className="pt-4">
-        <MovimientosTab insumos={insumos} sedes={sedes} lotes={lotes} />
+        <MovimientosTab
+          insumos={insumos}
+          sedes={sedes}
+          lotes={lotes}
+          motivosEntrada={motivosEntrada}
+          motivosSalida={motivosSalida}
+        />
       </TabsContent>
 
       <TabsContent value="cortes" className="pt-4">

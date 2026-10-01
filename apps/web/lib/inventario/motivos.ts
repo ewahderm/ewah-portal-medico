@@ -1,13 +1,13 @@
-export const MOTIVOS_ENTRADA = ["compra", "obsequio_proveedor", "saldo_inicial"] as const;
-export const MOTIVOS_SALIDA = ["desecho", "obsequio_paciente"] as const;
-
-export const MOTIVO_LABEL: Record<string, string> = {
-  compra: "Compra",
-  obsequio_proveedor: "Obsequio de proveedor",
-  saldo_inicial: "Saldo inicial",
+// Los motivos seleccionables desde un dropdown (compra, obsequio_proveedor,
+// saldo_inicial, desecho, obsequio_paciente) ya NO viven aquí — son un
+// catálogo real y editable (tabla motivos_movimiento_inventario, ver
+// lib/catalogos.ts#getMotivosMovimientoActivos). Esto queda solo con los 3
+// motivos que dispara el propio sistema (nunca aparecen en un dropdown, así
+// que no tiene sentido que el usuario los administre desde Parámetros):
+// Tratamientos registra "consumo_tratamiento", el diálogo de traslado
+// registra "traslado", y revertir un consumo registra "reverso_consumo".
+export const MOTIVO_LABEL_SISTEMA: Record<string, string> = {
   consumo_tratamiento: "Consumo en tratamiento",
-  desecho: "Desecho",
-  obsequio_paciente: "Obsequio a paciente",
   traslado: "Traslado entre sedes",
   reverso_consumo: "Reversa de consumo",
 };

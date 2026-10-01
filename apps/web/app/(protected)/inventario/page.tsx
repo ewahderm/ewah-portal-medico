@@ -6,7 +6,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { UpsellPlan } from "../_components/upsell-plan";
 import { InventarioTabs } from "./inventario-tabs";
-import { getSedesActivas } from "@/lib/catalogos";
+import { getSedesActivas, getMotivosMovimientoActivos } from "@/lib/catalogos";
 
 type LoteRow = {
   id: string;
@@ -57,6 +57,7 @@ export default async function InventarioPage() {
     { data: insumosData },
     sedesData,
     { data: lotesData },
+    motivos,
   ] = await Promise.all([
     supabase.rpc("has_permission", { modulo_code: "inventario", permiso_code: "CREATE" }),
     supabase.rpc("has_permission", { modulo_code: "inventario", permiso_code: "VOID" }),
@@ -69,6 +70,7 @@ export default async function InventarioPage() {
          insumos(nombre, unidad_medida), sedes(nombre)`,
       )
       .order("fecha_vencimiento", { ascending: true, nullsFirst: false }),
+    getMotivosMovimientoActivos(supabase),
   ]);
 
   const insumos = insumosData ?? [];
@@ -98,6 +100,8 @@ export default async function InventarioPage() {
         insumos={insumos}
         sedes={sedes}
         lotes={lotes}
+        motivosEntrada={motivos.entrada}
+        motivosSalida={motivos.salida}
         puedeCrear={!!puedeCrear}
         puedeAjustar={!!puedeAjustar}
       />

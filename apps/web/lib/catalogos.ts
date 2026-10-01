@@ -115,6 +115,23 @@ export async function getTiposExtintorActivos(supabase: Supabase) {
   return data ?? [];
 }
 
+// id = codigo (no el uuid de la fila) a propósito: es lo que viaja en el
+// formulario y lo que queda guardado en movimientos_insumos.motivo_movimiento
+// — así los componentes existentes que ya usan la forma Opcion (toItems,
+// etc.) funcionan sin cambios.
+export async function getMotivosMovimientoActivos(supabase: Supabase) {
+  const { data } = await supabase
+    .from("motivos_movimiento_inventario")
+    .select("codigo, nombre, categoria")
+    .eq("activo", true)
+    .order("orden");
+  const filas = data ?? [];
+  return {
+    entrada: filas.filter((m) => m.categoria === "entrada").map((m) => ({ id: m.codigo, nombre: m.nombre })),
+    salida: filas.filter((m) => m.categoria === "salida").map((m) => ({ id: m.codigo, nombre: m.nombre })),
+  };
+}
+
 export async function getEmpleadosActivos(supabase: Supabase) {
   const { data } = await supabase
     .from("empleados")

@@ -1,9 +1,9 @@
 "use client";
 
-import { useActionState, useState, useTransition } from "react";
+import { useActionState, useMemo, useState, useTransition } from "react";
 import { buscarLotePorId, registrarMovimiento } from "@/lib/inventario/actions";
-import { MOTIVOS_ENTRADA, MOTIVOS_SALIDA, MOTIVO_LABEL } from "@/lib/inventario/motivos";
 import { useCerrarAlExito } from "@/lib/forms/cerrarAlExito";
+import type { Opcion } from "@/lib/forms/opciones";
 import { toast } from "@/components/ui/toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -15,12 +15,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Combobox } from "@/components/ui/combobox";
 import { LoteScanner, type LoteEscaneado } from "../../_components/lote-scanner";
 
-const ITEMS_MOTIVO = [
-  ...MOTIVOS_ENTRADA.map((m) => ({ value: m, label: `Ingreso — ${MOTIVO_LABEL[m]}` })),
-  ...MOTIVOS_SALIDA.map((m) => ({ value: m, label: `Salida — ${MOTIVO_LABEL[m]}` })),
-];
-
-export function EscanearCliente({ puedeRegistrar }: { puedeRegistrar: boolean }) {
+export function EscanearCliente({
+  puedeRegistrar,
+  motivosEntrada,
+  motivosSalida,
+}: {
+  puedeRegistrar: boolean;
+  motivosEntrada: Opcion[];
+  motivosSalida: Opcion[];
+}) {
   const [lote, setLote] = useState<LoteEscaneado | null>(null);
   const [, startRefresco] = useTransition();
 
@@ -46,7 +49,13 @@ export function EscanearCliente({ puedeRegistrar }: { puedeRegistrar: boolean })
       </Card>
 
       {lote ? (
-        <LoteEncontradoCard lote={lote} puedeRegistrar={puedeRegistrar} onActualizado={refrescar} />
+        <LoteEncontradoCard
+          lote={lote}
+          puedeRegistrar={puedeRegistrar}
+          onActualizado={refrescar}
+          motivosEntrada={motivosEntrada}
+          motivosSalida={motivosSalida}
+        />
       ) : null}
     </div>
   );
@@ -56,12 +65,23 @@ function LoteEncontradoCard({
   lote,
   puedeRegistrar,
   onActualizado,
+  motivosEntrada,
+  motivosSalida,
 }: {
   lote: LoteEscaneado;
   puedeRegistrar: boolean;
   onActualizado: () => void;
+  motivosEntrada: Opcion[];
+  motivosSalida: Opcion[];
 }) {
   const [state, formAction, pending] = useActionState(registrarMovimiento, null);
+  const itemsMotivo = useMemo(
+    () => [
+      ...motivosEntrada.map((m) => ({ value: m.id, label: `Ingreso — ${m.nombre}` })),
+      ...motivosSalida.map((m) => ({ value: m.id, label: `Salida — ${m.nombre}` })),
+    ],
+    [motivosEntrada, motivosSalida],
+  );
 
   useCerrarAlExito(pending, !state?.error, () => {
     toast.add({ title: "Movimiento registrado", type: "success" });
@@ -114,7 +134,7 @@ function LoteEncontradoCard({
                   id="motivoMovimientoEscaneo"
                   name="motivoMovimiento"
                   required
-                  items={ITEMS_MOTIVO}
+                  items={itemsMotivo}
                   placeholder="Selecciona..."
                 />
               </div>

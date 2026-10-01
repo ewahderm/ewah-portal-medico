@@ -9,7 +9,15 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { LoteCampos } from "./lote-campos";
 import type { Opcion } from "@/lib/forms/opciones";
 
-export function RecepcionLoteForm({ insumos, sedes }: { insumos: Opcion[]; sedes: Opcion[] }) {
+export function RecepcionLoteForm({
+  insumos,
+  sedes,
+  motivosEntrada,
+}: {
+  insumos: Opcion[];
+  sedes: Opcion[];
+  motivosEntrada: Opcion[];
+}) {
   const [state, formAction, pending] = useActionState(crearLote, null);
   const [resetKey, setResetKey] = useState(0);
   const estabaPendiente = useRef(false);
@@ -39,7 +47,7 @@ export function RecepcionLoteForm({ insumos, sedes }: { insumos: Opcion[]; sedes
             </Alert>
           ) : null}
 
-          <LoteCampos insumos={insumos} sedes={sedes} />
+          <LoteCampos insumos={insumos} sedes={sedes} motivosEntrada={motivosEntrada} />
 
           <Button type="submit" disabled={pending}>
             {pending ? "Guardando..." : "Registrar lote"}

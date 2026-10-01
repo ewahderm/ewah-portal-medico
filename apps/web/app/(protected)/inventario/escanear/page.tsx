@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { UpsellPlan } from "../../_components/upsell-plan";
 import { EscanearCliente } from "./escanear-cliente";
+import { getMotivosMovimientoActivos } from "@/lib/catalogos";
 
 export default async function EscanearPage() {
   await requireUsuario();
@@ -39,6 +40,8 @@ export default async function EscanearPage() {
     permiso_code: "CREATE",
   });
 
+  const motivos = await getMotivosMovimientoActivos(supabase);
+
   return (
     <div className="space-y-6">
       <div>
@@ -49,7 +52,11 @@ export default async function EscanearPage() {
         </p>
       </div>
 
-      <EscanearCliente puedeRegistrar={!!puedeCrear} />
+      <EscanearCliente
+        puedeRegistrar={!!puedeCrear}
+        motivosEntrada={motivos.entrada}
+        motivosSalida={motivos.salida}
+      />
     </div>
   );
 }
