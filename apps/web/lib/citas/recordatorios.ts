@@ -67,7 +67,7 @@ function construirHtmlRecordatorio(
 
   return `
   <div style="font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif; background-color: #f4f7f9; padding: 24px;">
-    <div style="max-width: 560px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0;">
+    <div style="max-width: 700px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0;">
       <div style="background-color: #0D1825; padding: 20px 24px;">
         <span style="font-size: 20px; font-weight: 700; color: #ffffff;">ewah</span>
         <span style="font-size: 12px; font-weight: 700; letter-spacing: 2px; color: #00C9EC; margin-left: 6px;">TECH</span>
