@@ -6,6 +6,7 @@ import {
   getConsultoriosActivos,
   getNeverasActivas,
   getTiposExtintorActivos,
+  getEmpleadosActivos,
 } from "@/lib/catalogos";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { MedioAmbienteTabs } from "./medio-ambiente-tabs";
@@ -27,15 +28,23 @@ export default async function MedioAmbientePage() {
     );
   }
 
-  const [{ data: puedeCrear }, { data: puedeEditar }, sedes, consultorios, neveras, tiposExtintor] =
-    await Promise.all([
-      supabase.rpc("has_permission", { modulo_code: "medio_ambiente", permiso_code: "CREATE" }),
-      supabase.rpc("has_permission", { modulo_code: "medio_ambiente", permiso_code: "EDIT" }),
-      getSedesActivas(supabase),
-      getConsultoriosActivos(supabase),
-      getNeverasActivas(supabase),
-      getTiposExtintorActivos(supabase),
-    ]);
+  const [
+    { data: puedeCrear },
+    { data: puedeEditar },
+    sedes,
+    consultorios,
+    neveras,
+    tiposExtintor,
+    empleados,
+  ] = await Promise.all([
+    supabase.rpc("has_permission", { modulo_code: "medio_ambiente", permiso_code: "CREATE" }),
+    supabase.rpc("has_permission", { modulo_code: "medio_ambiente", permiso_code: "EDIT" }),
+    getSedesActivas(supabase),
+    getConsultoriosActivos(supabase),
+    getNeverasActivas(supabase),
+    getTiposExtintorActivos(supabase),
+    getEmpleadosActivos(supabase),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -58,6 +67,7 @@ export default async function MedioAmbientePage() {
         consultorios={consultorios}
         neveras={neveras}
         tiposExtintor={tiposExtintor}
+        empleados={empleados}
         puedeCrear={!!puedeCrear}
         puedeEditar={!!puedeEditar}
         nombreUsuario={usuario.nombre}

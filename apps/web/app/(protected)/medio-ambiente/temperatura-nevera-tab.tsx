@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { SearchIcon, XIcon } from "lucide-react";
 import { listarTemperaturasNevera } from "@/lib/medio-ambiente/actions";
+import { formatoFechaHoraJornada } from "@/lib/medio-ambiente/fecha-local";
 import { totalPaginas as calcularTotalPaginas } from "@/lib/pagination";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,7 +28,9 @@ type Nevera = { id: string; nombre: string; sede_id: string };
 
 type Registro = {
   id: string;
-  registrado_en: string;
+  fecha: string;
+  hora: string | null;
+  jornada: string;
   temperatura_celsius: number;
   observaciones: string | null;
   sedes: { nombre: string } | null;
@@ -164,7 +167,7 @@ export function TemperaturaNeveraTab({
               {registros.map((r) => (
                 <TableRow key={r.id}>
                   <TableCell className="text-muted-foreground">
-                    {new Date(r.registrado_en).toLocaleString("es-CO")}
+                    {formatoFechaHoraJornada(r.fecha, r.hora, r.jornada)}
                   </TableCell>
                   <TableCell className="text-muted-foreground">{r.sedes?.nombre ?? "—"}</TableCell>
                   <TableCell className="font-medium">{r.neveras?.nombre ?? "—"}</TableCell>

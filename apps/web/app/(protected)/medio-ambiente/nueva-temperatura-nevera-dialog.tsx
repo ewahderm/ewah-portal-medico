@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import { useActionState } from "react";
 import { PlusIcon } from "lucide-react";
 import { crearTemperaturaNevera } from "@/lib/medio-ambiente/actions";
-import { datetimeLocalAhora } from "@/lib/medio-ambiente/fecha-local";
 import { useCerrarAlExito } from "@/lib/forms/cerrarAlExito";
 import { toast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
@@ -21,6 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { Combobox } from "@/components/ui/combobox";
 import { toItems, type Opcion } from "@/lib/forms/opciones";
+import { FechaJornadaFields } from "./fecha-jornada-fields";
 
 type Nevera = { id: string; nombre: string; sede_id: string };
 
@@ -43,14 +43,7 @@ export function NuevaTemperaturaNeveraDialog({
     [neveras, sedeId],
   );
 
-  const [state, formAction, pending] = useActionState(
-    async (prevState: Awaited<ReturnType<typeof crearTemperaturaNevera>>, formData: FormData) => {
-      const local = String(formData.get("registradoEnLocal") ?? "");
-      if (local) formData.set("registradoEn", new Date(local).toISOString());
-      return crearTemperaturaNevera(prevState, formData);
-    },
-    null,
-  );
+  const [state, formAction, pending] = useActionState(crearTemperaturaNevera, null);
 
   useCerrarAlExito(pending, !state?.error, () => {
     setOpen(false);
@@ -112,16 +105,7 @@ export function NuevaTemperaturaNeveraDialog({
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="registradoEnLocal">Fecha y hora</Label>
-            <Input
-              id="registradoEnLocal"
-              name="registradoEnLocal"
-              type="datetime-local"
-              required
-              defaultValue={datetimeLocalAhora()}
-            />
-          </div>
+          <FechaJornadaFields />
 
           <div className="space-y-2">
             <Label htmlFor="temperaturaCelsius">Temperatura (°C)</Label>

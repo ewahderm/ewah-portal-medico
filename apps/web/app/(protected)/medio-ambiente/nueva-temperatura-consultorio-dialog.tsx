@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import { useActionState } from "react";
 import { PlusIcon } from "lucide-react";
 import { crearTemperaturaConsultorio } from "@/lib/medio-ambiente/actions";
-import { datetimeLocalAhora } from "@/lib/medio-ambiente/fecha-local";
 import { useCerrarAlExito } from "@/lib/forms/cerrarAlExito";
 import { toast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
@@ -21,6 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { Combobox } from "@/components/ui/combobox";
 import { toItems, type Opcion } from "@/lib/forms/opciones";
+import { FechaJornadaFields } from "./fecha-jornada-fields";
 
 type Consultorio = { id: string; nombre: string; sede_id: string };
 
@@ -43,18 +43,7 @@ export function NuevaTemperaturaConsultorioDialog({
     [consultorios, sedeId],
   );
 
-  // El input queda en hora LOCAL (lo que la persona ve en su reloj); el
-  // wrapper lo convierte a ISO/UTC real antes de llamar a la server
-  // action, para no depender de en qué zona horaria quede corriendo la
-  // base de datos.
-  const [state, formAction, pending] = useActionState(
-    async (prevState: Awaited<ReturnType<typeof crearTemperaturaConsultorio>>, formData: FormData) => {
-      const local = String(formData.get("registradoEnLocal") ?? "");
-      if (local) formData.set("registradoEn", new Date(local).toISOString());
-      return crearTemperaturaConsultorio(prevState, formData);
-    },
-    null,
-  );
+  const [state, formAction, pending] = useActionState(crearTemperaturaConsultorio, null);
 
   useCerrarAlExito(pending, !state?.error, () => {
     setOpen(false);
@@ -116,16 +105,7 @@ export function NuevaTemperaturaConsultorioDialog({
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="registradoEnLocal">Fecha y hora</Label>
-            <Input
-              id="registradoEnLocal"
-              name="registradoEnLocal"
-              type="datetime-local"
-              required
-              defaultValue={datetimeLocalAhora()}
-            />
-          </div>
+          <FechaJornadaFields />
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">

@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useActionState } from "react";
 import { PlusIcon } from "lucide-react";
 import { crearResiduo } from "@/lib/medio-ambiente/actions";
-import { datetimeLocalAhora } from "@/lib/medio-ambiente/fecha-local";
 import { TIPOS_RESIDUO } from "@/lib/medio-ambiente/constantes";
 import { useCerrarAlExito } from "@/lib/forms/cerrarAlExito";
 import { toast } from "@/components/ui/toast";
@@ -21,7 +20,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Combobox } from "@/components/ui/combobox";
-import { toItems, type Opcion } from "@/lib/forms/opciones";
+import { toItems, toItemsOpcional, type Opcion } from "@/lib/forms/opciones";
+import { SIN_SELECCION } from "@/lib/forms/opcional";
+import { FechaJornadaFields } from "./fecha-jornada-fields";
 
 const ITEMS_TIPO_RESIDUO = TIPOS_RESIDUO.map((t) => ({
   value: t.value,
@@ -30,21 +31,17 @@ const ITEMS_TIPO_RESIDUO = TIPOS_RESIDUO.map((t) => ({
 
 export function NuevoResiduoDialog({
   sedes,
+  empleados,
   onCreado,
 }: {
   sedes: Opcion[];
+  empleados: Opcion[];
   onCreado: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  const itemsEmpleados = toItemsOpcional(empleados, SIN_SELECCION, "Sin especificar");
 
-  const [state, formAction, pending] = useActionState(
-    async (prevState: Awaited<ReturnType<typeof crearResiduo>>, formData: FormData) => {
-      const local = String(formData.get("registradoEnLocal") ?? "");
-      if (local) formData.set("registradoEn", new Date(local).toISOString());
-      return crearResiduo(prevState, formData);
-    },
-    null,
-  );
+  const [state, formAction, pending] = useActionState(crearResiduo, null);
 
   useCerrarAlExito(pending, !state?.error, () => {
     setOpen(false);
@@ -89,21 +86,22 @@ export function NuevoResiduoDialog({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor="pesoKg">Peso (kg)</Label>
-              <Input id="pesoKg" name="pesoKg" type="number" step="0.001" min="0" required placeholder="0.000" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="registradoEnLocal">Fecha y hora</Label>
-              <Input
-                id="registradoEnLocal"
-                name="registradoEnLocal"
-                type="datetime-local"
-                required
-                defaultValue={datetimeLocalAhora()}
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="pesoKg">Peso (kg)</Label>
+            <Input id="pesoKg" name="pesoKg" type="number" step="0.001" min="0" required placeholder="0.000" />
+          </div>
+
+          <FechaJornadaFields />
+
+          <div className="space-y-2">
+            <Label htmlFor="empleadoId">Empleado que pesó el residuo (opcional)</Label>
+            <Combobox
+              id="empleadoId"
+              name="empleadoId"
+              items={itemsEmpleados}
+              defaultValue={SIN_SELECCION}
+              placeholder="Buscar empleado..."
+            />
           </div>
 
           <div className="space-y-2">

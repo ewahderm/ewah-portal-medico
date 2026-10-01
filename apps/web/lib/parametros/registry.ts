@@ -89,6 +89,13 @@ export const CATALOGOS: CatalogoConfig[] = [
     esGlobal: false,
     modulo: "medio_ambiente",
   },
+  {
+    tabla: "empleados",
+    nombre: "Empleados",
+    descripcion: "Personal operativo sin acceso al sistema (limpieza, pesaje de residuos) que se puede seleccionar al registrar una bitácora.",
+    esGlobal: false,
+    modulo: "medio_ambiente",
+  },
 ];
 
 // Consultorios, Insumos, Proveedores y Neveras se sacaron de esta lista a

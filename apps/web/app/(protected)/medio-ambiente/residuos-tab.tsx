@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { SearchIcon, XIcon } from "lucide-react";
 import { listarResiduos } from "@/lib/medio-ambiente/actions";
+import { formatoFechaHoraJornada } from "@/lib/medio-ambiente/fecha-local";
 import { totalPaginas as calcularTotalPaginas } from "@/lib/pagination";
 import { TIPOS_RESIDUO, infoResiduo, badgeVarianteCaneca } from "@/lib/medio-ambiente/constantes";
 import { Button } from "@/components/ui/button";
@@ -35,15 +36,26 @@ const ITEMS_TIPO_RESIDUO = [
 
 type Registro = {
   id: string;
-  registrado_en: string;
+  fecha: string;
+  hora: string | null;
+  jornada: string;
   tipo_residuo: string;
   peso_kg: number;
   observaciones: string | null;
   sedes: { nombre: string } | null;
+  empleados: { nombre: string } | null;
   creador: { nombre: string } | null;
 };
 
-export function ResiduosTab({ sedes, puedeCrear }: { sedes: Opcion[]; puedeCrear: boolean }) {
+export function ResiduosTab({
+  sedes,
+  empleados,
+  puedeCrear,
+}: {
+  sedes: Opcion[];
+  empleados: Opcion[];
+  puedeCrear: boolean;
+}) {
   const [registros, setRegistros] = useState<Registro[]>([]);
   const [total, setTotal] = useState(0);
   const [pagina, setPagina] = useState(1);
@@ -131,7 +143,9 @@ export function ResiduosTab({ sedes, puedeCrear }: { sedes: Opcion[]; puedeCrear
           <CardTitle className="text-base font-medium">
             Registros {total > 0 ? `(${total})` : ""}
           </CardTitle>
-          {puedeCrear ? <NuevoResiduoDialog sedes={sedes} onCreado={() => buscar()} /> : null}
+          {puedeCrear ? (
+            <NuevoResiduoDialog sedes={sedes} empleados={empleados} onCreado={() => buscar()} />
+          ) : null}
         </CardHeader>
         <CardContent>
           <Table>
@@ -142,8 +156,9 @@ export function ResiduosTab({ sedes, puedeCrear }: { sedes: Opcion[]; puedeCrear
                 <TableHead>Caneca</TableHead>
                 <TableHead>Tipo</TableHead>
                 <TableHead>Peso</TableHead>
+                <TableHead>Empleado</TableHead>
                 <TableHead>Observaciones</TableHead>
-                <TableHead>Usuario</TableHead>
+                <TableHead>Digitalizado por</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -152,7 +167,7 @@ export function ResiduosTab({ sedes, puedeCrear }: { sedes: Opcion[]; puedeCrear
                 return (
                   <TableRow key={r.id}>
                     <TableCell className="text-muted-foreground">
-                      {new Date(r.registrado_en).toLocaleString("es-CO")}
+                      {formatoFechaHoraJornada(r.fecha, r.hora, r.jornada)}
                     </TableCell>
                     <TableCell className="text-muted-foreground">{r.sedes?.nombre ?? "—"}</TableCell>
                     <TableCell>
@@ -166,6 +181,7 @@ export function ResiduosTab({ sedes, puedeCrear }: { sedes: Opcion[]; puedeCrear
                     </TableCell>
                     <TableCell className="font-medium">{info?.label ?? r.tipo_residuo}</TableCell>
                     <TableCell>{r.peso_kg} kg</TableCell>
+                    <TableCell className="text-muted-foreground">{r.empleados?.nombre ?? "—"}</TableCell>
                     <TableCell className="max-w-xs whitespace-normal break-words text-muted-foreground">
                       {r.observaciones ?? "—"}
                     </TableCell>
@@ -175,7 +191,7 @@ export function ResiduosTab({ sedes, puedeCrear }: { sedes: Opcion[]; puedeCrear
               })}
               {registros.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center text-muted-foreground">
                     {pending ? "Buscando..." : "Todavía no hay registros."}
                   </TableCell>
                 </TableRow>

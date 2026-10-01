@@ -17,6 +17,7 @@ export function MedioAmbienteTabs({
   consultorios,
   neveras,
   tiposExtintor,
+  empleados,
   puedeCrear,
   puedeEditar,
   nombreUsuario,
@@ -25,6 +26,7 @@ export function MedioAmbienteTabs({
   consultorios: Consultorio[];
   neveras: Nevera[];
   tiposExtintor: Opcion[];
+  empleados: Opcion[];
   puedeCrear: boolean;
   puedeEditar: boolean;
   nombreUsuario: string;
@@ -58,7 +60,7 @@ export function MedioAmbienteTabs({
       </TabsContent>
 
       <TabsContent value="residuos" className="pt-4">
-        <ResiduosTab sedes={sedes} puedeCrear={puedeCrear} />
+        <ResiduosTab sedes={sedes} empleados={empleados} puedeCrear={puedeCrear} />
       </TabsContent>
 
       <TabsContent value="extintores" className="pt-4">
@@ -74,6 +76,7 @@ export function MedioAmbienteTabs({
         <LimpiezaTab
           sedes={sedes}
           consultorios={consultorios}
+          empleados={empleados}
           puedeCrear={puedeCrear}
           nombreUsuario={nombreUsuario}
         />

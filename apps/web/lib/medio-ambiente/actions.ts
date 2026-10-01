@@ -3,9 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requirePermiso as requirePermisoBase } from "@/lib/auth/requirePermiso";
-import { campoOpcional } from "@/lib/forms/opcional";
+import { campoOpcional, valorOpcionalSelect } from "@/lib/forms/opcional";
 import { rangoPagina, esRangoFueraDeLimite } from "@/lib/pagination";
-import { esTipoResiduoValido, esAreaLimpiezaValida } from "./constantes";
+import { esTipoResiduoValido, esAreaLimpiezaValida, esJornadaValida } from "./constantes";
 
 export type MedioAmbienteActionState = { error?: string } | null;
 
@@ -28,13 +28,18 @@ export async function crearTemperaturaConsultorio(
   formData: FormData,
 ): Promise<MedioAmbienteActionState> {
   const consultorioId = String(formData.get("consultorioId") ?? "");
-  const registradoEn = String(formData.get("registradoEn") ?? "");
+  const fecha = String(formData.get("fecha") ?? "");
+  const hora = campoOpcional(formData, "hora");
+  const jornada = String(formData.get("jornada") ?? "");
   const temperaturaCelsius = numeroDesdeForm(formData, "temperaturaCelsius");
   const humedadTexto = campoOpcional(formData, "humedadPorcentaje");
   const observaciones = campoOpcional(formData, "observaciones");
 
-  if (!consultorioId || !registradoEn || temperaturaCelsius === null) {
-    return { error: "Consultorio, fecha/hora y temperatura son obligatorios." };
+  if (!consultorioId || !fecha || !jornada || temperaturaCelsius === null) {
+    return { error: "Consultorio, fecha, jornada y temperatura son obligatorios." };
+  }
+  if (!esJornadaValida(jornada)) {
+    return { error: "Elige una jornada válida (AM o PM)." };
   }
 
   const humedadPorcentaje = humedadTexto ? Number(humedadTexto) : null;
@@ -49,7 +54,9 @@ export async function crearTemperaturaConsultorio(
   const { error } = await supabase.from("registros_temperatura_consultorio").insert({
     clinica_id: check.usuario.clinica_id,
     consultorio_id: consultorioId,
-    registrado_en: registradoEn,
+    fecha,
+    hora,
+    jornada,
     temperatura_celsius: temperaturaCelsius,
     humedad_porcentaje: humedadPorcentaje,
     observaciones,
@@ -78,16 +85,17 @@ export async function listarTemperaturasConsultorio(filtros: {
   let query = supabase
     .from("registros_temperatura_consultorio")
     .select(
-      `id, registrado_en, temperatura_celsius, humedad_porcentaje, observaciones,
+      `id, fecha, hora, jornada, temperatura_celsius, humedad_porcentaje, observaciones,
        ${embedConsultorio}(nombre, sede_id), creador:usuarios!registros_temperatura_consultorio_created_by_fkey(nombre)`,
       { count: "exact" },
     )
-    .order("registrado_en", { ascending: false });
+    .order("fecha", { ascending: false })
+    .order("hora", { ascending: false, nullsFirst: false });
 
   if (filtros.sedeId) query = query.eq("consultorios.sede_id", filtros.sedeId);
   if (filtros.consultorioId) query = query.eq("consultorio_id", filtros.consultorioId);
-  if (filtros.desde) query = query.gte("registrado_en", filtros.desde);
-  if (filtros.hasta) query = query.lte("registrado_en", `${filtros.hasta}T23:59:59`);
+  if (filtros.desde) query = query.gte("fecha", filtros.desde);
+  if (filtros.hasta) query = query.lte("fecha", filtros.hasta);
 
   const paginaPedida = filtros.pagina ?? 1;
   const { data, count, error } = await query.range(...rangoPagina(paginaPedida));
@@ -108,12 +116,17 @@ export async function crearTemperaturaNevera(
 ): Promise<MedioAmbienteActionState> {
   const sedeId = String(formData.get("sedeId") ?? "");
   const neveraId = String(formData.get("neveraId") ?? "");
-  const registradoEn = String(formData.get("registradoEn") ?? "");
+  const fecha = String(formData.get("fecha") ?? "");
+  const hora = campoOpcional(formData, "hora");
+  const jornada = String(formData.get("jornada") ?? "");
   const temperaturaCelsius = numeroDesdeForm(formData, "temperaturaCelsius");
   const observaciones = campoOpcional(formData, "observaciones");
 
-  if (!sedeId || !neveraId || !registradoEn || temperaturaCelsius === null) {
-    return { error: "Sede, nevera, fecha/hora y temperatura son obligatorios." };
+  if (!sedeId || !neveraId || !fecha || !jornada || temperaturaCelsius === null) {
+    return { error: "Sede, nevera, fecha, jornada y temperatura son obligatorios." };
+  }
+  if (!esJornadaValida(jornada)) {
+    return { error: "Elige una jornada válida (AM o PM)." };
   }
 
   const check = await requirePermiso("CREATE");
@@ -124,7 +137,9 @@ export async function crearTemperaturaNevera(
     clinica_id: check.usuario.clinica_id,
     sede_id: sedeId,
     nevera_id: neveraId,
-    registrado_en: registradoEn,
+    fecha,
+    hora,
+    jornada,
     temperatura_celsius: temperaturaCelsius,
     observaciones,
     created_by: check.usuario.id,
@@ -147,16 +162,17 @@ export async function listarTemperaturasNevera(filtros: {
   let query = supabase
     .from("registros_temperatura_nevera")
     .select(
-      `id, registrado_en, temperatura_celsius, observaciones,
+      `id, fecha, hora, jornada, temperatura_celsius, observaciones,
        sedes(nombre), neveras(nombre), creador:usuarios!registros_temperatura_nevera_created_by_fkey(nombre)`,
       { count: "exact" },
     )
-    .order("registrado_en", { ascending: false });
+    .order("fecha", { ascending: false })
+    .order("hora", { ascending: false, nullsFirst: false });
 
   if (filtros.sedeId) query = query.eq("sede_id", filtros.sedeId);
   if (filtros.neveraId) query = query.eq("nevera_id", filtros.neveraId);
-  if (filtros.desde) query = query.gte("registrado_en", filtros.desde);
-  if (filtros.hasta) query = query.lte("registrado_en", `${filtros.hasta}T23:59:59`);
+  if (filtros.desde) query = query.gte("fecha", filtros.desde);
+  if (filtros.hasta) query = query.lte("fecha", filtros.hasta);
 
   const paginaPedida = filtros.pagina ?? 1;
   const { data, count, error } = await query.range(...rangoPagina(paginaPedida));
@@ -178,14 +194,20 @@ export async function crearResiduo(
   const sedeId = String(formData.get("sedeId") ?? "");
   const tipoResiduo = String(formData.get("tipoResiduo") ?? "");
   const pesoKg = numeroDesdeForm(formData, "pesoKg");
-  const registradoEn = String(formData.get("registradoEn") ?? "");
+  const fecha = String(formData.get("fecha") ?? "");
+  const hora = campoOpcional(formData, "hora");
+  const jornada = String(formData.get("jornada") ?? "");
+  const empleadoId = valorOpcionalSelect(formData, "empleadoId");
   const observaciones = campoOpcional(formData, "observaciones");
 
-  if (!sedeId || !tipoResiduo || !registradoEn || pesoKg === null) {
-    return { error: "Sede, tipo de residuo, fecha/hora y peso son obligatorios." };
+  if (!sedeId || !tipoResiduo || !fecha || !jornada || pesoKg === null) {
+    return { error: "Sede, tipo de residuo, fecha, jornada y peso son obligatorios." };
   }
   if (!esTipoResiduoValido(tipoResiduo)) {
     return { error: "Elige un tipo de residuo válido." };
+  }
+  if (!esJornadaValida(jornada)) {
+    return { error: "Elige una jornada válida (AM o PM)." };
   }
   if (pesoKg <= 0) {
     return { error: "El peso debe ser mayor que cero." };
@@ -200,7 +222,10 @@ export async function crearResiduo(
     sede_id: sedeId,
     tipo_residuo: tipoResiduo,
     peso_kg: pesoKg,
-    registrado_en: registradoEn,
+    fecha,
+    hora,
+    jornada,
+    empleado_id: empleadoId,
     observaciones,
     created_by: check.usuario.id,
   });
@@ -222,16 +247,17 @@ export async function listarResiduos(filtros: {
   let query = supabase
     .from("registros_residuos")
     .select(
-      `id, registrado_en, tipo_residuo, peso_kg, observaciones,
-       sedes(nombre), creador:usuarios!registros_residuos_created_by_fkey(nombre)`,
+      `id, fecha, hora, jornada, tipo_residuo, peso_kg, observaciones,
+       sedes(nombre), empleados(nombre), creador:usuarios!registros_residuos_created_by_fkey(nombre)`,
       { count: "exact" },
     )
-    .order("registrado_en", { ascending: false });
+    .order("fecha", { ascending: false })
+    .order("hora", { ascending: false, nullsFirst: false });
 
   if (filtros.sedeId) query = query.eq("sede_id", filtros.sedeId);
   if (filtros.tipoResiduo) query = query.eq("tipo_residuo", filtros.tipoResiduo);
-  if (filtros.desde) query = query.gte("registrado_en", filtros.desde);
-  if (filtros.hasta) query = query.lte("registrado_en", `${filtros.hasta}T23:59:59`);
+  if (filtros.desde) query = query.gte("fecha", filtros.desde);
+  if (filtros.hasta) query = query.lte("fecha", filtros.hasta);
 
   const paginaPedida = filtros.pagina ?? 1;
   const { data, count, error } = await query.range(...rangoPagina(paginaPedida));
@@ -391,14 +417,20 @@ export async function crearLimpieza(
   const areaTipo = String(formData.get("areaTipo") ?? "");
   const consultorioId = campoOpcional(formData, "consultorioId");
   const areaNombre = campoOpcional(formData, "areaNombre");
-  const registradoEn = String(formData.get("registradoEn") ?? "");
+  const fecha = String(formData.get("fecha") ?? "");
+  const hora = campoOpcional(formData, "hora");
+  const jornada = String(formData.get("jornada") ?? "");
+  const empleadoId = valorOpcionalSelect(formData, "empleadoId");
   const observaciones = campoOpcional(formData, "observaciones");
 
-  if (!sedeId || !areaTipo || !registradoEn) {
-    return { error: "Sede, área y fecha/hora son obligatorios." };
+  if (!sedeId || !areaTipo || !fecha || !jornada) {
+    return { error: "Sede, área, fecha y jornada son obligatorios." };
   }
   if (!esAreaLimpiezaValida(areaTipo)) {
     return { error: "Elige un tipo de área válido." };
+  }
+  if (!esJornadaValida(jornada)) {
+    return { error: "Elige una jornada válida (AM o PM)." };
   }
   if (areaTipo === "consultorio" && !consultorioId) {
     return { error: "Elige el consultorio que se limpió." };
@@ -417,10 +449,15 @@ export async function crearLimpieza(
     area_tipo: areaTipo,
     consultorio_id: areaTipo === "consultorio" ? consultorioId : null,
     area_nombre: areaTipo === "bano" ? areaNombre : null,
-    registrado_en: registradoEn,
+    fecha,
+    hora,
+    jornada,
+    empleado_id: empleadoId,
     observaciones,
-    // El responsable es siempre quien está haciendo el registro — nunca
-    // un valor que venga del formulario.
+    // El responsable de DIGITALIZAR el registro es siempre quien está en
+    // sesión — nunca un valor que venga del formulario. empleado_id (quien
+    // limpió físicamente) es un dato aparte, seleccionable, porque esa
+    // persona no tiene acceso al sistema.
     created_by: check.usuario.id,
   });
 
@@ -441,17 +478,18 @@ export async function listarLimpiezas(filtros: {
   let query = supabase
     .from("registros_limpieza")
     .select(
-      `id, registrado_en, area_tipo, area_nombre, observaciones,
-       sedes(nombre), consultorios(nombre),
+      `id, fecha, hora, jornada, area_tipo, area_nombre, observaciones,
+       sedes(nombre), consultorios(nombre), empleados(nombre),
        creador:usuarios!registros_limpieza_created_by_fkey(nombre)`,
       { count: "exact" },
     )
-    .order("registrado_en", { ascending: false });
+    .order("fecha", { ascending: false })
+    .order("hora", { ascending: false, nullsFirst: false });
 
   if (filtros.sedeId) query = query.eq("sede_id", filtros.sedeId);
   if (filtros.areaTipo) query = query.eq("area_tipo", filtros.areaTipo);
-  if (filtros.desde) query = query.gte("registrado_en", filtros.desde);
-  if (filtros.hasta) query = query.lte("registrado_en", `${filtros.hasta}T23:59:59`);
+  if (filtros.desde) query = query.gte("fecha", filtros.desde);
+  if (filtros.hasta) query = query.lte("fecha", filtros.hasta);
 
   const paginaPedida = filtros.pagina ?? 1;
   const { data, count, error } = await query.range(...rangoPagina(paginaPedida));

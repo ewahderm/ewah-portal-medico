@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import { useActionState } from "react";
 import { PlusIcon } from "lucide-react";
 import { crearLimpieza } from "@/lib/medio-ambiente/actions";
-import { datetimeLocalAhora } from "@/lib/medio-ambiente/fecha-local";
 import { AREAS_LIMPIEZA } from "@/lib/medio-ambiente/constantes";
 import { useCerrarAlExito } from "@/lib/forms/cerrarAlExito";
 import { toast } from "@/components/ui/toast";
@@ -21,7 +20,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Combobox } from "@/components/ui/combobox";
-import { toItems, type Opcion } from "@/lib/forms/opciones";
+import { toItems, toItemsOpcional, type Opcion } from "@/lib/forms/opciones";
+import { SIN_SELECCION } from "@/lib/forms/opcional";
+import { FechaJornadaFields } from "./fecha-jornada-fields";
 
 type Consultorio = { id: string; nombre: string; sede_id: string };
 
@@ -30,31 +31,27 @@ const ITEMS_AREA = AREAS_LIMPIEZA.map((a) => ({ value: a.value, label: a.label }
 export function NuevaLimpiezaDialog({
   sedes,
   consultorios,
+  empleados,
   nombreUsuario,
   onCreado,
 }: {
   sedes: Opcion[];
   consultorios: Consultorio[];
+  empleados: Opcion[];
   nombreUsuario: string;
   onCreado: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const [sedeId, setSedeId] = useState("");
   const [areaTipo, setAreaTipo] = useState<string>("");
+  const itemsEmpleados = toItemsOpcional(empleados, SIN_SELECCION, "Sin especificar");
 
   const consultoriosDeLaSede = useMemo(
     () => consultorios.filter((c) => c.sede_id === sedeId),
     [consultorios, sedeId],
   );
 
-  const [state, formAction, pending] = useActionState(
-    async (prevState: Awaited<ReturnType<typeof crearLimpieza>>, formData: FormData) => {
-      const local = String(formData.get("registradoEnLocal") ?? "");
-      if (local) formData.set("registradoEn", new Date(local).toISOString());
-      return crearLimpieza(prevState, formData);
-    },
-    null,
-  );
+  const [state, formAction, pending] = useActionState(crearLimpieza, null);
 
   useCerrarAlExito(pending, !state?.error, () => {
     setOpen(false);
@@ -144,14 +141,16 @@ export function NuevaLimpiezaDialog({
             </div>
           ) : null}
 
+          <FechaJornadaFields />
+
           <div className="space-y-2">
-            <Label htmlFor="registradoEnLocal">Fecha y hora</Label>
-            <Input
-              id="registradoEnLocal"
-              name="registradoEnLocal"
-              type="datetime-local"
-              required
-              defaultValue={datetimeLocalAhora()}
+            <Label htmlFor="empleadoId">Empleado que hizo la limpieza (opcional)</Label>
+            <Combobox
+              id="empleadoId"
+              name="empleadoId"
+              items={itemsEmpleados}
+              defaultValue={SIN_SELECCION}
+              placeholder="Buscar empleado..."
             />
           </div>
 
@@ -161,7 +160,7 @@ export function NuevaLimpiezaDialog({
           </div>
 
           <p className="text-xs text-muted-foreground">
-            Vas a registrar esta limpieza como responsable: <strong>{nombreUsuario}</strong>.
+            Vas a digitalizar este registro con tu usuario: <strong>{nombreUsuario}</strong>.
           </p>
 
           <Button type="submit" className="w-full" disabled={pending}>

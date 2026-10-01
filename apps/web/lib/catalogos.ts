@@ -114,3 +114,12 @@ export async function getTiposExtintorActivos(supabase: Supabase) {
     .order("orden");
   return data ?? [];
 }
+
+export async function getEmpleadosActivos(supabase: Supabase) {
+  const { data } = await supabase
+    .from("empleados")
+    .select("id, nombre")
+    .eq("activo", true)
+    .order("orden");
+  return data ?? [];
+}

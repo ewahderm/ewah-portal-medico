@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { SearchIcon, XIcon } from "lucide-react";
 import { listarTemperaturasConsultorio } from "@/lib/medio-ambiente/actions";
+import { formatoFechaHoraJornada } from "@/lib/medio-ambiente/fecha-local";
 import { totalPaginas as calcularTotalPaginas } from "@/lib/pagination";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,7 +26,9 @@ const TODOS = "__todos__";
 
 type Registro = {
   id: string;
-  registrado_en: string;
+  fecha: string;
+  hora: string | null;
+  jornada: string;
   temperatura_celsius: number;
   humedad_porcentaje: number | null;
   observaciones: string | null;
@@ -170,7 +173,7 @@ export function TemperaturaConsultorioTab({
               {registros.map((r) => (
                 <TableRow key={r.id}>
                   <TableCell className="text-muted-foreground">
-                    {new Date(r.registrado_en).toLocaleString("es-CO")}
+                    {formatoFechaHoraJornada(r.fecha, r.hora, r.jornada)}
                   </TableCell>
                   <TableCell className="font-medium">{r.consultorios?.nombre ?? "—"}</TableCell>
                   <TableCell>{r.temperatura_celsius} °C</TableCell>

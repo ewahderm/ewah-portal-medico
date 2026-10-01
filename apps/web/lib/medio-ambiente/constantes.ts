@@ -47,3 +47,17 @@ export type AreaLimpieza = (typeof AREAS_LIMPIEZA)[number]["value"];
 export function esAreaLimpiezaValida(valor: string): valor is AreaLimpieza {
   return AREAS_LIMPIEZA.some((a) => a.value === valor);
 }
+
+// Jornada AM/PM — dato siempre presente en el formato físico (a veces es lo
+// único que se marca, sin hora exacta), por eso es obligatorio en las 4
+// bitácoras mientras que la hora exacta es opcional.
+export const JORNADAS = [
+  { value: "AM", label: "AM" },
+  { value: "PM", label: "PM" },
+] as const;
+
+export type Jornada = (typeof JORNADAS)[number]["value"];
+
+export function esJornadaValida(valor: string): valor is Jornada {
+  return JORNADAS.some((j) => j.value === valor);
+}

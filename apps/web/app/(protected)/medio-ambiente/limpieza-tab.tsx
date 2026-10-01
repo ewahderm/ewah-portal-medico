@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { SearchIcon, XIcon } from "lucide-react";
 import { listarLimpiezas } from "@/lib/medio-ambiente/actions";
+import { formatoFechaHoraJornada } from "@/lib/medio-ambiente/fecha-local";
 import { totalPaginas as calcularTotalPaginas } from "@/lib/pagination";
 import { AREAS_LIMPIEZA } from "@/lib/medio-ambiente/constantes";
 import { Button } from "@/components/ui/button";
@@ -29,23 +30,28 @@ const ITEMS_AREA = [{ value: TODOS, label: "Todas" }, ...AREAS_LIMPIEZA.map((a) 
 
 type Registro = {
   id: string;
-  registrado_en: string;
+  fecha: string;
+  hora: string | null;
+  jornada: string;
   area_tipo: string;
   area_nombre: string | null;
   observaciones: string | null;
   sedes: { nombre: string } | null;
   consultorios: { nombre: string } | null;
+  empleados: { nombre: string } | null;
   creador: { nombre: string } | null;
 };
 
 export function LimpiezaTab({
   sedes,
   consultorios,
+  empleados,
   puedeCrear,
   nombreUsuario,
 }: {
   sedes: Opcion[];
   consultorios: Consultorio[];
+  empleados: Opcion[];
   puedeCrear: boolean;
   nombreUsuario: string;
 }) {
@@ -136,6 +142,7 @@ export function LimpiezaTab({
             <NuevaLimpiezaDialog
               sedes={sedes}
               consultorios={consultorios}
+              empleados={empleados}
               nombreUsuario={nombreUsuario}
               onCreado={() => buscar()}
             />
@@ -148,29 +155,31 @@ export function LimpiezaTab({
                 <TableHead>Fecha y hora</TableHead>
                 <TableHead>Sede</TableHead>
                 <TableHead>Área</TableHead>
-                <TableHead>Responsable</TableHead>
+                <TableHead>Empleado</TableHead>
                 <TableHead>Observaciones</TableHead>
+                <TableHead>Digitalizado por</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {registros.map((r) => (
                 <TableRow key={r.id}>
                   <TableCell className="text-muted-foreground">
-                    {new Date(r.registrado_en).toLocaleString("es-CO")}
+                    {formatoFechaHoraJornada(r.fecha, r.hora, r.jornada)}
                   </TableCell>
                   <TableCell className="text-muted-foreground">{r.sedes?.nombre ?? "—"}</TableCell>
                   <TableCell className="font-medium">
                     {r.area_tipo === "consultorio" ? r.consultorios?.nombre ?? "—" : `Baño — ${r.area_nombre}`}
                   </TableCell>
-                  <TableCell className="text-muted-foreground">{r.creador?.nombre ?? "—"}</TableCell>
+                  <TableCell className="text-muted-foreground">{r.empleados?.nombre ?? "—"}</TableCell>
                   <TableCell className="max-w-xs whitespace-normal break-words text-muted-foreground">
                     {r.observaciones ?? "—"}
                   </TableCell>
+                  <TableCell className="text-muted-foreground">{r.creador?.nombre ?? "—"}</TableCell>
                 </TableRow>
               ))}
               {registros.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center text-muted-foreground">
                     {pending ? "Buscando..." : "Todavía no hay registros."}
                   </TableCell>
                 </TableRow>
