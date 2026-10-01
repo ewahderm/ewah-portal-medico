@@ -1,6 +1,6 @@
 "use client";
 
-import { cloneElement, useActionState, useState } from "react";
+import { useActionState, useState } from "react";
 import { crearTratamiento, editarTratamiento } from "@/lib/tratamientos/actions";
 import { useCerrarAlExito } from "@/lib/forms/cerrarAlExito";
 import { toast } from "@/components/ui/toast";
@@ -113,17 +113,23 @@ export function TratamientoDialog({
   // El paciente ya viene fijo (ficha del paciente, "Atender" desde una
   // cita, o Editar/Corregir de un tratamiento existente) y tiene
   // información obligatoria pendiente: ni se abre el diálogo, el botón
-  // queda deshabilitado con una pista de por qué. El title va en un
-  // <span> que envuelve el botón, no en el botón mismo — un botón
-  // disabled trae pointer-events:none (ver components/ui/button.tsx),
-  // así que un title puesto directamente ahí nunca llega a dispararse.
+  // se ve deshabilitado con una pista de por qué. No se usa cloneElement
+  // para forzar disabled=true: `trigger` llega desde un Server Component
+  // (page.tsx) como elemento ya serializado cruzando el límite server/cliente,
+  // y clonarlo con props nuevas rompe su `type` en este Next.js ("Element
+  // type is invalid") — ver node_modules/next/dist/docs/01-app/02-guides/
+  // server-and-client-boundary.md. En su lugar se simula el estado disabled
+  // con CSS sobre un <span> envolvente (mismo opacity-50 que usa el botón
+  // real al deshabilitarse) y el title va en ese span, no en el botón, por
+  // la misma razón que antes: pointer-events:none en el hijo impediría que
+  // un title puesto directamente en el botón se disparara.
   if (pacienteFijo && pacientesPendientes.has(pacienteInicial)) {
     return (
       <span
-        className="inline-block"
+        className="inline-block cursor-not-allowed opacity-50 [&>*]:pointer-events-none"
         title="Este paciente tiene información obligatoria pendiente — complétala en su ficha primero."
       >
-        {cloneElement(trigger, { disabled: true } as Record<string, unknown>)}
+        {trigger}
       </span>
     );
   }
