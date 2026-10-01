@@ -87,3 +87,21 @@ export async function getProveedoresActivos(supabase: Supabase) {
     .order("orden");
   return data ?? [];
 }
+
+export async function getConsultoriosActivos(supabase: Supabase) {
+  const { data } = await supabase
+    .from("consultorios")
+    .select("id, nombre, sede_id")
+    .eq("activo", true)
+    .order("orden");
+  return data ?? [];
+}
+
+export async function getTiposExtintorActivos(supabase: Supabase) {
+  const { data } = await supabase
+    .from("tipos_extintor")
+    .select("id, nombre")
+    .eq("activo", true)
+    .order("orden");
+  return data ?? [];
+}

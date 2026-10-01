@@ -4,6 +4,7 @@ import {
   CalendarIcon,
   PackageIcon,
   MegaphoneIcon,
+  LeafIcon,
   type LucideIcon,
 } from "lucide-react";
 
@@ -62,5 +63,17 @@ export const REGISTRO_MODULOS: ModuloRegistro[] = [
     descripcion: "Mide el embudo de captación de pacientes.",
     href: "/campanas",
     icono: MegaphoneIcon,
+  },
+  // Es administrativo (incluido en todos los planes) pero, a diferencia de
+  // Usuarios/Parámetros/Suscripción, SÍ es trabajo operativo del día a día
+  // (temperatura, residuos, limpieza) — por eso sí compite por espacio en
+  // este launcher, aunque nunca muestre la insignia "Pro" (has_entitlement
+  // siempre es true para este módulo).
+  {
+    codigo: "medio_ambiente",
+    nombre: "Medio Ambiente",
+    descripcion: "Temperatura, cadena de frío, residuos, extintores y limpieza.",
+    href: "/medio-ambiente",
+    icono: LeafIcon,
   },
 ];

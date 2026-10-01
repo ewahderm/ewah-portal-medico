@@ -58,6 +58,12 @@ export const CATALOGOS: CatalogoConfig[] = [
     descripcion: "Formas de pago que acepta tu clínica (efectivo, tarjeta, transferencia...).",
     esGlobal: false,
   },
+  {
+    tabla: "tipos_extintor",
+    nombre: "Tipos de extintor",
+    descripcion: "Catálogo de tipos de extintor (PQS, CO2, agua, espuma...) usado en Medio Ambiente.",
+    esGlobal: false,
+  },
 ];
 
 // Consultorios, Insumos y Proveedores se sacaron de esta lista a propósito:
