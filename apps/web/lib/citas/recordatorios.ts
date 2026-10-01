@@ -7,6 +7,7 @@ import { nombreCompleto } from "@/lib/pacientes/nombre";
 type FilaRecordatorio = {
   hora_inicio: string;
   profesional_id: string;
+  motivo: string | null;
   pacientes: {
     primer_nombre: string;
     segundo_nombre: string | null;
@@ -15,6 +16,7 @@ type FilaRecordatorio = {
   } | null;
   profesional: { nombre: string; email: string } | null;
   consultorios: { sedes: { nombre: string } | null } | null;
+  tipos_tratamiento: { nombre: string } | null;
 };
 
 /**
@@ -31,18 +33,34 @@ function fechaDeManana(): string {
   return format(addDays(new Date(), 1), "yyyy-MM-dd");
 }
 
+// Observaciones es texto libre (lo escribe el staff al agendar/confirmar) y
+// nombres/sedes/tratamientos en teoría también podrían llevar un carácter
+// raro — sin escapar, un "<" o "&" suelto rompería el HTML del correo, y en
+// el peor caso alguien podría inyectar markup. Siempre se escapa antes de
+// interpolar.
+function escapeHtml(texto: string): string {
+  return texto
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function construirHtmlRecordatorio(
   nombreProfesional: string,
   fechaTexto: string,
-  citas: { hora: string; paciente: string; sede: string }[],
+  citas: { hora: string; paciente: string; sede: string; tratamiento: string; observaciones: string }[],
 ) {
   const filas = citas
     .map(
       (c, i) => `
         <tr style="background-color: ${i % 2 === 0 ? "#ffffff" : "#f4f7f9"};">
-          <td style="padding: 10px 14px; font-size: 14px; color: #0D1825; font-weight: 600; white-space: nowrap;">${c.hora}</td>
-          <td style="padding: 10px 14px; font-size: 14px; color: #0D1825;">${c.paciente}</td>
-          <td style="padding: 10px 14px; font-size: 14px; color: #363F4A;">${c.sede}</td>
+          <td style="padding: 10px 14px; font-size: 14px; color: #0D1825; font-weight: 600; white-space: nowrap;">${escapeHtml(c.hora)}</td>
+          <td style="padding: 10px 14px; font-size: 14px; color: #0D1825;">${escapeHtml(c.paciente)}</td>
+          <td style="padding: 10px 14px; font-size: 14px; color: #363F4A;">${escapeHtml(c.sede)}</td>
+          <td style="padding: 10px 14px; font-size: 14px; color: #363F4A;">${escapeHtml(c.tratamiento)}</td>
+          <td style="padding: 10px 14px; font-size: 13px; color: #94a3b8;">${escapeHtml(c.observaciones)}</td>
         </tr>`,
     )
     .join("");
@@ -55,7 +73,7 @@ function construirHtmlRecordatorio(
         <span style="font-size: 12px; font-weight: 700; letter-spacing: 2px; color: #00C9EC; margin-left: 6px;">TECH</span>
       </div>
       <div style="padding: 24px;">
-        <p style="font-size: 15px; color: #0D1825; margin: 0 0 4px;">Hola ${nombreProfesional},</p>
+        <p style="font-size: 15px; color: #0D1825; margin: 0 0 4px;">Hola ${escapeHtml(nombreProfesional)},</p>
         <p style="font-size: 14px; color: #363F4A; margin: 0 0 20px;">
           Este es tu recordatorio de citas para <strong>mañana, ${fechaTexto}</strong>:
         </p>
@@ -65,6 +83,8 @@ function construirHtmlRecordatorio(
               <th style="padding: 10px 14px; text-align: left; font-size: 12px; font-weight: 700; color: #0D1825; text-transform: uppercase; letter-spacing: 0.5px;">Hora</th>
               <th style="padding: 10px 14px; text-align: left; font-size: 12px; font-weight: 700; color: #0D1825; text-transform: uppercase; letter-spacing: 0.5px;">Paciente</th>
               <th style="padding: 10px 14px; text-align: left; font-size: 12px; font-weight: 700; color: #0D1825; text-transform: uppercase; letter-spacing: 0.5px;">Sede</th>
+              <th style="padding: 10px 14px; text-align: left; font-size: 12px; font-weight: 700; color: #0D1825; text-transform: uppercase; letter-spacing: 0.5px;">Tratamiento</th>
+              <th style="padding: 10px 14px; text-align: left; font-size: 12px; font-weight: 700; color: #0D1825; text-transform: uppercase; letter-spacing: 0.5px;">Observaciones</th>
             </tr>
           </thead>
           <tbody>${filas}</tbody>
@@ -106,17 +126,18 @@ export async function enviarRecordatoriosCitasManana(
   const { data, error } = await admin
     .from("citas")
     .select(
-      `hora_inicio, profesional_id,
+      `hora_inicio, profesional_id, motivo,
        pacientes(primer_nombre, segundo_nombre, primer_apellido, segundo_apellido),
        profesional:usuarios!citas_profesional_id_fkey(nombre, email),
-       consultorios(sedes(nombre))`,
+       consultorios(sedes(nombre)),
+       tipos_tratamiento(nombre)`,
     )
     .eq("fecha", fecha)
-    // "reprogramada" es el registro VIEJO que una reprogramación deja atrás
-    // (la cita real quedó en un nuevo row con nueva fecha/hora) — no es una
-    // cita vigente, incluirla mandaría un recordatorio de algo que ya no
-    // va a pasar. Mismo criterio que "cancelada"/"no_asistio".
-    .not("estado", "in", "(cancelada,no_asistio,reprogramada)")
+    // Solo confirmadas, a pedido explícito — "agendada" todavía no la
+    // confirma el paciente/la clínica, así que no amerita el recordatorio
+    // de "mañana tienes esto". "atendida" no debería darse para una fecha
+    // futura; "cancelada"/"no_asistio"/"reprogramada" nunca son vigentes.
+    .eq("estado", "confirmada")
     .order("hora_inicio", { ascending: true });
 
   if (error || !data) {
@@ -157,6 +178,8 @@ export async function enviarRecordatoriosCitasManana(
           hora: c.hora_inicio.slice(0, 5),
           paciente: c.pacientes ? nombreCompleto(c.pacientes) : "—",
           sede: c.consultorios?.sedes?.nombre ?? "—",
+          tratamiento: c.tipos_tratamiento?.nombre ?? "—",
+          observaciones: c.motivo ?? "—",
         })),
       );
       const { error: errorEnvio } = await cliente.emails.send({
