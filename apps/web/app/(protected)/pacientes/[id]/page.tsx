@@ -82,6 +82,9 @@ type PacienteCompleto = {
   email: string | null;
   telefono1: string | null;
   telefono2: string | null;
+  direccion: string | null;
+  contacto_emergencia_nombre: string | null;
+  contacto_emergencia_telefono: string | null;
   activo: boolean;
   tipos_identificacion: { nombre: string } | null;
   generos: { nombre: string } | null;
@@ -171,7 +174,8 @@ export default async function PacienteDetallePage({
     .select(
       `id, tipo_identificacion_id, numero_identificacion, primer_nombre, segundo_nombre,
        primer_apellido, segundo_apellido, fecha_nacimiento, genero_id, nacionalidad_id,
-       pais_residencia_id, canal_captacion_id, campana_id, eps_id, email, telefono1, telefono2, activo,
+       pais_residencia_id, canal_captacion_id, campana_id, eps_id, email, telefono1, telefono2,
+       direccion, contacto_emergencia_nombre, contacto_emergencia_telefono, activo,
        tipos_identificacion(nombre),
        generos(nombre),
        nacionalidad:paises!pacientes_nacionalidad_id_fkey(nombre),
@@ -405,6 +409,15 @@ export default async function PacienteDetallePage({
                 <Dato etiqueta="Correo" valor={paciente.email} />
                 <Dato etiqueta="Teléfono principal" valor={paciente.telefono1} />
                 <Dato etiqueta="Teléfono alterno" valor={paciente.telefono2} />
+                <Dato etiqueta="Dirección" valor={paciente.direccion} />
+                <Dato
+                  etiqueta="Contacto de emergencia"
+                  valor={
+                    paciente.contacto_emergencia_nombre
+                      ? `${paciente.contacto_emergencia_nombre}${paciente.contacto_emergencia_telefono ? ` · ${paciente.contacto_emergencia_telefono}` : ""}`
+                      : null
+                  }
+                />
               </div>
             </CardContent>
           </Card>

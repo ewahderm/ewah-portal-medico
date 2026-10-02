@@ -29,6 +29,9 @@ function datosPacienteDesdeForm(formData: FormData) {
     email: campoOpcional(formData, "email"),
     telefono1: campoOpcional(formData, "telefono1"),
     telefono2: campoOpcional(formData, "telefono2"),
+    direccion: campoOpcional(formData, "direccion"),
+    contacto_emergencia_nombre: campoOpcional(formData, "contactoEmergenciaNombre"),
+    contacto_emergencia_telefono: campoOpcional(formData, "contactoEmergenciaTelefono"),
   };
 }
 

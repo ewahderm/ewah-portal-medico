@@ -89,7 +89,7 @@ export default async function PacientesPage({
   let query = supabase
     .from("pacientes")
     .select(
-      "id, tipo_identificacion_id, numero_identificacion, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, fecha_nacimiento, genero_id, nacionalidad_id, pais_residencia_id, canal_captacion_id, campana_id, eps_id, email, telefono1, telefono2, activo",
+      "id, tipo_identificacion_id, numero_identificacion, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, fecha_nacimiento, genero_id, nacionalidad_id, pais_residencia_id, canal_captacion_id, campana_id, eps_id, email, telefono1, telefono2, direccion, contacto_emergencia_nombre, contacto_emergencia_telefono, activo",
       { count: "exact" },
     )
     .order("primer_apellido");

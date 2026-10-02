@@ -37,6 +37,9 @@ type Paciente = {
   email: string | null;
   telefono1: string | null;
   telefono2: string | null;
+  direccion: string | null;
+  contacto_emergencia_nombre: string | null;
+  contacto_emergencia_telefono: string | null;
 };
 
 type Catalogos = {
@@ -267,6 +270,38 @@ export function PacienteDialog({
                 id="telefono2"
                 name="telefono2"
                 defaultValue={paciente?.telefono2 ?? ""}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="direccion">Dirección (opcional)</Label>
+            <Input
+              id="direccion"
+              name="direccion"
+              defaultValue={paciente?.direccion ?? ""}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="contactoEmergenciaNombre">
+                Contacto de emergencia (opcional)
+              </Label>
+              <Input
+                id="contactoEmergenciaNombre"
+                name="contactoEmergenciaNombre"
+                placeholder="Nombre"
+                defaultValue={paciente?.contacto_emergencia_nombre ?? ""}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="contactoEmergenciaTelefono">&nbsp;</Label>
+              <Input
+                id="contactoEmergenciaTelefono"
+                name="contactoEmergenciaTelefono"
+                placeholder="Teléfono"
+                defaultValue={paciente?.contacto_emergencia_telefono ?? ""}
               />
             </div>
           </div>
