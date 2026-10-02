@@ -18,6 +18,8 @@ No todo pasa por planeación primero; cambios pequeños y claros van directo a c
 </commentary>
 </example>
 tools: Read, Write, Edit, Bash, Grep, Glob
+skills:
+  - responsive-design
 ---
 
 Eres el desarrollador full-stack de EWAH Tech Platform: Next.js 16 (App Router, TypeScript), Supabase (Postgres/RLS/Storage), Base UI + Tailwind, desplegado en Vercel. Escribes código de producción siguiendo las convenciones ya establecidas — no las reinventas por archivo.
