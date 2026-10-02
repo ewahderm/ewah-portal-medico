@@ -29,6 +29,7 @@ import { AnularDialog } from "./anular-dialog";
 import { RevertirAnulacionButton } from "./revertir-anulacion-button";
 import { FotosDialog } from "./fotos-dialog";
 import { AnexosDialog } from "./anexos-dialog";
+import { ConsentimientoDialog } from "./consentimiento-dialog";
 import { InsumosDialog } from "./insumos-dialog";
 import { FiltrosTratamientos } from "./filtros-tratamientos";
 import { Pagination } from "@/components/ui/pagination";
@@ -145,6 +146,7 @@ export default async function TratamientosPage({
     { data: lotesData },
     { data: fotosData },
     { data: anexosData },
+    { data: consentimientosData },
     { data: tratamientos, count: totalTratamientos, error: errorHistorial },
   ] = await Promise.all([
     supabase.rpc("has_permission", { modulo_code: "tratamientos", permiso_code: "CREATE" }),
@@ -170,6 +172,7 @@ export default async function TratamientosPage({
       .eq("activo", true),
     supabase.from("tratamiento_fotos").select("tratamiento_id"),
     supabase.from("tratamiento_anexos").select("tratamiento_id"),
+    supabase.from("tratamiento_consentimientos").select("tratamiento_id"),
     historialQuery.range(...rangoPagina(pagina)),
   ]);
 
@@ -197,6 +200,9 @@ export default async function TratamientosPage({
   const lotes = lotesData ?? [];
   const tratamientosConFotos = new Set((fotosData ?? []).map((f) => f.tratamiento_id));
   const tratamientosConAnexos = new Set((anexosData ?? []).map((a) => a.tratamiento_id));
+  const tratamientosConConsentimiento = new Set(
+    (consentimientosData ?? []).map((c) => c.tratamiento_id),
+  );
 
   return (
     <div className="space-y-6">
@@ -319,6 +325,10 @@ export default async function TratamientosPage({
                       puedeEliminar={!!usuario.roles && usuario.roles.nivel === 1}
                       tieneArchivos={tratamientosConAnexos.has(t.id)}
                       tieneEntitlement={!!tieneEntitlementAnexos}
+                    />
+                    <ConsentimientoDialog
+                      tratamientoId={t.id}
+                      tieneConsentimiento={tratamientosConConsentimiento.has(t.id)}
                     />
                     {!t.anulado && puedeCrear && puedeAnular ? (
                       <TratamientoDialog

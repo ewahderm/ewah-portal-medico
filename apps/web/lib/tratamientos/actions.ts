@@ -16,6 +16,12 @@ const TIPOS_FOTO_PERMITIDOS = ["image/jpeg", "image/png", "image/webp"];
 const MAX_ANEXO_BYTES = 15 * 1024 * 1024;
 const TIPOS_ANEXO_PERMITIDOS = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
 
+// El PDF ya viene ensamblado desde el navegador (una página por foto
+// recortada) — el límite es generoso porque varias páginas de foto en JPEG
+// calidad media pueden pesar más que un PDF de texto típico.
+const MAX_CONSENTIMIENTO_BYTES = 20 * 1024 * 1024;
+const MAX_PAGINAS_CONSENTIMIENTO = 20;
+
 function requirePermiso(permiso: "CREATE" | "VOID") {
   return requirePermisoBase("tratamientos", permiso);
 }
@@ -611,6 +617,96 @@ export async function listarAnexosTratamiento(tratamientoId: string) {
     (data ?? []).map(async (anexo) => ({
       ...anexo,
       url: await urlFirmadaAnexo(anexo.storage_path),
+    })),
+  );
+}
+
+// Consentimientos informados: mismo patrón de Storage+tabla que Anexos,
+// pero SIN requireEntitlement — a diferencia de Anexos (sub-feature de
+// pago), un consentimiento informado es una necesidad clínica/legal
+// (decisión acordada con el usuario), disponible en cualquier plan igual
+// que el resto del núcleo de Tratamientos.
+export async function subirConsentimientoTratamiento(tratamientoId: string, formData: FormData) {
+  const check = await requirePermiso("CREATE");
+  if (!check.ok) throw new Error(check.error);
+
+  const archivo = formData.get("archivo");
+  if (!(archivo instanceof File) || archivo.size === 0) {
+    throw new Error("No se generó ningún PDF para subir.");
+  }
+  if (archivo.size > MAX_CONSENTIMIENTO_BYTES) {
+    throw new Error("El PDF no puede pesar más de 20 MB.");
+  }
+  if (archivo.type !== "application/pdf") {
+    throw new Error("El consentimiento debe guardarse como PDF.");
+  }
+
+  const paginas = Number(formData.get("paginas") ?? 0);
+  if (!Number.isInteger(paginas) || paginas < 1 || paginas > MAX_PAGINAS_CONSENTIMIENTO) {
+    throw new Error(`El consentimiento debe tener entre 1 y ${MAX_PAGINAS_CONSENTIMIENTO} páginas.`);
+  }
+
+  const supabase = await createClient();
+  const path = `${check.usuario.clinica_id}/${tratamientoId}/consentimiento-${Date.now()}.pdf`;
+
+  const { error: uploadError } = await supabase.storage
+    .from("tratamiento-consentimientos")
+    .upload(path, archivo, { contentType: "application/pdf" });
+  if (uploadError) throw new Error("No se pudo subir el consentimiento.");
+
+  const { error: insertError } = await supabase.from("tratamiento_consentimientos").insert({
+    clinica_id: check.usuario.clinica_id,
+    tratamiento_id: tratamientoId,
+    storage_path: path,
+    nombre_archivo: archivo.name || "consentimiento.pdf",
+    paginas,
+    created_by: check.usuario.id,
+  });
+  if (insertError) throw new Error("No se pudo registrar el consentimiento.");
+
+  revalidarPantallasDeArchivos();
+}
+
+export async function eliminarConsentimientoTratamiento(id: string, storagePath: string) {
+  const usuario = await getCurrentUsuario();
+  if (!usuario) throw new Error("Sesión inválida.");
+  if (!esAdministrador(usuario)) {
+    throw new Error("Solo un administrador puede eliminar un consentimiento.");
+  }
+
+  const supabase = await createClient();
+  const { error: storageError } = await supabase.storage
+    .from("tratamiento-consentimientos")
+    .remove([storagePath]);
+  if (storageError) throw new Error("No se pudo eliminar el archivo.");
+
+  const { error } = await supabase.from("tratamiento_consentimientos").delete().eq("id", id);
+  if (error) throw new Error("No se pudo eliminar el consentimiento.");
+
+  revalidarPantallasDeArchivos();
+}
+
+export async function urlFirmadaConsentimiento(storagePath: string, descargar = false) {
+  const supabase = await createClient();
+  const { data, error } = await supabase.storage
+    .from("tratamiento-consentimientos")
+    .createSignedUrl(storagePath, 60 * 10, descargar ? { download: true } : undefined);
+  if (error || !data) return null;
+  return data.signedUrl;
+}
+
+export async function listarConsentimientosTratamiento(tratamientoId: string) {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("tratamiento_consentimientos")
+    .select("id, storage_path, nombre_archivo, paginas, created_at")
+    .eq("tratamiento_id", tratamientoId)
+    .order("created_at", { ascending: false });
+
+  return Promise.all(
+    (data ?? []).map(async (c) => ({
+      ...c,
+      url: await urlFirmadaConsentimiento(c.storage_path),
     })),
   );
 }

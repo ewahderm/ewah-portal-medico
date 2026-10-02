@@ -44,6 +44,7 @@ import { AnularDialog } from "../../tratamientos/anular-dialog";
 import { RevertirAnulacionButton } from "../../tratamientos/revertir-anulacion-button";
 import { FotosDialog } from "../../tratamientos/fotos-dialog";
 import { AnexosDialog } from "../../tratamientos/anexos-dialog";
+import { ConsentimientoDialog } from "../../tratamientos/consentimiento-dialog";
 import { InsumosDialog } from "../../tratamientos/insumos-dialog";
 import { CitaDialog } from "../../citas/cita-dialog";
 import { CitasTabla } from "./citas-tabla";
@@ -113,6 +114,7 @@ type TratamientoRow = {
   profesional: { nombre: string } | null;
   tieneFotos: boolean;
   tieneAnexos: boolean;
+  tieneConsentimiento: boolean;
 };
 
 type Consultorio = { id: string; nombre: string; sede_id: string };
@@ -250,7 +252,7 @@ export default async function PacienteDetallePage({
          paciente_id, tipo_tratamiento_id, profesional_id, sede_id, medio_pago_id,
          tipos_tratamiento(nombre), sedes(nombre),
          profesional:usuarios!tratamientos_profesional_id_fkey(nombre),
-         tratamiento_fotos(count), tratamiento_anexos(count)`,
+         tratamiento_fotos(count), tratamiento_anexos(count), tratamiento_consentimientos(count)`,
       )
       .eq("paciente_id", id)
       .order("fecha", { ascending: false }),
@@ -292,14 +294,19 @@ export default async function PacienteDetallePage({
   const pacientePendiente = tieneInfoPendiente(paciente);
   const pacientesPendientes = pacientePendiente ? new Set([paciente.id]) : new Set<string>();
   const tratamientosCompletos = (tratamientosData ?? []).map((t) => {
-    const fila = t as unknown as Omit<TratamientoRow, "tieneFotos" | "tieneAnexos"> & {
+    const fila = t as unknown as Omit<
+      TratamientoRow,
+      "tieneFotos" | "tieneAnexos" | "tieneConsentimiento"
+    > & {
       tratamiento_fotos?: { count: number }[];
       tratamiento_anexos?: { count: number }[];
+      tratamiento_consentimientos?: { count: number }[];
     };
     return {
       ...fila,
       tieneFotos: (fila.tratamiento_fotos?.[0]?.count ?? 0) > 0,
       tieneAnexos: (fila.tratamiento_anexos?.[0]?.count ?? 0) > 0,
+      tieneConsentimiento: (fila.tratamiento_consentimientos?.[0]?.count ?? 0) > 0,
     };
   }) as TratamientoRow[];
   const tratamientos = puedeVerAnulados
@@ -506,6 +513,10 @@ export default async function PacienteDetallePage({
                           puedeEliminar={puedeEliminarArchivos}
                           tieneArchivos={t.tieneAnexos}
                           tieneEntitlement={!!tieneEntitlementAnexos}
+                        />
+                        <ConsentimientoDialog
+                          tratamientoId={t.id}
+                          tieneConsentimiento={t.tieneConsentimiento}
                         />
                         {!t.anulado && puedeCrearTratamiento && puedeAnularTratamiento ? (
                           <TratamientoDialog
