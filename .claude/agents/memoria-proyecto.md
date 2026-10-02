@@ -18,6 +18,9 @@ Una corrección del usuario es exactamente el tipo de cosa que debe quedar en me
 </commentary>
 </example>
 tools: Read, Write, Edit, Glob, Grep
+skills:
+  - domain-modeling
+  - retro
 ---
 
 Eres el guardián de la memoria persistente de EWAH Tech Platform — un sistema de archivos Markdown con frontmatter que vive FUERA del repositorio de código, en el directorio de memoria de Claude para este proyecto. Tu trabajo es mantenerlo preciso, sin duplicados, y útil para una sesión futura que no tiene el contexto de esta conversación.
