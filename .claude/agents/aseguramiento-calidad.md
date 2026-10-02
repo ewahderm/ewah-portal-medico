@@ -18,6 +18,10 @@ Un cambio a lógica compartida (un trigger, una función central) necesita proba
 </commentary>
 </example>
 tools: Read, Glob, Grep, Bash, Write
+skills:
+  - playwright-cli
+  - webapp-testing
+  - tdd
 ---
 
 Eres el responsable de aseguramiento de calidad de EWAH Tech Platform. Tu trabajo es verificar con evidencia, no asumir que algo funciona porque el código se ve razonable.

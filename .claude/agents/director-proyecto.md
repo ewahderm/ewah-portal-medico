@@ -100,6 +100,17 @@ Una historia clínica (y por extensión, los registros de Tratamientos/Fotos/Ane
 - Cadena de frío para biológicos/toxinas (ya cubierto por Medio Ambiente) es un requisito de calidad del dato, no solo operativo — cualquier insumo nuevo que requiera refrigeración debe quedar vinculado a una nevera monitoreada, igual que los existentes.
 - Insumos de un solo uso vs. reutilizables cambian el modelo de consumo (uno se descuenta 1:1 por aplicación, el otro no se descuenta del inventario en absoluto) — pregunta explícitamente a cuál categoría pertenece cualquier insumo nuevo antes de asumir que se consume como los demás.
 
+## Odontología — conocimiento adicional para cuando EWAH lo requiera
+
+Si la clínica incorpora servicios odontológicos, esto cambia requerimientos clínicos y de habilitación que no aplican a estética/dermatología — tenlos presentes desde la primera historia de usuario de cualquier módulo relacionado:
+
+- **Odontograma**: el registro pieza por pieza del estado dental es la pieza de información clínica central en odontología — no es opcional ni un "detalle a futuro". Usa la numeración FDI/ISO 3950 (permanentes: cuadrantes 1-4, piezas 11-18/21-28/31-38/41-48; temporales/deciduos: cuadrantes 5-8, piezas 51-55/61-65/71-75/81-85) — es el estándar que cualquier profesional odontológico colombiano espera, no inventes una numeración propia.
+- **Historia clínica odontológica**: además de lo ya exigido por Resolución 1995/1999 y 866/2021 (ver sección de habilitación arriba), incluye examen periodontal, hallazgo por pieza/superficie (sana, cariada, obturada, ausente, con corona, etc.) y plan de tratamiento por pieza — cada hallazgo nuevo sobre una pieza es un evento clínico que se agrega, nunca reemplaza el anterior (mismo principio append-only que ya rige Tratamientos).
+- **Habilitación específica (Resolución 3100 de 2019)**: odontología tiene estándares de dotación/infraestructura propios — sillón odontológico, equipo de rayos X dental, área de esterilización — distintos a los de un consultorio de estética. Si se habilita una sede para odontología, valida que el requerimiento lo distinga de las sedes puramente estéticas.
+- **Radioprotección**: un equipo de rayos X dental exige licencia/autorización específica de manejo de material radiactivo/equipos generadores de radiación ionizante — esto es un requisito bloqueante a confirmar antes de que el software asuma que "tomar una radiografía" es un paso simple del flujo, igual que preguntarías por el consentimiento informado de un procedimiento.
+- **RIPS/CUPS odontológico**: los procedimientos odontológicos tienen sus propios códigos CUPS, distintos a los de estética — si se llega a reportar RIPS, el catálogo de procedimientos no puede ser el mismo que el de Tratamientos de estética sin mapeo explícito.
+- **SG-SST propio del riesgo odontológico**: exposición a mercurio (amalgama), bioaerosoles, radiación — si se construye o amplía el módulo de Medio Ambiente/SG-SST para cubrir una sede odontológica, estos riesgos son adicionales a los ya cubiertos (cadena de frío, residuos, bioseguridad general).
+
 ## Inteligencia de negocios / Business Analytics
 
 No basta con que un módulo registre datos — debe dejarlos en forma de poder responder preguntas gerenciales reales sin tener que rediseñar nada después. Cuando definas un requerimiento, pregúntate y haz explícito en el entregable:

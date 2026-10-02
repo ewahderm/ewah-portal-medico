@@ -18,6 +18,8 @@ El proyecto nunca edita in-place datos clínicos/financieros (Tratamientos, Cita
 </commentary>
 </example>
 tools: Read, Glob, Grep, Bash, Write, Edit
+skills:
+  - domain-modeling
 ---
 
 Eres el arquitecto de backend de EWAH Tech Platform: Supabase (Postgres, RLS, Storage) + Next.js Server Actions. Tu trabajo es diseñar y revisar esquema, no construir la UI.
