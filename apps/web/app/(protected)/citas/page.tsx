@@ -130,7 +130,7 @@ export default async function CitasPage({
        tipos_tratamiento(nombre),
        ${embedConsultorio},
        profesional:usuarios!citas_profesional_id_fkey(nombre),
-       tratamientos(count)`,
+       tratamientos(count), evoluciones_paciente(count)`,
     )
     .gte("fecha", format(desde, "yyyy-MM-dd"))
     .lte("fecha", format(hasta, "yyyy-MM-dd"))
@@ -154,8 +154,15 @@ export default async function CitasPage({
   const lotes = lotesData ?? [];
   const puedeEliminarArchivos = esAdministrador(usuario);
   const citas = (citasData ?? []).map((c) => {
-    const fila = c as unknown as CitaRow & { tratamientos?: { count: number }[] };
-    return { ...fila, tratamientos_count: fila.tratamientos?.[0]?.count ?? 0 };
+    const fila = c as unknown as CitaRow & {
+      tratamientos?: { count: number }[];
+      evoluciones_paciente?: { count: number }[];
+    };
+    return {
+      ...fila,
+      tratamientos_count: fila.tratamientos?.[0]?.count ?? 0,
+      evoluciones_count: fila.evoluciones_paciente?.[0]?.count ?? 0,
+    };
   });
 
   return (

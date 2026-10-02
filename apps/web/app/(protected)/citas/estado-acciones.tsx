@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Combobox } from "@/components/ui/combobox";
 import { CancelarDialog } from "./cancelar-dialog";
 import { TratamientoDialog } from "../tratamientos/tratamiento-dialog";
+import { EvolucionDialog } from "../pacientes/[id]/evolucion-dialog";
 import type { Opcion } from "@/lib/forms/opciones";
 
 const OPCIONES_HORA = opcionesHora();
@@ -26,6 +27,7 @@ export function EstadoAcciones({
   usuarioActualId,
   pacientesPendientes = new Set(),
   onTratamientoGuardado,
+  onEvolucionGuardada,
 }: {
   cita: {
     id: string;
@@ -37,6 +39,7 @@ export function EstadoAcciones({
     hora_inicio?: string;
     consultorios?: { sede_id: string | null } | null;
     tratamientos_count?: number;
+    evoluciones_count?: number;
   };
   puedeEditar: boolean;
   puedeCrearTratamiento: boolean;
@@ -51,6 +54,8 @@ export function EstadoAcciones({
    * tratamiento" — para que un detalle de cita abierto en ese momento
    * pueda refrescar su lista sin que el usuario tenga que cerrar/reabrir. */
   onTratamientoGuardado?: () => void;
+  /** Igual, pero al registrar una evolución (control sin procedimiento). */
+  onEvolucionGuardada?: () => void;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [conflicto, setConflicto] = useState<string | null>(null);
@@ -68,7 +73,8 @@ export function EstadoAcciones({
   // apareciendo como si la cita no se hubiera atendido — obligando a
   // cerrar y volver a abrir para ver el estado real.
   const [tratamientosCount, setTratamientosCount] = useState(cita.tratamientos_count ?? 0);
-  const atendida = cita.estado === "atendida" || tratamientosCount > 0;
+  const [evolucionesCount, setEvolucionesCount] = useState(cita.evoluciones_count ?? 0);
+  const atendida = cita.estado === "atendida" || tratamientosCount > 0 || evolucionesCount > 0;
 
   function handleConfirmar() {
     setError(null);
@@ -241,6 +247,23 @@ export function EstadoAcciones({
                 {atendida
                   ? `Agregar tratamiento${tratamientosCount ? ` · ${tratamientosCount} registrados` : ""}`
                   : "Atender"}
+              </Button>
+            }
+          />
+        ) : null}
+        {puedeCrearTratamiento && cita.paciente_id && !atendida ? (
+          <EvolucionDialog
+            pacienteId={cita.paciente_id}
+            citaId={cita.id}
+            profesionales={profesionales}
+            usuarioActualId={usuarioActualId}
+            onGuardado={() => {
+              setEvolucionesCount((n) => n + 1);
+              onEvolucionGuardada?.();
+            }}
+            trigger={
+              <Button variant="outline" size="sm" disabled={pending}>
+                Registrar evolución
               </Button>
             }
           />

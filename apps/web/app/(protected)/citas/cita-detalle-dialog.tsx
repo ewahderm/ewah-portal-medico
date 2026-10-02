@@ -11,6 +11,7 @@ import {
 import { EstadoAcciones } from "./estado-acciones";
 import { ESTADO_LABEL, nombreCompleto, type CitaRow } from "./tipos";
 import { listarTratamientosDeCita } from "@/lib/tratamientos/actions";
+import { listarEvolucionesDeCita, type EvolucionDeCita } from "@/lib/pacientes/evoluciones";
 import { InsumosDialog } from "../tratamientos/insumos-dialog";
 import { FotosDialog } from "../tratamientos/fotos-dialog";
 import { AnexosDialog } from "../tratamientos/anexos-dialog";
@@ -73,6 +74,7 @@ export function CitaDetalleDialog({
   // null = todavía cargando (o sin abrir) — distinto de un array vacío, que
   // significa "ya se consultó y de verdad no tiene tratamientos".
   const [tratamientos, setTratamientos] = useState<TratamientoDeCita[] | null>(null);
+  const [evoluciones, setEvoluciones] = useState<EvolucionDeCita[] | null>(null);
 
   // El diálogo se desmonta al cerrarse (Dialog de este proyecto solo
   // cierra con el botón X, nunca cambia de cita en el sitio), así que
@@ -83,6 +85,9 @@ export function CitaDetalleDialog({
     let cancelado = false;
     listarTratamientosDeCita(cita.id).then((data) => {
       if (!cancelado) setTratamientos(data);
+    });
+    listarEvolucionesDeCita(cita.id).then((data) => {
+      if (!cancelado) setEvoluciones(data);
     });
     return () => {
       cancelado = true;
@@ -96,6 +101,11 @@ export function CitaDetalleDialog({
   function refrescarTratamientos() {
     if (cita.es_bloqueo) return;
     listarTratamientosDeCita(cita.id).then(setTratamientos);
+  }
+
+  function refrescarEvoluciones() {
+    if (cita.es_bloqueo) return;
+    listarEvolucionesDeCita(cita.id).then(setEvoluciones);
   }
 
   const hayAnulados = (tratamientos ?? []).some((t) => t.anulado);
@@ -235,6 +245,23 @@ export function CitaDetalleDialog({
           </div>
         ) : null}
 
+        {!cita.es_bloqueo && evoluciones && evoluciones.length > 0 ? (
+          <div className="space-y-2 border-t pt-4">
+            <span className="text-sm font-medium">Evoluciones registradas en esta cita</span>
+            <div className="space-y-2">
+              {evoluciones.map((e) => (
+                <div key={e.id} className="text-sm">
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>{e.fecha}</span>
+                    <span>{e.profesional?.nombre ?? "—"}</span>
+                  </div>
+                  <p className="whitespace-normal break-words">{e.evolucion}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
         {!cita.es_bloqueo ? (
           <div className="flex justify-end border-t pt-4">
             <EstadoAcciones
@@ -249,6 +276,7 @@ export function CitaDetalleDialog({
               usuarioActualId={usuarioActualId}
               pacientesPendientes={pacientesPendientes}
               onTratamientoGuardado={refrescarTratamientos}
+              onEvolucionGuardada={refrescarEvoluciones}
             />
           </div>
         ) : null}

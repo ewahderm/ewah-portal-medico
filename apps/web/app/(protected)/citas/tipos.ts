@@ -25,6 +25,9 @@ export type CitaRow = {
    * mostrarlo antes de abrir el detalle y evitar registros duplicados
    * por no saber que ya se atendió algo. */
   tratamientos_count: number;
+  /** Igual que tratamientos_count pero para evoluciones — una cita de
+   * control sin procedimiento se marca atendida por esto, no por aquello. */
+  evoluciones_count: number;
 };
 
 export const ESTADO_LABEL: Record<string, string> = {

@@ -6,6 +6,7 @@ import {
   CalendarDaysIcon,
   SyringeIcon,
   PhoneCallIcon,
+  ClipboardListIcon,
   PencilIcon,
 } from "lucide-react";
 import { requireUsuario, esAdministrador } from "@/lib/auth/session";
@@ -38,6 +39,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ContactoDialog } from "./contacto-dialog";
+import { EvolucionDialog } from "./evolucion-dialog";
 import { PacienteDialog } from "../paciente-dialog";
 import { TratamientoDialog } from "../../tratamientos/tratamiento-dialog";
 import { AnularDialog } from "../../tratamientos/anular-dialog";
@@ -140,6 +142,16 @@ type ContactoRow = {
   creador: { nombre: string } | null;
 };
 
+type EvolucionRow = {
+  id: string;
+  fecha: string;
+  evolucion: string;
+  proximo_control_fecha: string | null;
+  tratamiento_id: string | null;
+  tratamientos: { tipos_tratamiento: { nombre: string } | null } | null;
+  profesional: { nombre: string } | null;
+};
+
 function Dato({ etiqueta, valor }: { etiqueta: string; valor: React.ReactNode }) {
   return (
     <div className="space-y-0.5">
@@ -218,6 +230,7 @@ export default async function PacienteDetallePage({
     { data: tratamientosData },
     { data: citasData },
     { data: contactosData },
+    { data: evolucionesData },
     { data: consumosData },
   ] = await Promise.all([
     supabase.rpc("has_permission", { modulo_code: "pacientes", permiso_code: "EDIT" }),
@@ -265,7 +278,7 @@ export default async function PacienteDetallePage({
          tipos_tratamiento(nombre),
          profesional:usuarios!citas_profesional_id_fkey(nombre),
          consultorios(nombre, sede_id, sedes(nombre)),
-         tratamientos(count)`,
+         tratamientos(count), evoluciones_paciente(count)`,
       )
       .eq("paciente_id", id)
       .order("fecha", { ascending: false }),
@@ -274,6 +287,15 @@ export default async function PacienteDetallePage({
       .select(
         `id, fecha, tipo, nota, resultado, proxima_accion_fecha, proxima_accion_nota,
          creador:usuarios!contactos_paciente_created_by_fkey(nombre)`,
+      )
+      .eq("paciente_id", id)
+      .order("fecha", { ascending: false }),
+    supabase
+      .from("evoluciones_paciente")
+      .select(
+        `id, fecha, evolucion, proximo_control_fecha, tratamiento_id,
+         tratamientos(tipos_tratamiento(nombre)),
+         profesional:usuarios!evoluciones_paciente_profesional_id_fkey(nombre)`,
       )
       .eq("paciente_id", id)
       .order("fecha", { ascending: false }),
@@ -313,10 +335,22 @@ export default async function PacienteDetallePage({
     ? tratamientosCompletos
     : tratamientosCompletos.filter((t) => !t.anulado);
   const citas = (citasData ?? []).map((c) => {
-    const fila = c as unknown as CitaRow & { tratamientos?: { count: number }[] };
-    return { ...fila, tratamientos_count: fila.tratamientos?.[0]?.count ?? 0 };
+    const fila = c as unknown as CitaRow & {
+      tratamientos?: { count: number }[];
+      evoluciones_paciente?: { count: number }[];
+    };
+    return {
+      ...fila,
+      tratamientos_count: fila.tratamientos?.[0]?.count ?? 0,
+      evoluciones_count: fila.evoluciones_paciente?.[0]?.count ?? 0,
+    };
   });
   const contactos = (contactosData ?? []) as unknown as ContactoRow[];
+  const evoluciones = (evolucionesData ?? []) as unknown as EvolucionRow[];
+  const tratamientosParaEvolucion = tratamientosCompletos.map((t) => ({
+    id: t.id,
+    nombre: `${t.fecha} — ${t.tipos_tratamiento?.nombre ?? "Tratamiento"}`,
+  }));
   const consumos = (consumosData ?? []) as unknown as ConsumoRow[];
   const profesionales = profesionalesData ?? [];
   const insumos = insumosData ?? [];
@@ -377,6 +411,9 @@ export default async function PacienteDetallePage({
           </TabsTrigger>
           <TabsTrigger value="insumos">
             <SyringeIcon /> Insumos
+          </TabsTrigger>
+          <TabsTrigger value="evoluciones">
+            <ClipboardListIcon /> Evoluciones
           </TabsTrigger>
           <TabsTrigger value="contactos">
             <PhoneCallIcon /> Contactos
@@ -675,6 +712,62 @@ export default async function PacienteDetallePage({
                     <TableRow>
                       <TableCell colSpan={5} className="text-center text-muted-foreground">
                         Sin insumos registrados.
+                      </TableCell>
+                    </TableRow>
+                  ) : null}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="evoluciones">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-base font-medium">Evoluciones del paciente</CardTitle>
+              {puedeCrearTratamiento ? (
+                <EvolucionDialog
+                  pacienteId={paciente.id}
+                  profesionales={profesionales}
+                  usuarioActualId={usuario.id}
+                  tratamientos={tratamientosParaEvolucion}
+                  trigger={<Button size="sm">Nueva evolución</Button>}
+                />
+              ) : null}
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Fecha</TableHead>
+                    <TableHead>Evolución</TableHead>
+                    <TableHead className="hidden md:table-cell">Tratamiento</TableHead>
+                    <TableHead className="hidden md:table-cell">Próximo control</TableHead>
+                    <TableHead className="hidden md:table-cell">Profesional</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {evoluciones.map((e) => (
+                    <TableRow key={e.id}>
+                      <TableCell className="text-muted-foreground">{e.fecha}</TableCell>
+                      <TableCell className="max-w-xs whitespace-normal break-words">
+                        {e.evolucion}
+                      </TableCell>
+                      <TableCell className="hidden text-muted-foreground md:table-cell">
+                        {e.tratamientos?.tipos_tratamiento?.nombre ?? "—"}
+                      </TableCell>
+                      <TableCell className="hidden text-muted-foreground md:table-cell">
+                        {e.proximo_control_fecha ?? "—"}
+                      </TableCell>
+                      <TableCell className="hidden text-muted-foreground md:table-cell">
+                        {e.profesional?.nombre ?? "—"}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {evoluciones.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center text-muted-foreground">
+                        Sin evoluciones registradas.
                       </TableCell>
                     </TableRow>
                   ) : null}
