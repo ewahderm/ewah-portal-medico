@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   IdCardIcon,
+  FileTextIcon,
   StethoscopeIcon,
   CalendarDaysIcon,
   SyringeIcon,
@@ -40,6 +41,13 @@ import {
 } from "@/components/ui/table";
 import { ContactoDialog } from "./contacto-dialog";
 import { EvolucionDialog } from "./evolucion-dialog";
+import { AnamnesisDialog, type UltimaAnamnesis } from "./anamnesis-dialog";
+import {
+  etiquetasAntecedentes,
+  etiquetasAlergias,
+  etiquetasMedicamentos,
+  etiquetasHabitos,
+} from "@/lib/pacientes/anamnesis-opciones";
 import { PacienteDialog } from "../paciente-dialog";
 import { TratamientoDialog } from "../../tratamientos/tratamiento-dialog";
 import { AnularDialog } from "../../tratamientos/anular-dialog";
@@ -146,9 +154,28 @@ type EvolucionRow = {
   id: string;
   fecha: string;
   evolucion: string;
+  tipo: string;
   proximo_control_fecha: string | null;
   tratamiento_id: string | null;
   tratamientos: { tipos_tratamiento: { nombre: string } | null } | null;
+  profesional: { nombre: string } | null;
+};
+
+type AnamnesisRow = {
+  id: string;
+  fecha: string;
+  motivo_consulta: string;
+  antecedentes_personales: string[];
+  antecedentes_otros: string | null;
+  alergias: string[];
+  alergias_otras: string | null;
+  medicamentos_actuales: string[];
+  medicamentos_otros: string | null;
+  habitos: string[];
+  fototipo: string | null;
+  examen_fisico_hallazgos: string | null;
+  zona_a_tratar: string | null;
+  proximo_control_fecha: string | null;
   profesional: { nombre: string } | null;
 };
 
@@ -231,6 +258,7 @@ export default async function PacienteDetallePage({
     { data: citasData },
     { data: contactosData },
     { data: evolucionesData },
+    { data: anamnesisData },
     { data: consumosData },
   ] = await Promise.all([
     supabase.rpc("has_permission", { modulo_code: "pacientes", permiso_code: "EDIT" }),
@@ -293,9 +321,19 @@ export default async function PacienteDetallePage({
     supabase
       .from("evoluciones_paciente")
       .select(
-        `id, fecha, evolucion, proximo_control_fecha, tratamiento_id,
+        `id, fecha, evolucion, tipo, proximo_control_fecha, tratamiento_id,
          tratamientos(tipos_tratamiento(nombre)),
          profesional:usuarios!evoluciones_paciente_profesional_id_fkey(nombre)`,
+      )
+      .eq("paciente_id", id)
+      .order("fecha", { ascending: false }),
+    supabase
+      .from("anamnesis_paciente")
+      .select(
+        `id, fecha, motivo_consulta, antecedentes_personales, antecedentes_otros,
+         alergias, alergias_otras, medicamentos_actuales, medicamentos_otros, habitos,
+         fototipo, examen_fisico_hallazgos, zona_a_tratar, proximo_control_fecha,
+         profesional:usuarios!anamnesis_paciente_profesional_id_fkey(nombre)`,
       )
       .eq("paciente_id", id)
       .order("fecha", { ascending: false }),
@@ -347,6 +385,8 @@ export default async function PacienteDetallePage({
   });
   const contactos = (contactosData ?? []) as unknown as ContactoRow[];
   const evoluciones = (evolucionesData ?? []) as unknown as EvolucionRow[];
+  const anamnesis = (anamnesisData ?? []) as unknown as AnamnesisRow[];
+  const ultimaAnamnesis: UltimaAnamnesis | null = anamnesis[0] ?? null;
   const tratamientosParaEvolucion = tratamientosCompletos.map((t) => ({
     id: t.id,
     nombre: `${t.fecha} — ${t.tipos_tratamiento?.nombre ?? "Tratamiento"}`,
@@ -402,6 +442,9 @@ export default async function PacienteDetallePage({
         <TabsList className="w-full sm:w-fit">
           <TabsTrigger value="datos">
             <IdCardIcon /> Datos básicos
+          </TabsTrigger>
+          <TabsTrigger value="anamnesis">
+            <FileTextIcon /> Anamnesis
           </TabsTrigger>
           <TabsTrigger value="tratamientos">
             <StethoscopeIcon /> Tratamientos
@@ -463,6 +506,74 @@ export default async function PacienteDetallePage({
                   }
                 />
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="anamnesis">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-base font-medium">Anamnesis y examen físico</CardTitle>
+              {puedeCrearTratamiento ? (
+                <AnamnesisDialog
+                  pacienteId={paciente.id}
+                  profesionales={profesionales}
+                  usuarioActualId={usuario.id}
+                  tratamientos={tratamientosParaEvolucion}
+                  ultimaAnamnesis={ultimaAnamnesis}
+                  trigger={<Button size="sm">Nueva anamnesis</Button>}
+                />
+              ) : null}
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Fecha</TableHead>
+                    <TableHead>Motivo de consulta</TableHead>
+                    <TableHead className="hidden md:table-cell">Antecedentes</TableHead>
+                    <TableHead className="hidden md:table-cell">Alergias</TableHead>
+                    <TableHead className="hidden lg:table-cell">Medicamentos</TableHead>
+                    <TableHead className="hidden lg:table-cell">Hábitos</TableHead>
+                    <TableHead className="hidden md:table-cell">Profesional</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {anamnesis.map((a) => (
+                    <TableRow key={a.id}>
+                      <TableCell className="text-muted-foreground">{a.fecha}</TableCell>
+                      <TableCell className="max-w-xs whitespace-normal break-words">
+                        {a.motivo_consulta}
+                      </TableCell>
+                      <TableCell className="hidden max-w-xs whitespace-normal break-words text-muted-foreground md:table-cell">
+                        {etiquetasAntecedentes(a.antecedentes_personales)}
+                        {a.antecedentes_otros ? ` · ${a.antecedentes_otros}` : ""}
+                      </TableCell>
+                      <TableCell className="hidden max-w-xs whitespace-normal break-words text-muted-foreground md:table-cell">
+                        {etiquetasAlergias(a.alergias)}
+                        {a.alergias_otras ? ` · ${a.alergias_otras}` : ""}
+                      </TableCell>
+                      <TableCell className="hidden max-w-xs whitespace-normal break-words text-muted-foreground lg:table-cell">
+                        {etiquetasMedicamentos(a.medicamentos_actuales)}
+                        {a.medicamentos_otros ? ` · ${a.medicamentos_otros}` : ""}
+                      </TableCell>
+                      <TableCell className="hidden max-w-xs whitespace-normal break-words text-muted-foreground lg:table-cell">
+                        {etiquetasHabitos(a.habitos)}
+                      </TableCell>
+                      <TableCell className="hidden text-muted-foreground md:table-cell">
+                        {a.profesional?.nombre ?? "—"}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {anamnesis.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center text-muted-foreground">
+                        Sin anamnesis registrada.
+                      </TableCell>
+                    </TableRow>
+                  ) : null}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
         </TabsContent>
@@ -726,13 +837,27 @@ export default async function PacienteDetallePage({
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-base font-medium">Evoluciones del paciente</CardTitle>
               {puedeCrearTratamiento ? (
-                <EvolucionDialog
-                  pacienteId={paciente.id}
-                  profesionales={profesionales}
-                  usuarioActualId={usuario.id}
-                  tratamientos={tratamientosParaEvolucion}
-                  trigger={<Button size="sm">Nueva evolución</Button>}
-                />
+                <div className="flex gap-2">
+                  <EvolucionDialog
+                    pacienteId={paciente.id}
+                    profesionales={profesionales}
+                    usuarioActualId={usuario.id}
+                    tratamientos={tratamientosParaEvolucion}
+                    trigger={<Button size="sm">Nueva evolución</Button>}
+                  />
+                  <EvolucionDialog
+                    pacienteId={paciente.id}
+                    profesionales={profesionales}
+                    usuarioActualId={usuario.id}
+                    tratamientos={tratamientosParaEvolucion}
+                    tipo="epicrisis"
+                    trigger={
+                      <Button size="sm" variant="outline">
+                        Registrar epicrisis
+                      </Button>
+                    }
+                  />
+                </div>
               ) : null}
             </CardHeader>
             <CardContent>
@@ -751,7 +876,14 @@ export default async function PacienteDetallePage({
                     <TableRow key={e.id}>
                       <TableCell className="text-muted-foreground">{e.fecha}</TableCell>
                       <TableCell className="max-w-xs whitespace-normal break-words">
-                        {e.evolucion}
+                        <div className="flex flex-col gap-1">
+                          {e.tipo === "epicrisis" ? (
+                            <Badge variant="outline" className="w-fit text-amber-600">
+                              Epicrisis
+                            </Badge>
+                          ) : null}
+                          {e.evolucion}
+                        </div>
                       </TableCell>
                       <TableCell className="hidden text-muted-foreground md:table-cell">
                         {e.tratamientos?.tipos_tratamiento?.nombre ?? "—"}

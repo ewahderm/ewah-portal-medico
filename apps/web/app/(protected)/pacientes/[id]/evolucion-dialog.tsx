@@ -27,6 +27,7 @@ export function EvolucionDialog({
   profesionales,
   usuarioActualId,
   tratamientos,
+  tipo = "seguimiento",
   trigger,
   onGuardado,
 }: {
@@ -41,16 +42,21 @@ export function EvolucionDialog({
    * Se omite desde el detalle de una cita: ese flujo es para un control
    * sin procedimiento, por eso solo aparece en la ficha del paciente. */
   tratamientos?: Opcion[];
+  /** "epicrisis" solo se usa desde la pestaña Evoluciones de la ficha del
+   * paciente — cambia el título/botón y marca la fila para distinguirla
+   * de un control normal, pero es la misma tabla y el mismo permiso. */
+  tipo?: "seguimiento" | "epicrisis";
   trigger: React.ReactElement;
   onGuardado?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState(crearEvolucion, null);
+  const esEpicrisis = tipo === "epicrisis";
 
   useCerrarAlExito(pending, !state?.error, () => {
     setOpen(false);
     onGuardado?.();
-    toast.add({ title: "Evolución registrada", type: "success" });
+    toast.add({ title: esEpicrisis ? "Epicrisis registrada" : "Evolución registrada", type: "success" });
   });
 
   return (
@@ -58,11 +64,12 @@ export function EvolucionDialog({
       <DialogTrigger render={trigger} />
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Registrar evolución</DialogTitle>
+          <DialogTitle>{esEpicrisis ? "Registrar epicrisis" : "Registrar evolución"}</DialogTitle>
         </DialogHeader>
 
         <form action={formAction} className="space-y-5">
           <input type="hidden" name="pacienteId" value={pacienteId} />
+          <input type="hidden" name="tipo" value={tipo} />
           {citaId ? <input type="hidden" name="citaId" value={citaId} /> : null}
 
           {state?.error ? (
@@ -103,13 +110,17 @@ export function EvolucionDialog({
           ) : null}
 
           <div className="space-y-2">
-            <Label htmlFor="evolucion">Evolución</Label>
+            <Label htmlFor="evolucion">{esEpicrisis ? "Epicrisis" : "Evolución"}</Label>
             <Textarea
               id="evolucion"
               name="evolucion"
               rows={5}
               required
-              placeholder="¿Cómo evolucionó el paciente? Hallazgos, complicaciones, plan..."
+              placeholder={
+                esEpicrisis
+                  ? "Resumen de cierre: diagnóstico, procedimientos realizados, resultado y recomendaciones..."
+                  : "¿Cómo evolucionó el paciente? Hallazgos, complicaciones, plan..."
+              }
             />
           </div>
 
@@ -119,7 +130,7 @@ export function EvolucionDialog({
           </div>
 
           <Button type="submit" className="w-full" disabled={pending}>
-            {pending ? "Guardando..." : "Registrar evolución"}
+            {pending ? "Guardando..." : esEpicrisis ? "Registrar epicrisis" : "Registrar evolución"}
           </Button>
         </form>
       </DialogContent>

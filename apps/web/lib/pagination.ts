@@ -1,7 +1,7 @@
 // Tamaño de página único para todos los listados paginados de la app — si
 // un módulo necesita otro valor, es una señal para volver a discutirlo, no
 // para que cada pantalla invente el suyo.
-export const TAMANO_PAGINA = 20;
+export const TAMANO_PAGINA = 10;
 
 // Convierte el searchParam `page` (string | undefined, puede venir inválido
 // desde una URL escrita a mano) en un número de página válido, mínimo 1.
