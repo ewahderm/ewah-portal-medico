@@ -30,6 +30,9 @@ export async function crearAnamnesis(
   const medicamentosOtros = campoOpcional(formData, "medicamentosOtros");
   const habitos = formData.getAll("habitos").map(String);
   const fototipo = valorOpcionalSelect(formData, "fototipo");
+  const tallaCm = campoOpcional(formData, "tallaCm");
+  const pesoKg = campoOpcional(formData, "pesoKg");
+  const tipoSangre = valorOpcionalSelect(formData, "tipoSangre");
   const examenFisicoHallazgos = campoOpcional(formData, "examenFisicoHallazgos");
   const zonaATratar = campoOpcional(formData, "zonaATratar");
   const proximoControlFecha = campoOpcional(formData, "proximoControlFecha");
@@ -87,6 +90,9 @@ export async function crearAnamnesis(
     medicamentos_otros: medicamentosOtros,
     habitos,
     fototipo,
+    talla_cm: tallaCm ? Number(tallaCm) : null,
+    peso_kg: pesoKg ? Number(pesoKg) : null,
+    tipo_sangre: tipoSangre,
     examen_fisico_hallazgos: examenFisicoHallazgos,
     zona_a_tratar: zonaATratar,
     proximo_control_fecha: proximoControlFecha,

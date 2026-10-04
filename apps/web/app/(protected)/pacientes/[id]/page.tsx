@@ -173,6 +173,9 @@ type AnamnesisRow = {
   medicamentos_otros: string | null;
   habitos: string[];
   fototipo: string | null;
+  talla_cm: number | null;
+  peso_kg: number | null;
+  tipo_sangre: string | null;
   examen_fisico_hallazgos: string | null;
   zona_a_tratar: string | null;
   proximo_control_fecha: string | null;
@@ -332,7 +335,8 @@ export default async function PacienteDetallePage({
       .select(
         `id, fecha, motivo_consulta, antecedentes_personales, antecedentes_otros,
          alergias, alergias_otras, medicamentos_actuales, medicamentos_otros, habitos,
-         fototipo, examen_fisico_hallazgos, zona_a_tratar, proximo_control_fecha,
+         fototipo, talla_cm, peso_kg, tipo_sangre, examen_fisico_hallazgos, zona_a_tratar,
+         proximo_control_fecha,
          profesional:usuarios!anamnesis_paciente_profesional_id_fkey(nombre)`,
       )
       .eq("paciente_id", id)
@@ -535,6 +539,7 @@ export default async function PacienteDetallePage({
                     <TableHead className="hidden md:table-cell">Alergias</TableHead>
                     <TableHead className="hidden lg:table-cell">Medicamentos</TableHead>
                     <TableHead className="hidden lg:table-cell">Hábitos</TableHead>
+                    <TableHead className="hidden lg:table-cell">Talla/Peso/Sangre</TableHead>
                     <TableHead className="hidden md:table-cell">Profesional</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -560,6 +565,15 @@ export default async function PacienteDetallePage({
                       <TableCell className="hidden max-w-xs whitespace-normal break-words text-muted-foreground lg:table-cell">
                         {etiquetasHabitos(a.habitos)}
                       </TableCell>
+                      <TableCell className="hidden text-muted-foreground lg:table-cell">
+                        {[
+                          a.talla_cm ? `${a.talla_cm} cm` : null,
+                          a.peso_kg ? `${a.peso_kg} kg` : null,
+                          a.tipo_sangre,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ") || "—"}
+                      </TableCell>
                       <TableCell className="hidden text-muted-foreground md:table-cell">
                         {a.profesional?.nombre ?? "—"}
                       </TableCell>
@@ -567,7 +581,7 @@ export default async function PacienteDetallePage({
                   ))}
                   {anamnesis.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center text-muted-foreground">
+                      <TableCell colSpan={8} className="text-center text-muted-foreground">
                         Sin anamnesis registrada.
                       </TableCell>
                     </TableRow>

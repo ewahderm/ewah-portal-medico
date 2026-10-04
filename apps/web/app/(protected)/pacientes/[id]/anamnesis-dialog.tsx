@@ -8,6 +8,7 @@ import {
   MEDICAMENTOS_ACTUALES,
   HABITOS,
   FOTOTIPOS,
+  TIPOS_SANGRE,
   SIN_ANTECEDENTES,
   SIN_ALERGIAS,
 } from "@/lib/pacientes/anamnesis-opciones";
@@ -95,6 +96,7 @@ export type UltimaAnamnesis = {
   medicamentos_otros: string | null;
   habitos: string[];
   fototipo: string | null;
+  tipo_sangre: string | null;
 };
 
 export function AnamnesisDialog({
@@ -129,6 +131,10 @@ export function AnamnesisDialog({
   const [medicamentosOtros, setMedicamentosOtros] = useState("");
   const [habitos, setHabitos] = useState<Set<string>>(new Set());
   const [fototipo, setFototipo] = useState(SIN_SELECCION);
+  // Tipo de sangre no cambia entre visitas, así que sí se copia — talla y
+  // peso en cambio se vuelven a medir cada vez, por eso arrancan en blanco
+  // incluso al usar "Copiar de la última anamnesis".
+  const [tipoSangre, setTipoSangre] = useState(SIN_SELECCION);
 
   function copiarDeLaUltima() {
     if (!ultimaAnamnesis) return;
@@ -146,6 +152,7 @@ export function AnamnesisDialog({
     setMedicamentosOtros(ultimaAnamnesis.medicamentos_otros ?? "");
     setHabitos(new Set(ultimaAnamnesis.habitos));
     setFototipo(ultimaAnamnesis.fototipo ?? SIN_SELECCION);
+    setTipoSangre(ultimaAnamnesis.tipo_sangre ?? SIN_SELECCION);
   }
 
   useCerrarAlExito(pending, !state?.error, () => {
@@ -280,6 +287,28 @@ export function AnamnesisDialog({
 
           <div className="space-y-2 border-t pt-4">
             <p className="text-sm font-medium">Examen físico</p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+            <div className="space-y-2">
+              <Label htmlFor="tallaCm">Talla (cm, opcional)</Label>
+              <Input id="tallaCm" name="tallaCm" type="number" min="0" step="1" placeholder="Ej: 165" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="pesoKg">Peso (kg, opcional)</Label>
+              <Input id="pesoKg" name="pesoKg" type="number" min="0" step="0.1" placeholder="Ej: 62.5" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="tipoSangre">Tipo de sangre (opcional)</Label>
+              <Combobox
+                id="tipoSangre"
+                name="tipoSangre"
+                items={[{ value: SIN_SELECCION, label: "Sin registrar" }, ...TIPOS_SANGRE]}
+                value={tipoSangre}
+                onValueChange={(v) => setTipoSangre(String(v ?? SIN_SELECCION))}
+                placeholder="Selecciona"
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">

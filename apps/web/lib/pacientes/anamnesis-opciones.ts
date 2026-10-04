@@ -39,6 +39,17 @@ export const HABITOS = [
   { value: "exposicion_solar", label: "Exposición solar frecuente" },
 ];
 
+export const TIPOS_SANGRE = [
+  { value: "O+", label: "O+" },
+  { value: "O-", label: "O-" },
+  { value: "A+", label: "A+" },
+  { value: "A-", label: "A-" },
+  { value: "B+", label: "B+" },
+  { value: "B-", label: "B-" },
+  { value: "AB+", label: "AB+" },
+  { value: "AB-", label: "AB-" },
+];
+
 export const FOTOTIPOS = [
   { value: "I", label: "I — Siempre se quema, nunca se broncea" },
   { value: "II", label: "II — Se quema fácil, broncea mínimo" },
