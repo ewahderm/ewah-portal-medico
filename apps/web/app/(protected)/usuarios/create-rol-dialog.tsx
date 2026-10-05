@@ -2,6 +2,8 @@
 
 import { useActionState, useState } from "react";
 import { createRol } from "@/lib/rbac/actions";
+import { useCerrarAlExito } from "@/lib/forms/cerrarAlExito";
+import { toast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +19,11 @@ import {
 export function CreateRolDialog() {
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState(createRol, null);
+
+  useCerrarAlExito(pending, !state?.error, () => {
+    setOpen(false);
+    toast.add({ title: "Rol creado", type: "success" });
+  });
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
