@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireUsuario } from "@/lib/auth/session";
+import { requireUsuario, esAdministrador } from "@/lib/auth/session";
 import { logout } from "@/lib/auth/actions";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -31,9 +31,11 @@ export default async function ProtectedLayout({
   // Tech, nunca asignable desde ninguna pantalla de la app.
   const supabaseSesion = await createClient();
   const { data: esSuperAdmin } = await supabaseSesion.rpc("es_super_admin");
-  const navItems = esSuperAdmin
-    ? [...NAV_ITEMS, { href: "/plataforma", label: "Plataforma" }]
-    : NAV_ITEMS;
+  const navItems = [
+    ...NAV_ITEMS,
+    ...(esAdministrador(usuario) ? [{ href: "/exportar", label: "Exportar datos" }] : []),
+    ...(esSuperAdmin ? [{ href: "/plataforma", label: "Plataforma" }] : []),
+  ];
 
   // Cliente admin a propósito, no el de sesión: clinica_actual() (y por lo
   // tanto la policy de select normal) ahora exige clinicas.activo = true —
