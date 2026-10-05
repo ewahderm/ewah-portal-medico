@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireUsuario } from "@/lib/auth/session";
 import { logout } from "@/lib/auth/actions";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { Button } from "@/components/ui/button";
 import { EwahLogo } from "@/components/ewah-logo";
 import { MobileNav } from "./_components/mobile-nav";
@@ -25,18 +26,51 @@ export default async function ProtectedLayout({
 }) {
   const usuario = await requireUsuario();
 
-  const supabase = await createClient();
-  const { data: clinica } = await supabase
+  // es_super_admin() depende de auth.uid(), así que necesita el cliente de
+  // sesión (no el admin) — es la bandera cross-tenant del equipo de EWAH
+  // Tech, nunca asignable desde ninguna pantalla de la app.
+  const supabaseSesion = await createClient();
+  const { data: esSuperAdmin } = await supabaseSesion.rpc("es_super_admin");
+  const navItems = esSuperAdmin
+    ? [...NAV_ITEMS, { href: "/plataforma", label: "Plataforma" }]
+    : NAV_ITEMS;
+
+  // Cliente admin a propósito, no el de sesión: clinica_actual() (y por lo
+  // tanto la policy de select normal) ahora exige clinicas.activo = true —
+  // si la clínica se desactivó mientras este usuario ya tenía sesión
+  // abierta, una consulta con RLS normal no devolvería la fila y no
+  // podríamos distinguir "sin logo" de "clínica desactivada". Sigue sin
+  // riesgo cross-tenant: el filtro es por el id ya resuelto de la sesión.
+  const admin = createAdminClient();
+  const { data: clinica } = await admin
     .from("clinicas")
-    .select("nombre, nombre_comercial, logo_storage_path")
+    .select("nombre, nombre_comercial, logo_storage_path, activo")
     .eq("id", usuario.clinica_id)
     .maybeSingle();
+
+  if (clinica && !clinica.activo) {
+    return (
+      <div className="flex min-h-screen items-center justify-center px-4">
+        <div className="w-full max-w-sm rounded-2xl border bg-card p-8 text-center shadow-xl">
+          <h2 className="text-xl font-bold tracking-tight">Clínica desactivada</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            El acceso de tu clínica fue desactivado. Contacta a EWAH Tech para reactivarlo.
+          </p>
+          <form action={logout} className="mt-6">
+            <Button type="submit" variant="outline" className="w-full">
+              Salir
+            </Button>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   // El logo de la clínica es la marca que el staff ve todo el día — EWAH
   // Tech se queda como respaldo mientras no hayan subido uno (Suscripción)
   // y sigue siendo la identidad de las pantallas públicas (login/signup).
   const logoClinicaUrl = clinica?.logo_storage_path
-    ? supabase.storage.from("clinica-logos").getPublicUrl(clinica.logo_storage_path).data.publicUrl
+    ? admin.storage.from("clinica-logos").getPublicUrl(clinica.logo_storage_path).data.publicUrl
     : null;
   const nombreClinica = clinica?.nombre_comercial || clinica?.nombre || "Tu clínica";
 
@@ -58,7 +92,7 @@ export default async function ProtectedLayout({
               )}
             </Link>
             <div className="hidden items-center gap-6 md:flex">
-              {NAV_ITEMS.map((item) => (
+              {navItems.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
@@ -80,7 +114,7 @@ export default async function ProtectedLayout({
             </form>
           </div>
           <MobileNav
-            items={NAV_ITEMS}
+            items={navItems}
             nombreUsuario={usuario.nombre}
             rolUsuario={usuario.roles?.nombre}
             logoutAction={logout}

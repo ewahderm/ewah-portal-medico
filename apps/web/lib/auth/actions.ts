@@ -26,12 +26,17 @@ export async function login(
   const admin = createAdminClient();
   const { data: usuario } = await admin
     .from("usuarios")
-    .select("id, bloqueado, intentos_login, activo")
+    .select("id, bloqueado, intentos_login, activo, clinicas(activo)")
     .eq("email", email)
     .maybeSingle();
 
   if (usuario && !usuario.activo) {
     return { error: "Esta cuenta está desactivada. Contacta a tu administrador." };
+  }
+
+  const clinicaActiva = (usuario?.clinicas as unknown as { activo: boolean } | null)?.activo;
+  if (usuario && clinicaActiva === false) {
+    return { error: "Esta clínica fue desactivada. Contacta a EWAH Tech." };
   }
 
   if (usuario?.bloqueado) {

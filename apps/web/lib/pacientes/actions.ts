@@ -11,6 +11,33 @@ function requirePermiso(permiso: "CREATE" | "EDIT") {
   return requirePermisoBase("pacientes", permiso);
 }
 
+// null = puede seguir creando. Cuenta solo pacientes activos — uno
+// desactivado no sigue "ocupando" un cupo del plan.
+async function verificarLimitePacientes(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  clinicaId: string,
+): Promise<string | null> {
+  const { data: clinica } = await supabase
+    .from("clinicas")
+    .select("planes(nombre, limite_pacientes)")
+    .eq("id", clinicaId)
+    .maybeSingle();
+
+  const plan = clinica?.planes as unknown as { nombre: string; limite_pacientes: number | null } | null;
+  if (!plan?.limite_pacientes) return null;
+
+  const { count } = await supabase
+    .from("pacientes")
+    .select("id", { count: "exact", head: true })
+    .eq("clinica_id", clinicaId)
+    .eq("activo", true);
+
+  if ((count ?? 0) >= plan.limite_pacientes) {
+    return `Tu plan ${plan.nombre} permite hasta ${plan.limite_pacientes} pacientes activos. Desactiva alguno o solicita el plan Pro desde Suscripción para seguir agregando.`;
+  }
+  return null;
+}
+
 function datosPacienteDesdeForm(formData: FormData) {
   return {
     tipo_identificacion_id: String(formData.get("tipoIdentificacionId") ?? ""),
@@ -55,6 +82,9 @@ export async function crearPaciente(
   if (!check.ok) return { error: check.error };
 
   const supabase = await createClient();
+  const limiteAlcanzado = await verificarLimitePacientes(supabase, check.usuario.clinica_id);
+  if (limiteAlcanzado) return { error: limiteAlcanzado };
+
   const { error } = await supabase.from("pacientes").insert({
     ...datos,
     clinica_id: check.usuario.clinica_id,
@@ -135,6 +165,9 @@ export async function crearPacienteRapido(
   if (!check.ok) return { error: check.error };
 
   const supabase = await createClient();
+  const limiteAlcanzado = await verificarLimitePacientes(supabase, check.usuario.clinica_id);
+  if (limiteAlcanzado) return { error: limiteAlcanzado };
+
   const { data: paciente, error } = await supabase
     .from("pacientes")
     .insert({

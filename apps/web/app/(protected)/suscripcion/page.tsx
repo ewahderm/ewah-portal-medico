@@ -7,10 +7,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SolicitarPlanDialog } from "./solicitar-plan-dialog";
-import { CambiarPlanPruebaButton } from "./cambiar-plan-prueba-button";
 import { MarcaDialog } from "./marca-dialog";
 
-type Plan = { id: string; codigo: string; nombre: string; precio_mensual: number | null };
+type Plan = {
+  id: string;
+  codigo: string;
+  nombre: string;
+  precio_mensual: number | null;
+  limite_pacientes: number | null;
+};
 
 export default async function SuscripcionPage() {
   const usuario = await requireUsuario();
@@ -29,24 +34,34 @@ export default async function SuscripcionPage() {
     );
   }
 
-  const [{ data: clinica }, { data: planes }, { data: plan_modulos }, { data: plan_features }] =
-    await Promise.all([
-      supabase
-        .from("clinicas")
-        .select(
-          "nombre, nombre_comercial, logo_storage_path, correo_notificaciones, telefono_contacto, plan_id, planes(id, codigo, nombre, precio_mensual)",
-        )
-        .single(),
-      supabase.from("planes").select("id, codigo, nombre, precio_mensual").order("precio_mensual"),
-      supabase.from("plan_modulos").select("plan_id, modulo_id, incluido, modulos(codigo)"),
-      supabase.from("plan_features").select("plan_id, modulo_id, feature_codigo, incluido, modulos(codigo)"),
-    ]);
+  const [
+    { data: clinica },
+    { data: planes },
+    { data: plan_modulos },
+    { data: plan_features },
+    { count: totalPacientes },
+  ] = await Promise.all([
+    supabase
+      .from("clinicas")
+      .select(
+        "nombre, nombre_comercial, logo_storage_path, correo_notificaciones, telefono_contacto, plan_id, planes(id, codigo, nombre, precio_mensual, limite_pacientes)",
+      )
+      .single(),
+    supabase
+      .from("planes")
+      .select("id, codigo, nombre, precio_mensual, limite_pacientes")
+      .order("precio_mensual"),
+    supabase.from("plan_modulos").select("plan_id, modulo_id, incluido, modulos(codigo)"),
+    supabase.from("plan_features").select("plan_id, modulo_id, feature_codigo, incluido, modulos(codigo)"),
+    supabase.from("pacientes").select("id", { count: "exact", head: true }).eq("activo", true),
+  ]);
 
   const planActual = clinica?.planes as unknown as Plan | null;
   const todosLosPlanes = (planes ?? []) as Plan[];
   const logoUrl = clinica?.logo_storage_path
     ? supabase.storage.from("clinica-logos").getPublicUrl(clinica.logo_storage_path).data.publicUrl
     : null;
+  const pacientesUsados = totalPacientes ?? 0;
 
   function moduloIncluido(planId: string, moduloCodigo: string) {
     return (plan_modulos ?? []).some((pm) => {
@@ -128,6 +143,30 @@ export default async function SuscripcionPage() {
                 : "Gratis"}
             </p>
           </div>
+          {planActual?.limite_pacientes ? (
+            <div className="text-right">
+              <p
+                className={`text-sm font-medium ${
+                  pacientesUsados >= planActual.limite_pacientes ? "text-destructive" : ""
+                }`}
+              >
+                {pacientesUsados} de {planActual.limite_pacientes} pacientes
+              </p>
+              <div className="mt-1 h-1.5 w-32 overflow-hidden rounded-full bg-muted">
+                <div
+                  className={`h-full ${
+                    pacientesUsados >= planActual.limite_pacientes ? "bg-destructive" : "bg-primary"
+                  }`}
+                  style={{
+                    width: `${Math.min(100, (pacientesUsados / planActual.limite_pacientes) * 100)}%`,
+                  }}
+                />
+              </div>
+              {pacientesUsados >= planActual.limite_pacientes ? (
+                <p className="mt-1 text-xs text-destructive">Límite alcanzado — solicita Pro para seguir.</p>
+              ) : null}
+            </div>
+          ) : null}
         </CardContent>
       </Card>
 
@@ -145,6 +184,14 @@ export default async function SuscripcionPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               <ul className="space-y-1.5 text-sm">
+                <li className="flex items-center gap-2">
+                  <CheckIcon className="size-4 text-primary" />
+                  <span>
+                    {plan.limite_pacientes
+                      ? `Hasta ${plan.limite_pacientes} pacientes`
+                      : "Pacientes ilimitados"}
+                  </span>
+                </li>
                 {REGISTRO_MODULOS.map((modulo) => {
                   const incluido = moduloIncluido(plan.id, modulo.codigo);
                   return (
@@ -183,9 +230,6 @@ export default async function SuscripcionPage() {
                     planNombre={plan.nombre}
                     trigger={<Button className="w-full">Solicitar este plan</Button>}
                   />
-                  {esAdministrador(usuario) ? (
-                    <CambiarPlanPruebaButton planCodigo={plan.codigo} />
-                  ) : null}
                 </div>
               ) : null}
             </CardContent>
