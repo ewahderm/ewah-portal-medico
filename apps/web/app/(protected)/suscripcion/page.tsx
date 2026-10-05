@@ -1,8 +1,9 @@
-import { CheckIcon, ImageIcon, PencilIcon, XIcon } from "lucide-react";
+import Link from "next/link";
+import { CheckIcon, ImageIcon, PencilIcon, ShieldCheckIcon, XIcon } from "lucide-react";
 import { requireUsuario, esAdministrador } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { REGISTRO_MODULOS } from "@/lib/modulos/registro";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,10 +22,10 @@ export default async function SuscripcionPage() {
   const usuario = await requireUsuario();
   const supabase = await createClient();
 
-  const { data: puedeVer } = await supabase.rpc("has_permission", {
-    modulo_code: "suscripcion",
-    permiso_code: "VIEW",
-  });
+  const [{ data: puedeVer }, { data: esSuperAdmin }] = await Promise.all([
+    supabase.rpc("has_permission", { modulo_code: "suscripcion", permiso_code: "VIEW" }),
+    supabase.rpc("es_super_admin"),
+  ]);
 
   if (!puedeVer) {
     return (
@@ -46,6 +47,7 @@ export default async function SuscripcionPage() {
       .select(
         "nombre, nombre_comercial, logo_storage_path, correo_notificaciones, telefono_contacto, plan_id, planes(id, codigo, nombre, precio_mensual, limite_pacientes)",
       )
+      .eq("id", usuario.clinica_id)
       .single(),
     supabase
       .from("planes")
@@ -90,6 +92,22 @@ export default async function SuscripcionPage() {
           El plan de tu clínica determina qué módulos y funciones tienes disponibles.
         </p>
       </div>
+
+      {esSuperAdmin ? (
+        <Alert className="border-primary/30 bg-primary/5">
+          <ShieldCheckIcon className="text-primary" />
+          <AlertTitle>Super administrador de EWAH Tech</AlertTitle>
+          <AlertDescription>
+            Esta es la suscripción de tu propia clínica. Para activar un plan de forma provisional o
+            desactivar cualquier clínica, usa el panel de Plataforma.
+          </AlertDescription>
+          <AlertAction>
+            <Button size="sm" variant="outline" nativeButton={false} render={<Link href="/plataforma" />}>
+              Ir a Plataforma
+            </Button>
+          </AlertAction>
+        </Alert>
+      ) : null}
 
       <Card>
         <CardHeader>

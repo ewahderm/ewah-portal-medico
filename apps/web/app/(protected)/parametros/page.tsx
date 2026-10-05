@@ -124,7 +124,7 @@ export default async function ParametrosPage() {
       .select("id, nombre, categoria, codigo, activo")
       .order("categoria")
       .order("orden"),
-    supabase.from("clinicas").select("agencia_regulatoria").single(),
+    supabase.from("clinicas").select("agencia_regulatoria").eq("id", usuario.clinica_id).single(),
     supabase
       .from("clinica_modulos")
       .select("modulos(codigo)")
