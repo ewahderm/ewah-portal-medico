@@ -22,9 +22,9 @@ export default function LoginPage() {
           </div>
 
           <p className="mt-6 text-center text-sm text-muted-foreground">
-            ¿Tu clínica no tiene cuenta todavía?{" "}
+            ¿Todavía no tienes cuenta?{" "}
             <Link href="/signup" className="font-medium text-foreground underline underline-offset-4">
-              Regístrala
+              Regístrate
             </Link>
           </p>
         </div>

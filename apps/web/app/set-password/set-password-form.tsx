@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { limpiarBloqueoPropio } from "@/lib/auth/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,11 +27,20 @@ export function SetPasswordForm() {
     const supabase = createClient();
     const { error: updateError } = await supabase.auth.updateUser({ password });
 
-    setPending(false);
     if (updateError) {
+      setPending(false);
       setError(updateError.message);
       return;
     }
+
+    // Cubre el caso de "olvidé mi contraseña": si la cuenta había quedado
+    // bloqueada por intentos fallidos antes de pedir este enlace, ya
+    // demostró ser dueña de la cuenta — no debería seguir bloqueada.
+    // No-op inofensivo para el otro camino que llega aquí (invitación a
+    // una cuenta nueva, que nunca estuvo bloqueada).
+    await limpiarBloqueoPropio();
+
+    setPending(false);
     router.push("/dashboard");
   }
 

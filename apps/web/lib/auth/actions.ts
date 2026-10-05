@@ -3,6 +3,8 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { siteUrl } from "@/lib/site-url";
+import { enviarCorreoRestablecerPassword } from "@/lib/email/passwordResetCorreo";
 
 const MAX_INTENTOS_LOGIN = 5;
 
@@ -77,6 +79,76 @@ export async function logout() {
   const supabase = await createClient();
   await supabase.auth.signOut();
   redirect("/login");
+}
+
+export type OlvidePasswordState = { enviado: true } | { error: string } | null;
+
+/**
+ * El correo nativo de recuperación de Supabase tiene el mismo problema que
+ * ya bloqueaba las invitaciones (ver inviteStaff): en plan gratuito solo
+ * entrega a miembros de la organización de Supabase. En vez de usar
+ * `resetPasswordForEmail` (que dispara ese correo), se genera el link con
+ * la API de administrador (`generateLink`, no envía nada) y se manda por
+ * Resend — mismo canal que ya funciona para las citas.
+ *
+ * Nunca revela si el correo existe o si la cuenta está activa: siempre
+ * devuelve el mismo resultado, para no filtrar esa información a quien
+ * sea que esté probando correos al azar.
+ */
+export async function solicitarRestablecerPassword(
+  _prevState: OlvidePasswordState,
+  formData: FormData,
+): Promise<OlvidePasswordState> {
+  const email = String(formData.get("email") ?? "")
+    .trim()
+    .toLowerCase();
+  if (!email) return { error: "Ingresa tu correo electrónico." };
+
+  const admin = createAdminClient();
+  const { data: usuario } = await admin
+    .from("usuarios")
+    .select("nombre, activo")
+    .eq("email", email)
+    .maybeSingle();
+
+  if (usuario?.activo) {
+    const { data: link } = await admin.auth.admin.generateLink({
+      type: "recovery",
+      email,
+      options: { redirectTo: `${siteUrl()}/set-password` },
+    });
+
+    const hashedToken = link?.properties?.hashed_token;
+    if (hashedToken) {
+      const url = `${siteUrl()}/auth/confirm?token_hash=${hashedToken}&type=recovery&next=/set-password`;
+      await enviarCorreoRestablecerPassword({ email, nombre: usuario.nombre, link: url });
+    }
+  }
+
+  return { enviado: true };
+}
+
+/**
+ * Se llama justo después de que alguien define una contraseña nueva desde
+ * el link de recuperación (ver SetPasswordForm). El id sale de la sesión
+ * del propio usuario (nunca del cliente), así que solo puede desbloquearse
+ * a sí mismo — nunca a otra cuenta. Mismo criterio que `restablecerPassword`
+ * (el que usa un Administrador desde Usuarios): si alguien llegó hasta acá
+ * es porque ya probó su contraseña nueva, así que lo que necesita es volver
+ * a entrar, no seguir bloqueado por los intentos fallidos previos.
+ */
+export async function limpiarBloqueoPropio() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const admin = createAdminClient();
+  await admin
+    .from("usuarios")
+    .update({ bloqueado: false, intentos_login: 0, fecha_bloqueo: null })
+    .eq("id", user.id);
 }
 
 export async function signUpClinica(

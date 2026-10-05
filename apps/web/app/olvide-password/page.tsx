@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { AuthHero } from "@/components/auth-hero";
 import { EwahLogo } from "@/components/ewah-logo";
-import { SignupForm } from "./signup-form";
+import { OlvidePasswordForm } from "./olvide-password-form";
 
-export default function SignupPage() {
+export default function OlvidePasswordPage() {
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
       <AuthHero />
@@ -12,19 +12,19 @@ export default function SignupPage() {
         <EwahLogo variant="dark" className="lg:hidden" />
 
         <div className="w-full max-w-sm rounded-2xl border bg-card p-8 shadow-xl">
-          <h2 className="text-2xl font-bold tracking-tight">Crea tu cuenta</h2>
+          <h2 className="text-2xl font-bold tracking-tight">Recupera tu acceso</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Para tu clínica o tu consultorio independiente — tú quedas como administrador
+            Ingresa el correo de tu cuenta y te enviamos un enlace para elegir una contraseña
+            nueva.
           </p>
 
           <div className="mt-6">
-            <SignupForm />
+            <OlvidePasswordForm />
           </div>
 
           <p className="mt-6 text-center text-sm text-muted-foreground">
-            ¿Ya tienes cuenta?{" "}
             <Link href="/login" className="font-medium text-foreground underline underline-offset-4">
-              Inicia sesión
+              Volver a iniciar sesión
             </Link>
           </p>
         </div>
