@@ -8,7 +8,7 @@ import {
   SlidersHorizontalIcon,
   type LucideIcon,
 } from "lucide-react";
-import { requireUsuario } from "@/lib/auth/session";
+import { requireUsuario, esAdministrador } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { CATALOGOS, type ModuloCatalogo } from "@/lib/parametros/registry";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -18,6 +18,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CatalogoTable } from "./catalogo-table";
 import { AddValorDialog } from "./add-valor-dialog";
+import { ImportarCatalogoDialog } from "./importar-catalogo-dialog";
+import { ExportarXlsxLink } from "../_components/exportar-xlsx-link";
 import { ConsultoriosTable, type ConsultorioRow } from "./consultorios-table";
 import { ConsultorioDialog } from "./consultorio-dialog";
 import { NeverasTable, type NeveraRow } from "./neveras-table";
@@ -290,11 +292,21 @@ export default async function ParametrosPage() {
                             {catalogo.descripcion}
                           </p>
                         </div>
-                        {catalogo.esGlobal ? (
-                          <Badge variant="outline">Administrado por EWAH Tech</Badge>
-                        ) : (
-                          <AddValorDialog tabla={catalogo.tabla} nombre={catalogo.nombre} />
-                        )}
+                        <div className="flex items-center gap-2">
+                          {esAdministrador(usuario) ? (
+                            <ExportarXlsxLink href={`/api/exportar/parametros/${catalogo.tabla}`} />
+                          ) : null}
+                          {catalogo.esGlobal ? (
+                            <Badge variant="outline">Administrado por EWAH Tech</Badge>
+                          ) : (
+                            <>
+                              {esAdministrador(usuario) ? (
+                                <ImportarCatalogoDialog tabla={catalogo.tabla} nombre={catalogo.nombre} />
+                              ) : null}
+                              <AddValorDialog tabla={catalogo.tabla} nombre={catalogo.nombre} />
+                            </>
+                          )}
+                        </div>
                       </CardHeader>
                       <CardContent>
                         <CatalogoTable
