@@ -33,22 +33,16 @@ type Correccion = {
   cufe: string | null;
 };
 
-type DesdeCita = {
+// Todo tratamiento nuevo cuelga de una atención — si no viene de
+// corrigiendo/editando (que la heredan del original en el servidor), viene
+// de este contexto: el detalle de una atención ya creada (con o sin cita
+// detrás, no hace falta distinguirlo aquí).
+type DesdeAtencion = {
   id: string;
   paciente_id: string;
   profesional_id: string;
   tipo_tratamiento_id: string | null;
-  sede_id?: string;
   fecha: string;
-  // true cuando la cita ya está "atendida" y esto es un tratamiento
-  // adicional sobre la misma cita (una cita puede tener varios) — cambia el
-  // título/alerta/texto del botón para que quede claro que no es un error
-  // ni un duplicado accidental.
-  yaAtendida?: boolean;
-};
-
-type DesdePaciente = {
-  id: string;
 };
 
 export function TratamientoDialog({
@@ -60,8 +54,7 @@ export function TratamientoDialog({
   usuarioActualId,
   corrigiendo,
   editando,
-  desdeCita,
-  desdePaciente,
+  desdeAtencion,
   pacientesPendientes = new Set(),
   onGuardado,
   trigger,
@@ -74,8 +67,7 @@ export function TratamientoDialog({
   usuarioActualId: string;
   corrigiendo?: Correccion;
   editando?: Correccion;
-  desdeCita?: DesdeCita;
-  desdePaciente?: DesdePaciente;
+  desdeAtencion?: DesdeAtencion;
   pacientesPendientes?: Set<string>;
   /** Se dispara además del toast, al guardar con éxito — para que quien
    * embebe este diálogo (ej. el detalle de una cita) pueda refrescar su
@@ -92,8 +84,8 @@ export function TratamientoDialog({
   // de la misma forma de tratamiento — solo difieren en qué campo oculto
   // envían y en qué acción de servidor invocan.
   const prefill = corrigiendo ?? editando;
-  const pacienteInicial = prefill?.paciente_id ?? desdeCita?.paciente_id ?? desdePaciente?.id ?? "";
-  const pacienteFijo = Boolean(prefill || desdeCita || desdePaciente);
+  const pacienteInicial = prefill?.paciente_id ?? desdeAtencion?.paciente_id ?? "";
+  const pacienteFijo = Boolean(prefill || desdeAtencion);
   const [pacienteId, setPacienteId] = useState(pacienteInicial);
   const pacientePendiente = pacientesPendientes.has(pacienteId);
 
@@ -149,11 +141,7 @@ export function TratamientoDialog({
               ? "Corregir tratamiento"
               : editando
                 ? "Editar tratamiento"
-                : desdeCita
-                  ? desdeCita.yaAtendida
-                    ? "Registrar tratamiento adicional en esta cita"
-                    : "Atender cita"
-                  : "Nuevo tratamiento"}
+                : "Nuevo tratamiento"}
           </DialogTitle>
         </DialogHeader>
 
@@ -162,7 +150,7 @@ export function TratamientoDialog({
             <input type="hidden" name="corrigeA" value={corrigiendo.id} />
           ) : null}
           {editando ? <input type="hidden" name="editaId" value={editando.id} /> : null}
-          {desdeCita ? <input type="hidden" name="citaId" value={desdeCita.id} /> : null}
+          {desdeAtencion ? <input type="hidden" name="atencionId" value={desdeAtencion.id} /> : null}
 
           {corrigiendo ? (
             <Alert>
@@ -177,14 +165,6 @@ export function TratamientoDialog({
               <AlertDescription>
                 El registro actual se anulará y se creará uno nuevo con estos datos — un
                 tratamiento nunca se edita in-place.
-              </AlertDescription>
-            </Alert>
-          ) : null}
-          {desdeCita?.yaAtendida ? (
-            <Alert>
-              <AlertDescription>
-                Esta cita ya tiene al menos un tratamiento registrado. Esto agrega uno más
-                sobre la misma cita, no reemplaza el que ya existe.
               </AlertDescription>
             </Alert>
           ) : null}
@@ -223,7 +203,7 @@ export function TratamientoDialog({
               name="tipoTratamientoId"
               required
               items={toItems(tiposTratamiento)}
-              defaultValue={prefill?.tipo_tratamiento_id ?? desdeCita?.tipo_tratamiento_id ?? undefined}
+              defaultValue={prefill?.tipo_tratamiento_id ?? desdeAtencion?.tipo_tratamiento_id ?? undefined}
               placeholder="Selecciona un tratamiento"
             />
           </div>
@@ -236,7 +216,7 @@ export function TratamientoDialog({
                 name="profesionalId"
                 required
                 items={toItems(profesionales)}
-                defaultValue={prefill?.profesional_id ?? desdeCita?.profesional_id ?? usuarioActualId}
+                defaultValue={prefill?.profesional_id ?? desdeAtencion?.profesional_id ?? usuarioActualId}
                 placeholder="Selecciona"
               />
             </div>
@@ -247,7 +227,7 @@ export function TratamientoDialog({
                 name="fecha"
                 type="date"
                 required
-                defaultValue={prefill?.fecha ?? desdeCita?.fecha ?? hoy()}
+                defaultValue={prefill?.fecha ?? desdeAtencion?.fecha ?? hoy()}
               />
             </div>
           </div>
@@ -260,7 +240,7 @@ export function TratamientoDialog({
                 name="sedeId"
                 required
                 items={toItems(sedes)}
-                defaultValue={prefill?.sede_id ?? desdeCita?.sede_id}
+                defaultValue={prefill?.sede_id}
                 placeholder="Selecciona"
               />
             </div>
@@ -319,11 +299,7 @@ export function TratamientoDialog({
                 ? "Guardar corrección"
                 : editando
                   ? "Guardar edición"
-                  : desdeCita
-                    ? desdeCita.yaAtendida
-                      ? "Registrar tratamiento"
-                      : "Registrar y marcar como atendida"
-                    : "Registrar tratamiento"}
+                  : "Registrar tratamiento"}
           </Button>
         </form>
       </DialogContent>

@@ -102,6 +102,7 @@ export type UltimaAnamnesis = {
 
 export function AnamnesisDialog({
   pacienteId,
+  atencionId,
   profesionales,
   usuarioActualId,
   ultimaAnamnesis,
@@ -109,6 +110,8 @@ export function AnamnesisDialog({
   onGuardado,
 }: {
   pacienteId: string;
+  /** Toda anamnesis cuelga de una atención — se registra desde su detalle. */
+  atencionId: string;
   profesionales: Opcion[];
   usuarioActualId: string;
   /** La anamnesis más reciente de este paciente, si existe — habilita el
@@ -170,6 +173,7 @@ export function AnamnesisDialog({
 
         <form action={formAction} className="space-y-5">
           <input type="hidden" name="pacienteId" value={pacienteId} />
+          <input type="hidden" name="atencionId" value={atencionId} />
 
           {state?.error ? (
             <Alert variant="destructive">

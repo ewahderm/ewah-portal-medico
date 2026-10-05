@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { confirmarCita, marcarNoAsistio, reprogramarCita } from "@/lib/citas/actions";
+import { crearAtencionDesdeCita } from "@/lib/atenciones/actions";
 import { opcionesHora, sumarMinutos } from "@/lib/citas/horarios";
 import { toast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
@@ -9,8 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Combobox } from "@/components/ui/combobox";
 import { CancelarDialog } from "./cancelar-dialog";
-import { TratamientoDialog } from "../tratamientos/tratamiento-dialog";
-import { EvolucionDialog } from "../pacientes/[id]/evolucion-dialog";
+import { AtencionDetalleDialog } from "../atenciones/atencion-detalle-dialog";
 import type { Opcion } from "@/lib/forms/opciones";
 
 const OPCIONES_HORA = opcionesHora();
@@ -19,43 +19,51 @@ export function EstadoAcciones({
   cita,
   puedeEditar,
   puedeCrearTratamiento,
-  pacientes,
+  puedeAnularTratamiento,
+  puedeVerAnulados,
   tiposTratamiento,
   profesionales,
   sedes,
   mediosPago,
   usuarioActualId,
+  insumos,
+  lotes,
+  puedeRegistrarConsumo,
+  puedeRevertirConsumo,
+  puedeEliminarArchivos,
+  tieneEntitlementAnexos,
   pacientesPendientes = new Set(),
-  onTratamientoGuardado,
-  onEvolucionGuardada,
 }: {
   cita: {
     id: string;
     estado: string;
     paciente_id: string | null;
-    profesional_id: string;
-    tipo_tratamiento_id: string | null;
     fecha: string;
     hora_inicio?: string;
-    consultorios?: { sede_id: string | null } | null;
-    tratamientos_count?: number;
-    evoluciones_count?: number;
+    atencion_id: string | null;
   };
   puedeEditar: boolean;
   puedeCrearTratamiento: boolean;
-  pacientes: Opcion[];
+  puedeAnularTratamiento: boolean;
+  puedeVerAnulados: boolean;
   tiposTratamiento: Opcion[];
   profesionales: Opcion[];
   sedes: Opcion[];
   mediosPago: Opcion[];
   usuarioActualId: string;
+  insumos: { id: string; nombre: string }[];
+  lotes: {
+    id: string;
+    insumo_id: string;
+    sede_id: string;
+    numero_lote: string | null;
+    cantidad_actual: number;
+  }[];
+  puedeRegistrarConsumo: boolean;
+  puedeRevertirConsumo: boolean;
+  puedeEliminarArchivos: boolean;
+  tieneEntitlementAnexos: boolean;
   pacientesPendientes?: Set<string>;
-  /** Se dispara al guardar un tratamiento desde "Atender"/"Agregar
-   * tratamiento" — para que un detalle de cita abierto en ese momento
-   * pueda refrescar su lista sin que el usuario tenga que cerrar/reabrir. */
-  onTratamientoGuardado?: () => void;
-  /** Igual, pero al registrar una evolución (control sin procedimiento). */
-  onEvolucionGuardada?: () => void;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [conflicto, setConflicto] = useState<string | null>(null);
@@ -64,17 +72,33 @@ export function EstadoAcciones({
   const [nuevaFecha, setNuevaFecha] = useState(cita.fecha);
   const [nuevaHoraInicio, setNuevaHoraInicio] = useState(cita.hora_inicio ?? "09:00");
   const [nuevaHoraFin, setNuevaHoraFin] = useState(sumarMinutos(cita.hora_inicio ?? "09:00", 60));
-  // cita.estado/tratamientos_count vienen del server component que renderizó
-  // esta fila — no se actualizan solos cuando se guarda un tratamiento desde
-  // este mismo componente (Next.js no vuelve a bajar props nuevas a un
-  // client component ya montado sin una navegación). Sin este contador
-  // local, tras guardar el primer tratamiento el botón seguía diciendo
-  // "Atender" y el resto de acciones (Reprogramar/Cancelar) seguían
-  // apareciendo como si la cita no se hubiera atendido — obligando a
-  // cerrar y volver a abrir para ver el estado real.
-  const [tratamientosCount, setTratamientosCount] = useState(cita.tratamientos_count ?? 0);
-  const [evolucionesCount, setEvolucionesCount] = useState(cita.evoluciones_count ?? 0);
-  const atendida = cita.estado === "atendida" || tratamientosCount > 0 || evolucionesCount > 0;
+  // cita.estado/atencion_id vienen del server component que renderizó esta
+  // fila — no se actualizan solos cuando se crea una atención desde este
+  // mismo componente (Next.js no vuelve a bajar props nuevas a un client
+  // component ya montado sin una navegación). Sin este estado local, tras
+  // "Atender" el botón seguía diciendo "Atender" y el resto de acciones
+  // (Reprogramar/Cancelar) seguían apareciendo como si la cita no se
+  // hubiera atendido — obligando a cerrar y volver a abrir.
+  const [atencionId, setAtencionId] = useState(cita.atencion_id);
+  const [detalleAbierto, setDetalleAbierto] = useState(false);
+  const atendida = cita.estado === "atendida" || !!atencionId;
+
+  function handleAtender() {
+    setError(null);
+    if (atencionId) {
+      setDetalleAbierto(true);
+      return;
+    }
+    startTransition(async () => {
+      try {
+        const id = await crearAtencionDesdeCita(cita.id);
+        setAtencionId(id);
+        setDetalleAbierto(true);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "No se pudo crear la atención.");
+      }
+    });
+  }
 
   function handleConfirmar() {
     setError(null);
@@ -122,12 +146,10 @@ export function EstadoAcciones({
     });
   }
 
-  // "atendida" ya NO es un estado terminal para esta lista de acciones: una
-  // cita puede tener varios tratamientos (esquema invertido en
-  // tratamientos.cita_id), así que "Atender"/"Agregar tratamiento" debe
-  // seguir disponible. Los demás sí siguen sin tener sentido una vez
-  // atendida — dejamos de mostrar Confirmar/No asistió/Reprogramar/Cancelar
-  // más abajo condicionando cada botón, no con un return temprano.
+  // "atendida" ya no es un estado terminal para esta lista de acciones:
+  // una atención puede seguir recibiendo tratamientos/evoluciones nuevas,
+  // así que "Atender"/"Ver atención" debe seguir disponible. Los demás sí
+  // siguen sin tener sentido una vez atendida.
   if (cita.estado === "cancelada" || cita.estado === "no_asistio" || cita.estado === "reprogramada") {
     return error ? <span className="text-xs text-destructive">{error}</span> : null;
   }
@@ -221,52 +243,9 @@ export function EstadoAcciones({
           </Button>
         ) : null}
         {puedeCrearTratamiento && cita.paciente_id ? (
-          <TratamientoDialog
-            pacientes={pacientes}
-            tiposTratamiento={tiposTratamiento}
-            profesionales={profesionales}
-            sedes={sedes}
-            mediosPago={mediosPago}
-            usuarioActualId={usuarioActualId}
-            pacientesPendientes={pacientesPendientes}
-            onGuardado={() => {
-              setTratamientosCount((n) => n + 1);
-              onTratamientoGuardado?.();
-            }}
-            desdeCita={{
-              id: cita.id,
-              paciente_id: cita.paciente_id,
-              profesional_id: cita.profesional_id,
-              tipo_tratamiento_id: cita.tipo_tratamiento_id,
-              sede_id: cita.consultorios?.sede_id ?? undefined,
-              fecha: cita.fecha,
-              yaAtendida: atendida,
-            }}
-            trigger={
-              <Button size="sm" disabled={pending}>
-                {atendida
-                  ? `Agregar tratamiento${tratamientosCount ? ` · ${tratamientosCount} registrados` : ""}`
-                  : "Atender"}
-              </Button>
-            }
-          />
-        ) : null}
-        {puedeCrearTratamiento && cita.paciente_id && !atendida ? (
-          <EvolucionDialog
-            pacienteId={cita.paciente_id}
-            citaId={cita.id}
-            profesionales={profesionales}
-            usuarioActualId={usuarioActualId}
-            onGuardado={() => {
-              setEvolucionesCount((n) => n + 1);
-              onEvolucionGuardada?.();
-            }}
-            trigger={
-              <Button variant="outline" size="sm" disabled={pending}>
-                Registrar evolución
-              </Button>
-            }
-          />
+          <Button size="sm" onClick={handleAtender} disabled={pending}>
+            {pending ? "Guardando..." : atendida ? "Ver atención" : "Atender"}
+          </Button>
         ) : null}
         {cita.estado === "confirmada" && !atendida && puedeEditar ? (
           <Button variant="ghost" size="sm" onClick={handleNoAsistio} disabled={pending}>
@@ -281,6 +260,29 @@ export function EstadoAcciones({
         {!atendida && puedeEditar ? <CancelarDialog id={cita.id} /> : null}
       </div>
       {error ? <span className="text-xs text-destructive">{error}</span> : null}
+
+      {atencionId ? (
+        <AtencionDetalleDialog
+          atencionId={atencionId}
+          open={detalleAbierto}
+          onOpenChange={setDetalleAbierto}
+          tiposTratamiento={tiposTratamiento}
+          profesionales={profesionales}
+          sedes={sedes}
+          mediosPago={mediosPago}
+          usuarioActualId={usuarioActualId}
+          insumos={insumos}
+          lotes={lotes}
+          puedeCrearTratamiento={puedeCrearTratamiento}
+          puedeAnularTratamiento={puedeAnularTratamiento}
+          puedeVerAnulados={puedeVerAnulados}
+          puedeRegistrarConsumo={puedeRegistrarConsumo}
+          puedeRevertirConsumo={puedeRevertirConsumo}
+          puedeEliminarArchivos={puedeEliminarArchivos}
+          tieneEntitlementAnexos={tieneEntitlementAnexos}
+          pacientesPendientes={pacientesPendientes}
+        />
+      ) : null}
     </div>
   );
 }

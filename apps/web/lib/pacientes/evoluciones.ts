@@ -19,17 +19,18 @@ export async function crearEvolucion(
   formData: FormData,
 ): Promise<ActionState> {
   const pacienteId = String(formData.get("pacienteId") ?? "");
-  const citaId = campoOpcional(formData, "citaId");
+  const atencionId = String(formData.get("atencionId") ?? "");
   const tratamientoId = valorOpcionalSelect(formData, "tratamientoId");
   const profesionalId = String(formData.get("profesionalId") ?? "");
   const fecha = String(formData.get("fecha") ?? "").trim();
   const evolucion = String(formData.get("evolucion") ?? "").trim();
   const proximoControlFecha = campoOpcional(formData, "proximoControlFecha");
-  // Viene de un input oculto con un valor fijo ("seguimiento"/"epicrisis"),
-  // no de un Combobox — por eso no pasa por valorOpcionalSelect/SIN_SELECCION.
+  // Viene de un input oculto con un valor fijo ("seguimiento"/
+  // "epicrisis_atencion"/"epicrisis_general"), no de un Combobox — por eso
+  // no pasa por valorOpcionalSelect/SIN_SELECCION.
   const tipo = campoOpcional(formData, "tipo") ?? "seguimiento";
 
-  if (!pacienteId || !profesionalId || !fecha || !evolucion) {
+  if (!pacienteId || !atencionId || !profesionalId || !fecha || !evolucion) {
     return { error: "Fecha, profesional y evolución son obligatorios." };
   }
 
@@ -38,19 +39,15 @@ export async function crearEvolucion(
 
   const supabase = await createClient();
 
-  // citaId/tratamientoId nunca se confían tal cual vienen del formulario —
-  // mismo criterio de seguridad que crearTratamiento con su propio citaId.
-  let citaIdValidado: string | null = null;
-  if (citaId) {
-    const { data: citaDestino } = await supabase
-      .from("citas")
-      .select("id, paciente_id")
-      .eq("id", citaId)
-      .maybeSingle();
-    if (!citaDestino || citaDestino.paciente_id !== pacienteId) {
-      return { error: "La cita indicada no es válida para este paciente." };
-    }
-    citaIdValidado = citaId;
+  // atencionId/tratamientoId nunca se confían tal cual vienen del
+  // formulario — mismo criterio de seguridad que crearTratamiento.
+  const { data: atencionDestino } = await supabase
+    .from("atenciones")
+    .select("id, paciente_id")
+    .eq("id", atencionId)
+    .maybeSingle();
+  if (!atencionDestino || atencionDestino.paciente_id !== pacienteId) {
+    return { error: "La atención indicada no es válida para este paciente." };
   }
 
   let tratamientoIdValidado: string | null = null;
@@ -70,7 +67,7 @@ export async function crearEvolucion(
     clinica_id: check.usuario.clinica_id,
     paciente_id: pacienteId,
     tratamiento_id: tratamientoIdValidado,
-    cita_id: citaIdValidado,
+    atencion_id: atencionId,
     profesional_id: profesionalId,
     fecha,
     evolucion,
@@ -81,25 +78,19 @@ export async function crearEvolucion(
 
   if (error) return { error: "No se pudo registrar la evolución." };
 
-  // Mismo mecanismo que crearTratamiento: una evolución ligada a una cita
-  // la marca atendida, sin exigir que haya un tratamiento (procedimiento).
-  if (citaIdValidado) {
-    await supabase.from("citas").update({ estado: "atendida" }).eq("id", citaIdValidado);
-    revalidatePath("/citas");
-  }
-
   revalidatePath(`/pacientes/${pacienteId}`);
   return null;
 }
 
-export type EvolucionDeCita = {
+export type EvolucionDeAtencion = {
   id: string;
   fecha: string;
   evolucion: string;
+  tipo: string;
   profesional: { nombre: string } | null;
 };
 
-export async function listarEvolucionesDeCita(citaId: string): Promise<EvolucionDeCita[]> {
+export async function listarEvolucionesDeAtencion(atencionId: string): Promise<EvolucionDeAtencion[]> {
   const usuario = await getCurrentUsuario();
   if (!usuario) return [];
 
@@ -107,11 +98,11 @@ export async function listarEvolucionesDeCita(citaId: string): Promise<Evolucion
   const { data } = await supabase
     .from("evoluciones_paciente")
     .select(
-      "id, fecha, evolucion, profesional:usuarios!evoluciones_paciente_profesional_id_fkey(nombre)",
+      "id, fecha, evolucion, tipo, profesional:usuarios!evoluciones_paciente_profesional_id_fkey(nombre)",
     )
-    .eq("cita_id", citaId)
+    .eq("atencion_id", atencionId)
     .eq("clinica_id", usuario.clinica_id)
     .order("fecha", { ascending: false });
 
-  return (data ?? []) as unknown as EvolucionDeCita[];
+  return (data ?? []) as unknown as EvolucionDeAtencion[];
 }

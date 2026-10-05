@@ -2,19 +2,16 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   IdCardIcon,
-  FileTextIcon,
   StethoscopeIcon,
   CalendarDaysIcon,
   SyringeIcon,
   PhoneCallIcon,
-  ClipboardListIcon,
-  PencilIcon,
 } from "lucide-react";
 import { requireUsuario, esAdministrador } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { nombreCompleto } from "@/lib/pacientes/nombre";
 import { tieneInfoPendiente, camposFaltantes } from "@/lib/pacientes/completitud";
-import { formatoMoneda, hoy } from "@/lib/format";
+import { hoy } from "@/lib/format";
 import {
   getSedesActivas,
   getMediosPagoActivos,
@@ -40,24 +37,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ContactoDialog } from "./contacto-dialog";
-import { EvolucionDialog } from "./evolucion-dialog";
-import { AnamnesisDialog, type UltimaAnamnesis } from "./anamnesis-dialog";
-import {
-  etiquetasAntecedentes,
-  etiquetasAlergias,
-  etiquetasMedicamentos,
-  etiquetasHabitos,
-} from "@/lib/pacientes/anamnesis-opciones";
 import { PacienteDialog } from "../paciente-dialog";
-import { TratamientoDialog } from "../../tratamientos/tratamiento-dialog";
-import { AnularDialog } from "../../tratamientos/anular-dialog";
-import { RevertirAnulacionButton } from "../../tratamientos/revertir-anulacion-button";
-import { FotosDialog } from "../../tratamientos/fotos-dialog";
-import { AnexosDialog } from "../../tratamientos/anexos-dialog";
-import { ConsentimientoDialog } from "../../tratamientos/consentimiento-dialog";
-import { InsumosDialog } from "../../tratamientos/insumos-dialog";
 import { CitaDialog } from "../../citas/cita-dialog";
 import { CitasTabla } from "./citas-tabla";
+import { AtencionesTabla, type AtencionRow } from "./atenciones-tabla";
+import { AtencionSinCitaDialog } from "../../atenciones/atencion-sin-cita-dialog";
 import type { CitaRow } from "../../citas/tipos";
 
 const TIPO_CONTACTO_LABEL: Record<string, string> = {
@@ -106,27 +90,6 @@ type PacienteCompleto = {
   eps: { nombre: string } | null;
 };
 
-type TratamientoRow = {
-  id: string;
-  fecha: string;
-  costo: number | null;
-  notas: string | null;
-  cufe: string | null;
-  anulado: boolean;
-  anulado_motivo: string | null;
-  paciente_id: string;
-  tipo_tratamiento_id: string;
-  profesional_id: string;
-  sede_id: string;
-  medio_pago_id: string;
-  tipos_tratamiento: { nombre: string } | null;
-  sedes: { nombre: string } | null;
-  profesional: { nombre: string } | null;
-  tieneFotos: boolean;
-  tieneAnexos: boolean;
-  tieneConsentimiento: boolean;
-};
-
 type Consultorio = { id: string; nombre: string; sede_id: string };
 
 type ConsumoRow = {
@@ -148,37 +111,6 @@ type ContactoRow = {
   proxima_accion_fecha: string | null;
   proxima_accion_nota: string | null;
   creador: { nombre: string } | null;
-};
-
-type EvolucionRow = {
-  id: string;
-  fecha: string;
-  evolucion: string;
-  tipo: string;
-  proximo_control_fecha: string | null;
-  tratamiento_id: string | null;
-  tratamientos: { tipos_tratamiento: { nombre: string } | null } | null;
-  profesional: { nombre: string } | null;
-};
-
-type AnamnesisRow = {
-  id: string;
-  fecha: string;
-  motivo_consulta: string;
-  antecedentes_personales: string[];
-  antecedentes_otros: string | null;
-  alergias: string[];
-  alergias_otras: string | null;
-  medicamentos_actuales: string[];
-  medicamentos_otros: string | null;
-  habitos: string[];
-  habitos_otros: string | null;
-  fototipo: string | null;
-  talla_cm: number | null;
-  peso_kg: number | null;
-  tipo_sangre: string | null;
-  examen_fisico_hallazgos: string | null;
-  profesional: { nombre: string } | null;
 };
 
 function Dato({ etiqueta, valor }: { etiqueta: string; valor: React.ReactNode }) {
@@ -256,11 +188,9 @@ export default async function PacienteDetallePage({
     { data: insumosData },
     { data: lotesData },
     { data: consultoriosData },
-    { data: tratamientosData },
+    { data: atencionesData },
     { data: citasData },
     { data: contactosData },
-    { data: evolucionesData },
-    { data: anamnesisData },
     { data: consumosData },
   ] = await Promise.all([
     supabase.rpc("has_permission", { modulo_code: "pacientes", permiso_code: "EDIT" }),
@@ -289,13 +219,11 @@ export default async function PacienteDetallePage({
       .eq("activo", true),
     supabase.from("consultorios").select("id, nombre, sede_id").eq("activo", true).order("nombre"),
     supabase
-      .from("tratamientos")
+      .from("atenciones")
       .select(
-        `id, fecha, costo, notas, cufe, anulado, anulado_motivo,
-         paciente_id, tipo_tratamiento_id, profesional_id, sede_id, medio_pago_id,
-         tipos_tratamiento(nombre), sedes(nombre),
-         profesional:usuarios!tratamientos_profesional_id_fkey(nombre),
-         tratamiento_fotos(count), tratamiento_anexos(count), tratamiento_consentimientos(count)`,
+        `id, fecha, motivo, cita_id,
+         profesional:usuarios!atenciones_profesional_id_fkey(nombre),
+         tratamientos(count), evoluciones_paciente(count), anamnesis_paciente(count)`,
       )
       .eq("paciente_id", id)
       .order("fecha", { ascending: false }),
@@ -308,7 +236,7 @@ export default async function PacienteDetallePage({
          tipos_tratamiento(nombre),
          profesional:usuarios!citas_profesional_id_fkey(nombre),
          consultorios(nombre, sede_id, sedes(nombre)),
-         tratamientos(count), evoluciones_paciente(count)`,
+         atenciones(id)`,
       )
       .eq("paciente_id", id)
       .order("fecha", { ascending: false }),
@@ -317,25 +245,6 @@ export default async function PacienteDetallePage({
       .select(
         `id, fecha, tipo, nota, resultado, proxima_accion_fecha, proxima_accion_nota,
          creador:usuarios!contactos_paciente_created_by_fkey(nombre)`,
-      )
-      .eq("paciente_id", id)
-      .order("fecha", { ascending: false }),
-    supabase
-      .from("evoluciones_paciente")
-      .select(
-        `id, fecha, evolucion, tipo, proximo_control_fecha, tratamiento_id,
-         tratamientos(tipos_tratamiento(nombre)),
-         profesional:usuarios!evoluciones_paciente_profesional_id_fkey(nombre)`,
-      )
-      .eq("paciente_id", id)
-      .order("fecha", { ascending: false }),
-    supabase
-      .from("anamnesis_paciente")
-      .select(
-        `id, fecha, motivo_consulta, antecedentes_personales, antecedentes_otros,
-         alergias, alergias_otras, medicamentos_actuales, medicamentos_otros, habitos,
-         habitos_otros, fototipo, talla_cm, peso_kg, tipo_sangre, examen_fisico_hallazgos,
-         profesional:usuarios!anamnesis_paciente_profesional_id_fkey(nombre)`,
       )
       .eq("paciente_id", id)
       .order("fecha", { ascending: false }),
@@ -355,44 +264,27 @@ export default async function PacienteDetallePage({
   const puedeEliminarArchivos = esAdministrador(usuario);
   const pacientePendiente = tieneInfoPendiente(paciente);
   const pacientesPendientes = pacientePendiente ? new Set([paciente.id]) : new Set<string>();
-  const tratamientosCompletos = (tratamientosData ?? []).map((t) => {
-    const fila = t as unknown as Omit<
-      TratamientoRow,
-      "tieneFotos" | "tieneAnexos" | "tieneConsentimiento"
+  const atenciones: AtencionRow[] = (atencionesData ?? []).map((a) => {
+    const fila = a as unknown as Omit<
+      AtencionRow,
+      "tratamientos_count" | "evoluciones_count" | "anamnesis_count"
     > & {
-      tratamiento_fotos?: { count: number }[];
-      tratamiento_anexos?: { count: number }[];
-      tratamiento_consentimientos?: { count: number }[];
-    };
-    return {
-      ...fila,
-      tieneFotos: (fila.tratamiento_fotos?.[0]?.count ?? 0) > 0,
-      tieneAnexos: (fila.tratamiento_anexos?.[0]?.count ?? 0) > 0,
-      tieneConsentimiento: (fila.tratamiento_consentimientos?.[0]?.count ?? 0) > 0,
-    };
-  }) as TratamientoRow[];
-  const tratamientos = puedeVerAnulados
-    ? tratamientosCompletos
-    : tratamientosCompletos.filter((t) => !t.anulado);
-  const citas = (citasData ?? []).map((c) => {
-    const fila = c as unknown as CitaRow & {
       tratamientos?: { count: number }[];
       evoluciones_paciente?: { count: number }[];
+      anamnesis_paciente?: { count: number }[];
     };
     return {
       ...fila,
       tratamientos_count: fila.tratamientos?.[0]?.count ?? 0,
       evoluciones_count: fila.evoluciones_paciente?.[0]?.count ?? 0,
+      anamnesis_count: fila.anamnesis_paciente?.[0]?.count ?? 0,
     };
   });
+  const citas = (citasData ?? []).map((c) => {
+    const fila = c as unknown as CitaRow & { atenciones?: { id: string }[] };
+    return { ...fila, atencion_id: fila.atenciones?.[0]?.id ?? null };
+  });
   const contactos = (contactosData ?? []) as unknown as ContactoRow[];
-  const evoluciones = (evolucionesData ?? []) as unknown as EvolucionRow[];
-  const anamnesis = (anamnesisData ?? []) as unknown as AnamnesisRow[];
-  const ultimaAnamnesis: UltimaAnamnesis | null = anamnesis[0] ?? null;
-  const tratamientosParaEvolucion = tratamientosCompletos.map((t) => ({
-    id: t.id,
-    nombre: `${t.fecha} — ${t.tipos_tratamiento?.nombre ?? "Tratamiento"}`,
-  }));
   const consumos = (consumosData ?? []) as unknown as ConsumoRow[];
   const profesionales = profesionalesData ?? [];
   const insumos = insumosData ?? [];
@@ -445,20 +337,14 @@ export default async function PacienteDetallePage({
           <TabsTrigger value="datos">
             <IdCardIcon /> Datos básicos
           </TabsTrigger>
-          <TabsTrigger value="anamnesis">
-            <FileTextIcon /> Anamnesis
-          </TabsTrigger>
-          <TabsTrigger value="tratamientos">
-            <StethoscopeIcon /> Tratamientos
+          <TabsTrigger value="atenciones">
+            <StethoscopeIcon /> Atenciones
           </TabsTrigger>
           <TabsTrigger value="citas">
             <CalendarDaysIcon /> Citas
           </TabsTrigger>
           <TabsTrigger value="insumos">
             <SyringeIcon /> Insumos
-          </TabsTrigger>
-          <TabsTrigger value="evoluciones">
-            <ClipboardListIcon /> Evoluciones
           </TabsTrigger>
           <TabsTrigger value="contactos">
             <PhoneCallIcon /> Contactos
@@ -512,246 +398,52 @@ export default async function PacienteDetallePage({
           </Card>
         </TabsContent>
 
-        <TabsContent value="anamnesis">
+        <TabsContent value="atenciones">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-base font-medium">Anamnesis y examen físico</CardTitle>
+              <CardTitle className="text-base font-medium">Atenciones</CardTitle>
               {puedeCrearTratamiento ? (
-                <AnamnesisDialog
-                  pacienteId={paciente.id}
+                <AtencionSinCitaDialog
+                  pacientes={[{ id: paciente.id, nombre: nombreCompleto(paciente) }]}
                   profesionales={profesionales}
                   usuarioActualId={usuario.id}
-                  ultimaAnamnesis={ultimaAnamnesis}
-                  trigger={<Button size="sm">Nueva anamnesis</Button>}
-                />
-              ) : null}
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Fecha</TableHead>
-                    <TableHead>Motivo de consulta</TableHead>
-                    <TableHead className="hidden md:table-cell">Antecedentes</TableHead>
-                    <TableHead className="hidden md:table-cell">Alergias</TableHead>
-                    <TableHead className="hidden lg:table-cell">Medicamentos</TableHead>
-                    <TableHead className="hidden lg:table-cell">Hábitos</TableHead>
-                    <TableHead className="hidden lg:table-cell">Talla/Peso/Sangre</TableHead>
-                    <TableHead className="hidden md:table-cell">Profesional</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {anamnesis.map((a) => (
-                    <TableRow key={a.id}>
-                      <TableCell className="text-muted-foreground">{a.fecha}</TableCell>
-                      <TableCell className="max-w-xs whitespace-normal break-words">
-                        {a.motivo_consulta}
-                      </TableCell>
-                      <TableCell className="hidden max-w-xs whitespace-normal break-words text-muted-foreground md:table-cell">
-                        {etiquetasAntecedentes(a.antecedentes_personales)}
-                        {a.antecedentes_otros ? ` · ${a.antecedentes_otros}` : ""}
-                      </TableCell>
-                      <TableCell className="hidden max-w-xs whitespace-normal break-words text-muted-foreground md:table-cell">
-                        {etiquetasAlergias(a.alergias)}
-                        {a.alergias_otras ? ` · ${a.alergias_otras}` : ""}
-                      </TableCell>
-                      <TableCell className="hidden max-w-xs whitespace-normal break-words text-muted-foreground lg:table-cell">
-                        {etiquetasMedicamentos(a.medicamentos_actuales)}
-                        {a.medicamentos_otros ? ` · ${a.medicamentos_otros}` : ""}
-                      </TableCell>
-                      <TableCell className="hidden max-w-xs whitespace-normal break-words text-muted-foreground lg:table-cell">
-                        {etiquetasHabitos(a.habitos)}
-                        {a.habitos_otros ? ` · ${a.habitos_otros}` : ""}
-                      </TableCell>
-                      <TableCell className="hidden text-muted-foreground lg:table-cell">
-                        {[
-                          a.talla_cm ? `${a.talla_cm} cm` : null,
-                          a.peso_kg ? `${a.peso_kg} kg` : null,
-                          a.tipo_sangre,
-                        ]
-                          .filter(Boolean)
-                          .join(" · ") || "—"}
-                      </TableCell>
-                      <TableCell className="hidden text-muted-foreground md:table-cell">
-                        {a.profesional?.nombre ?? "—"}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {anamnesis.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={8} className="text-center text-muted-foreground">
-                        Sin anamnesis registrada.
-                      </TableCell>
-                    </TableRow>
-                  ) : null}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="tratamientos">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-base font-medium">
-                Tratamientos realizados
-              </CardTitle>
-              {puedeCrearTratamiento ? (
-                <TratamientoDialog
-                  pacientes={[{ id: paciente.id, nombre: nombreCompleto(paciente) }]}
                   tiposTratamiento={tiposTratamiento}
-                  profesionales={profesionales}
                   sedes={sedes}
                   mediosPago={mediosPago}
-                  usuarioActualId={usuario.id}
+                  insumos={insumos}
+                  lotes={lotes}
+                  puedeCrearTratamiento={!!puedeCrearTratamiento}
+                  puedeAnularTratamiento={!!puedeAnularTratamiento}
+                  puedeVerAnulados={puedeVerAnulados}
+                  puedeRegistrarConsumo={!!puedeRegistrarConsumo}
+                  puedeRevertirConsumo={!!puedeRevertirConsumo}
+                  puedeEliminarArchivos={puedeEliminarArchivos}
+                  tieneEntitlementAnexos={!!tieneEntitlementAnexos}
                   pacientesPendientes={pacientesPendientes}
-                  desdePaciente={{ id: paciente.id }}
-                  trigger={<Button size="sm">Nuevo tratamiento</Button>}
+                  pacienteFijo={{ id: paciente.id }}
+                  trigger={<Button size="sm">Atención sin cita</Button>}
                 />
               ) : null}
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Fecha</TableHead>
-                    <TableHead>Tratamiento</TableHead>
-                    <TableHead className="hidden md:table-cell">Sede</TableHead>
-                    <TableHead className="hidden md:table-cell">Profesional</TableHead>
-                    <TableHead className="hidden md:table-cell">Valor</TableHead>
-                    <TableHead />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {tratamientos.map((t) => (
-                    <TableRow key={t.id}>
-                      <TableCell className="text-muted-foreground">{t.fecha}</TableCell>
-                      <TableCell className="max-w-[55vw] md:max-w-xs">
-                        <div className="flex flex-col gap-0.5">
-                          <span
-                            className={`truncate ${t.anulado ? "text-muted-foreground line-through" : ""}`}
-                          >
-                            {t.tipos_tratamiento?.nombre ?? "—"}
-                          </span>
-                          {t.anulado ? (
-                            <span className="whitespace-normal break-words text-xs text-muted-foreground">
-                              Anulado{t.anulado_motivo ? `: ${t.anulado_motivo}` : ""}
-                            </span>
-                          ) : null}
-                        </div>
-                      </TableCell>
-                      <TableCell className="hidden text-muted-foreground md:table-cell">
-                        {t.sedes?.nombre ?? "—"}
-                      </TableCell>
-                      <TableCell className="hidden text-muted-foreground md:table-cell">
-                        {t.profesional?.nombre ?? "—"}
-                      </TableCell>
-                      <TableCell className="hidden text-muted-foreground md:table-cell">
-                        {formatoMoneda(t.costo)}
-                      </TableCell>
-                      {/* Sin flex-wrap a propósito: ver el comentario en
-                          /tratamientos — un <td> flex que envuelve se encoge
-                          al ancho de un solo botón y los apila en columna. */}
-                      <TableCell className="flex justify-end gap-2 text-right">
-                        <InsumosDialog
-                          tratamientoId={t.id}
-                          sedeId={t.sede_id}
-                          insumos={insumos}
-                          lotes={lotes}
-                          puedeRegistrar={!!puedeRegistrarConsumo}
-                          puedeRevertir={!!puedeRevertirConsumo}
-                        />
-                        <FotosDialog
-                          tratamientoId={t.id}
-                          puedeSubir={!!puedeCrearTratamiento}
-                          puedeEliminar={puedeEliminarArchivos}
-                          tieneArchivos={t.tieneFotos}
-                        />
-                        <AnexosDialog
-                          tratamientoId={t.id}
-                          puedeSubir={!!puedeCrearTratamiento}
-                          puedeEliminar={puedeEliminarArchivos}
-                          tieneArchivos={t.tieneAnexos}
-                          tieneEntitlement={!!tieneEntitlementAnexos}
-                        />
-                        <ConsentimientoDialog
-                          tratamientoId={t.id}
-                          tieneConsentimiento={t.tieneConsentimiento}
-                        />
-                        {!t.anulado && puedeCrearTratamiento && puedeAnularTratamiento ? (
-                          <TratamientoDialog
-                            pacientes={[{ id: paciente.id, nombre: nombreCompleto(paciente) }]}
-                            tiposTratamiento={tiposTratamiento}
-                            profesionales={profesionales}
-                            sedes={sedes}
-                            mediosPago={mediosPago}
-                            usuarioActualId={usuario.id}
-                            pacientesPendientes={pacientesPendientes}
-                            editando={{
-                              id: t.id,
-                              paciente_id: t.paciente_id,
-                              tipo_tratamiento_id: t.tipo_tratamiento_id,
-                              profesional_id: t.profesional_id,
-                              sede_id: t.sede_id,
-                              medio_pago_id: t.medio_pago_id,
-                              fecha: t.fecha,
-                              costo: t.costo,
-                              notas: t.notas,
-                              cufe: t.cufe,
-                            }}
-                            trigger={
-                              <Button variant="outline" size="sm" aria-label="Editar">
-                                <PencilIcon className="md:hidden" />
-                                <span className="hidden md:inline">Editar</span>
-                              </Button>
-                            }
-                          />
-                        ) : null}
-                        {!t.anulado && puedeAnularTratamiento ? <AnularDialog id={t.id} /> : null}
-                        {t.anulado && puedeCrearTratamiento ? (
-                          <TratamientoDialog
-                            pacientes={[{ id: paciente.id, nombre: nombreCompleto(paciente) }]}
-                            tiposTratamiento={tiposTratamiento}
-                            profesionales={profesionales}
-                            sedes={sedes}
-                            mediosPago={mediosPago}
-                            usuarioActualId={usuario.id}
-                            pacientesPendientes={pacientesPendientes}
-                            corrigiendo={{
-                              id: t.id,
-                              paciente_id: t.paciente_id,
-                              tipo_tratamiento_id: t.tipo_tratamiento_id,
-                              profesional_id: t.profesional_id,
-                              sede_id: t.sede_id,
-                              medio_pago_id: t.medio_pago_id,
-                              fecha: t.fecha,
-                              costo: t.costo,
-                              notas: t.notas,
-                              cufe: t.cufe,
-                            }}
-                            trigger={
-                              <Button variant="outline" size="sm" aria-label="Corregir">
-                                <PencilIcon className="md:hidden" />
-                                <span className="hidden md:inline">Corregir</span>
-                              </Button>
-                            }
-                          />
-                        ) : null}
-                        {t.anulado && puedeVerAnulados ? (
-                          <RevertirAnulacionButton id={t.id} />
-                        ) : null}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {tratamientos.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground">
-                        Sin tratamientos registrados.
-                      </TableCell>
-                    </TableRow>
-                  ) : null}
-                </TableBody>
-              </Table>
+              <AtencionesTabla
+                atenciones={atenciones}
+                tiposTratamiento={tiposTratamiento}
+                profesionales={profesionales}
+                sedes={sedes}
+                mediosPago={mediosPago}
+                usuarioActualId={usuario.id}
+                insumos={insumos}
+                lotes={lotes}
+                puedeCrearTratamiento={!!puedeCrearTratamiento}
+                puedeAnularTratamiento={!!puedeAnularTratamiento}
+                puedeVerAnulados={puedeVerAnulados}
+                puedeRegistrarConsumo={!!puedeRegistrarConsumo}
+                puedeRevertirConsumo={!!puedeRevertirConsumo}
+                puedeEliminarArchivos={puedeEliminarArchivos}
+                tieneEntitlementAnexos={!!tieneEntitlementAnexos}
+                pacientesPendientes={pacientesPendientes}
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -779,7 +471,8 @@ export default async function PacienteDetallePage({
                 citas={citas}
                 puedeEditar={!!puedeEditarCita}
                 puedeCrearTratamiento={!!puedeCrearTratamiento}
-                pacientes={[{ id: paciente.id, nombre: nombreCompleto(paciente) }]}
+                puedeAnularTratamiento={!!puedeAnularTratamiento}
+                puedeVerAnulados={puedeVerAnulados}
                 tiposTratamiento={tiposTratamiento}
                 profesionales={profesionales}
                 sedes={sedes}
@@ -835,83 +528,6 @@ export default async function PacienteDetallePage({
                     <TableRow>
                       <TableCell colSpan={5} className="text-center text-muted-foreground">
                         Sin insumos registrados.
-                      </TableCell>
-                    </TableRow>
-                  ) : null}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="evoluciones">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-base font-medium">Evoluciones del paciente</CardTitle>
-              {puedeCrearTratamiento ? (
-                <div className="flex gap-2">
-                  <EvolucionDialog
-                    pacienteId={paciente.id}
-                    profesionales={profesionales}
-                    usuarioActualId={usuario.id}
-                    tratamientos={tratamientosParaEvolucion}
-                    trigger={<Button size="sm">Nueva evolución</Button>}
-                  />
-                  <EvolucionDialog
-                    pacienteId={paciente.id}
-                    profesionales={profesionales}
-                    usuarioActualId={usuario.id}
-                    tratamientos={tratamientosParaEvolucion}
-                    tipo="epicrisis"
-                    trigger={
-                      <Button size="sm" variant="outline">
-                        Registrar epicrisis
-                      </Button>
-                    }
-                  />
-                </div>
-              ) : null}
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Fecha</TableHead>
-                    <TableHead>Evolución</TableHead>
-                    <TableHead className="hidden md:table-cell">Tratamiento</TableHead>
-                    <TableHead className="hidden md:table-cell">Próximo control</TableHead>
-                    <TableHead className="hidden md:table-cell">Profesional</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {evoluciones.map((e) => (
-                    <TableRow key={e.id}>
-                      <TableCell className="text-muted-foreground">{e.fecha}</TableCell>
-                      <TableCell className="max-w-xs whitespace-normal break-words">
-                        <div className="flex flex-col gap-1">
-                          {e.tipo === "epicrisis" ? (
-                            <Badge variant="outline" className="w-fit text-amber-600">
-                              Epicrisis
-                            </Badge>
-                          ) : null}
-                          {e.evolucion}
-                        </div>
-                      </TableCell>
-                      <TableCell className="hidden text-muted-foreground md:table-cell">
-                        {e.tratamientos?.tipos_tratamiento?.nombre ?? "—"}
-                      </TableCell>
-                      <TableCell className="hidden text-muted-foreground md:table-cell">
-                        {e.proximo_control_fecha ?? "—"}
-                      </TableCell>
-                      <TableCell className="hidden text-muted-foreground md:table-cell">
-                        {e.profesional?.nombre ?? "—"}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {evoluciones.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center text-muted-foreground">
-                        Sin evoluciones registradas.
                       </TableCell>
                     </TableRow>
                   ) : null}

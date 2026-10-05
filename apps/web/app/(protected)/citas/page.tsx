@@ -7,6 +7,7 @@ import { CitaDialog } from "./cita-dialog";
 import { BloqueoDialog } from "./bloqueo-dialog";
 import { FiltrosAgenda } from "./filtros-agenda";
 import { AgendaCalendario } from "./agenda-calendario";
+import { AtencionSinCitaDialog } from "../atenciones/atencion-sin-cita-dialog";
 import { nombreCompleto, type CitaRow } from "./tipos";
 import { getSedesActivas, getMediosPagoActivos, getTiposTratamientoActivos } from "@/lib/catalogos";
 import { tieneInfoPendiente } from "@/lib/pacientes/completitud";
@@ -72,6 +73,7 @@ export default async function CitasPage({
     { data: puedeCrear },
     { data: puedeEditar },
     { data: puedeCrearTratamiento },
+    { data: puedeAnularTratamiento },
     { data: puedeRegistrarConsumo },
     { data: puedeRevertirConsumo },
     { data: tieneEntitlementAnexos },
@@ -87,6 +89,7 @@ export default async function CitasPage({
     supabase.rpc("has_permission", { modulo_code: "citas", permiso_code: "CREATE" }),
     supabase.rpc("has_permission", { modulo_code: "citas", permiso_code: "EDIT" }),
     supabase.rpc("has_permission", { modulo_code: "tratamientos", permiso_code: "CREATE" }),
+    supabase.rpc("has_permission", { modulo_code: "tratamientos", permiso_code: "VOID" }),
     supabase.rpc("has_permission", { modulo_code: "inventario", permiso_code: "CREATE" }),
     supabase.rpc("has_permission", { modulo_code: "inventario", permiso_code: "VOID" }),
     supabase.rpc("has_entitlement", { modulo_code: "tratamientos", feature_code: "anexos" }),
@@ -130,7 +133,7 @@ export default async function CitasPage({
        tipos_tratamiento(nombre),
        ${embedConsultorio},
        profesional:usuarios!citas_profesional_id_fkey(nombre),
-       tratamientos(count), evoluciones_paciente(count)`,
+       atenciones(id)`,
     )
     .gte("fecha", format(desde, "yyyy-MM-dd"))
     .lte("fecha", format(hasta, "yyyy-MM-dd"))
@@ -153,16 +156,10 @@ export default async function CitasPage({
   const insumos = insumosData ?? [];
   const lotes = lotesData ?? [];
   const puedeEliminarArchivos = esAdministrador(usuario);
+  const puedeVerAnulados = esAdministrador(usuario);
   const citas = (citasData ?? []).map((c) => {
-    const fila = c as unknown as CitaRow & {
-      tratamientos?: { count: number }[];
-      evoluciones_paciente?: { count: number }[];
-    };
-    return {
-      ...fila,
-      tratamientos_count: fila.tratamientos?.[0]?.count ?? 0,
-      evoluciones_count: fila.evoluciones_paciente?.[0]?.count ?? 0,
-    };
+    const fila = c as unknown as CitaRow & { atenciones?: { id: string }[] };
+    return { ...fila, atencion_id: fila.atenciones?.[0]?.id ?? null };
   });
 
   return (
@@ -196,6 +193,27 @@ export default async function CitasPage({
               trigger={<Button>Nueva cita</Button>}
             />
           ) : null}
+          {puedeCrearTratamiento ? (
+            <AtencionSinCitaDialog
+              pacientes={pacientes}
+              profesionales={profesionales}
+              usuarioActualId={usuario.id}
+              tiposTratamiento={tiposTratamiento}
+              sedes={sedes}
+              mediosPago={mediosPago}
+              insumos={insumos}
+              lotes={lotes}
+              puedeCrearTratamiento={!!puedeCrearTratamiento}
+              puedeAnularTratamiento={!!puedeAnularTratamiento}
+              puedeVerAnulados={puedeVerAnulados}
+              puedeRegistrarConsumo={!!puedeRegistrarConsumo}
+              puedeRevertirConsumo={!!puedeRevertirConsumo}
+              puedeEliminarArchivos={puedeEliminarArchivos}
+              tieneEntitlementAnexos={!!tieneEntitlementAnexos}
+              pacientesPendientes={pacientesPendientes}
+              trigger={<Button variant="outline">Atención sin cita</Button>}
+            />
+          ) : null}
         </div>
       </div>
 
@@ -208,6 +226,8 @@ export default async function CitasPage({
         puedeEditar={!!puedeEditar}
         puedeCrear={!!puedeCrear}
         puedeCrearTratamiento={!!puedeCrearTratamiento}
+        puedeAnularTratamiento={!!puedeAnularTratamiento}
+        puedeVerAnulados={puedeVerAnulados}
         pacientes={pacientes}
         tiposTratamiento={tiposTratamiento}
         profesionales={profesionales}

@@ -96,7 +96,7 @@ export async function crearTratamiento(
 ): Promise<ActionState> {
   const datos = datosTratamientoDesdeForm(formData);
   const corrigeA = campoOpcional(formData, "corrigeA");
-  const citaId = campoOpcional(formData, "citaId");
+  const atencionId = campoOpcional(formData, "atencionId");
 
   const errorValidacion = validarDatosTratamiento(datos);
   if (errorValidacion) return { error: errorValidacion };
@@ -113,23 +113,52 @@ export async function crearTratamiento(
     };
   }
 
-  // citaId viene de un campo oculto del formulario — no confiar en él tal
-  // cual. RLS ya excluye una cita de otra clínica de este select, pero
-  // además hay que confirmar que sea la cita de ESTE paciente: sin esto,
-  // cualquiera con permiso CREATE podría enlazar un tratamiento a una cita
-  // ajena si conociera su id, contaminando el ticket de esa cita.
-  let citaIdValidado: string | null = null;
-  if (!corrigeA && citaId) {
-    const { data: citaDestino } = await supabase
-      .from("citas")
-      .select("id, paciente_id")
-      .eq("id", citaId)
+  // Todo tratamiento cuelga de una atención — nunca de una cita
+  // directamente. Si se corrige uno ya anulado, hereda la atención del
+  // original (más abajo). Si no, o ya viene de un atencionId (desde el
+  // detalle de una atención) — se valida que sea del mismo paciente, el
+  // mismo criterio de seguridad que ya existía para citaId — o, si no
+  // viene ninguno (ej. el botón "Nuevo tratamiento" de /tratamientos, que
+  // deja elegir cualquier paciente sin pasar antes por una atención), se
+  // crea una atención sin cita al vuelo para que el tratamiento nunca
+  // quede sin su contenedor.
+  let atencionIdFinal: string | null = null;
+  if (corrigeA) {
+    const { data: original } = await supabase
+      .from("tratamientos")
+      .select("atencion_id")
+      .eq("id", corrigeA)
       .maybeSingle();
-    if (!citaDestino || citaDestino.paciente_id !== datos.pacienteId) {
-      return { error: "La cita indicada no es válida para este paciente." };
+    atencionIdFinal = original?.atencion_id ?? null;
+  } else if (atencionId) {
+    const { data: atencionDestino } = await supabase
+      .from("atenciones")
+      .select("id, paciente_id")
+      .eq("id", atencionId)
+      .maybeSingle();
+    if (!atencionDestino || atencionDestino.paciente_id !== datos.pacienteId) {
+      return { error: "La atención indicada no es válida para este paciente." };
     }
-    citaIdValidado = citaId;
+    atencionIdFinal = atencionId;
+  } else {
+    const { data: nuevaAtencion, error: errorAtencion } = await supabase
+      .from("atenciones")
+      .insert({
+        clinica_id: check.usuario.clinica_id,
+        paciente_id: datos.pacienteId,
+        profesional_id: datos.profesionalId,
+        fecha: datos.fecha,
+        created_by: check.usuario.id,
+      })
+      .select("id")
+      .single();
+    if (errorAtencion || !nuevaAtencion) {
+      return { error: "No se pudo crear la atención para este tratamiento." };
+    }
+    atencionIdFinal = nuevaAtencion.id;
   }
+
+  if (!atencionIdFinal) return { error: "No se pudo determinar la atención de este tratamiento." };
 
   const { data: tratamiento, error } = await supabase
     .from("tratamientos")
@@ -145,7 +174,7 @@ export async function crearTratamiento(
       notas: datos.notas,
       cufe: datos.cufe,
       corrige_a: corrigeA,
-      cita_id: corrigeA ? undefined : citaIdValidado,
+      atencion_id: atencionIdFinal,
       created_by: check.usuario.id,
     })
     .select("id")
@@ -153,12 +182,8 @@ export async function crearTratamiento(
 
   if (error || !tratamiento) return { error: "No se pudo registrar el tratamiento." };
 
-  if (citaIdValidado) {
-    await supabase.from("citas").update({ estado: "atendida" }).eq("id", citaIdValidado);
-    revalidatePath("/citas");
-  }
-
   revalidatePath("/tratamientos");
+  revalidatePath("/citas");
   return null;
 }
 
@@ -191,12 +216,12 @@ export async function editarTratamiento(
     };
   }
 
-  // El corregido hereda el cita_id del original, para no perder el enlace
-  // con la cita solo por haber corregido un error (el formulario no manda
-  // este campo, así que se consulta aparte).
+  // El corregido hereda la atención del original, para no perder el
+  // enlace solo por haber corregido un error (el formulario no manda este
+  // campo, así que se consulta aparte).
   const { data: original } = await supabase
     .from("tratamientos")
-    .select("cita_id")
+    .select("atencion_id")
     .eq("id", editaId)
     .maybeSingle();
 
@@ -214,7 +239,7 @@ export async function editarTratamiento(
       notas: datos.notas,
       cufe: datos.cufe,
       corrige_a: editaId,
-      cita_id: original?.cita_id ?? null,
+      atencion_id: original?.atencion_id,
       created_by: checkCrear.usuario.id,
     })
     .select("id")
@@ -561,7 +586,28 @@ export async function urlFirmadaAnexo(storagePath: string, descargar = false) {
 // listarFotosTratamiento/listarAnexosTratamiento) — no se exige un permiso
 // explícito, pero sí se filtra por clinica_id para no exponer tratamientos
 // de otra clínica.
-export async function listarTratamientosDeCita(citaId: string) {
+export type TratamientoDeAtencion = {
+  id: string;
+  paciente_id: string;
+  tipo_tratamiento_id: string;
+  profesional_id: string;
+  sede_id: string;
+  medio_pago_id: string;
+  fecha: string;
+  costo: number | null;
+  notas: string | null;
+  cufe: string | null;
+  anulado: boolean;
+  anulado_motivo: string | null;
+  tipos_tratamiento: { nombre: string } | null;
+  sedes: { nombre: string } | null;
+  profesional: { nombre: string } | null;
+  tieneFotos: boolean;
+  tieneAnexos: boolean;
+  tieneConsentimiento: boolean;
+};
+
+export async function listarTratamientosDeAtencion(atencionId: string): Promise<TratamientoDeAtencion[]> {
   const usuario = await getCurrentUsuario();
   if (!usuario) return [];
 
@@ -569,40 +615,29 @@ export async function listarTratamientosDeCita(citaId: string) {
   const { data } = await supabase
     .from("tratamientos")
     .select(
-      "id, costo, anulado, sede_id, tipos_tratamiento(nombre), tratamiento_fotos(count), tratamiento_anexos(count)",
+      `id, paciente_id, tipo_tratamiento_id, profesional_id, sede_id, medio_pago_id,
+       fecha, costo, notas, cufe, anulado, anulado_motivo,
+       tipos_tratamiento(nombre), sedes(nombre),
+       profesional:usuarios!tratamientos_profesional_id_fkey(nombre),
+       tratamiento_fotos(count), tratamiento_anexos(count), tratamiento_consentimientos(count)`,
     )
-    .eq("cita_id", citaId)
+    .eq("atencion_id", atencionId)
     .eq("clinica_id", usuario.clinica_id)
     .order("created_at");
 
   return (data ?? []).map((fila) => {
-    const t = fila as unknown as {
-      id: string;
-      costo: number | null;
-      anulado: boolean;
-      sede_id: string;
-      tipos_tratamiento: { nombre: string } | null;
+    const t = fila as unknown as Omit<TratamientoDeAtencion, "tieneFotos" | "tieneAnexos" | "tieneConsentimiento"> & {
       tratamiento_fotos?: { count: number }[];
       tratamiento_anexos?: { count: number }[];
+      tratamiento_consentimientos?: { count: number }[];
     };
     return {
-      id: t.id,
-      costo: t.costo,
-      anulado: t.anulado,
-      sede_id: t.sede_id,
-      tipos_tratamiento: t.tipos_tratamiento,
+      ...t,
       tieneFotos: (t.tratamiento_fotos?.[0]?.count ?? 0) > 0,
       tieneAnexos: (t.tratamiento_anexos?.[0]?.count ?? 0) > 0,
+      tieneConsentimiento: (t.tratamiento_consentimientos?.[0]?.count ?? 0) > 0,
     };
-  }) as {
-    id: string;
-    costo: number | null;
-    anulado: boolean;
-    sede_id: string;
-    tipos_tratamiento: { nombre: string } | null;
-    tieneFotos: boolean;
-    tieneAnexos: boolean;
-  }[];
+  });
 }
 
 export async function listarAnexosTratamiento(tratamientoId: string) {

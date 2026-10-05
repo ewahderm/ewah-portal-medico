@@ -153,6 +153,8 @@ export function AgendaCalendario({
   puedeEditar,
   puedeCrear,
   puedeCrearTratamiento,
+  puedeAnularTratamiento,
+  puedeVerAnulados,
   pacientes,
   tiposTratamiento,
   profesionales,
@@ -174,6 +176,8 @@ export function AgendaCalendario({
   puedeEditar: boolean;
   puedeCrear: boolean;
   puedeCrearTratamiento: boolean;
+  puedeAnularTratamiento: boolean;
+  puedeVerAnulados: boolean;
   pacientes: { id: string; nombre: string }[];
   tiposTratamiento: { id: string; nombre: string }[];
   profesionales: { id: string; nombre: string }[];
@@ -339,7 +343,8 @@ export function AgendaCalendario({
           }}
           puedeEditar={puedeEditar}
           puedeCrearTratamiento={puedeCrearTratamiento}
-          pacientes={pacientes}
+          puedeAnularTratamiento={puedeAnularTratamiento}
+          puedeVerAnulados={puedeVerAnulados}
           tiposTratamiento={tiposTratamiento}
           profesionales={profesionales}
           sedes={sedes}

@@ -24,7 +24,8 @@ export function CitasTabla({
   citas,
   puedeEditar,
   puedeCrearTratamiento,
-  pacientes,
+  puedeAnularTratamiento,
+  puedeVerAnulados,
   tiposTratamiento,
   profesionales,
   sedes,
@@ -41,7 +42,8 @@ export function CitasTabla({
   citas: CitaRow[];
   puedeEditar: boolean;
   puedeCrearTratamiento: boolean;
-  pacientes: Opcion[];
+  puedeAnularTratamiento: boolean;
+  puedeVerAnulados: boolean;
   tiposTratamiento: Opcion[];
   profesionales: Opcion[];
   sedes: Opcion[];
@@ -118,7 +120,8 @@ export function CitasTabla({
           }}
           puedeEditar={puedeEditar}
           puedeCrearTratamiento={puedeCrearTratamiento}
-          pacientes={pacientes}
+          puedeAnularTratamiento={puedeAnularTratamiento}
+          puedeVerAnulados={puedeVerAnulados}
           tiposTratamiento={tiposTratamiento}
           profesionales={profesionales}
           sedes={sedes}

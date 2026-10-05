@@ -23,7 +23,7 @@ import { hoy } from "@/lib/format";
 
 export function EvolucionDialog({
   pacienteId,
-  citaId,
+  atencionId,
   profesionales,
   usuarioActualId,
   tratamientos,
@@ -32,26 +32,27 @@ export function EvolucionDialog({
   onGuardado,
 }: {
   pacienteId: string;
-  /** Presente cuando se abre desde el detalle de una cita — al guardar,
-   * esa cita se marca "atendida" aunque no se registre ningún tratamiento. */
-  citaId?: string;
+  /** Toda evolución/epicrisis cuelga de una atención — el detalle de la
+   * atención es el único lugar desde donde se abre este diálogo. */
+  atencionId: string;
   profesionales: Opcion[];
   usuarioActualId: string;
   /** Tratamientos previos de este paciente, para ligar opcionalmente la
-   * evolución a uno de ellos (seguimiento de un procedimiento concreto).
-   * Se omite desde el detalle de una cita: ese flujo es para un control
-   * sin procedimiento, por eso solo aparece en la ficha del paciente. */
+   * evolución a uno de ellos (seguimiento de un procedimiento concreto,
+   * incluso de una atención anterior). */
   tratamientos?: Opcion[];
-  /** "epicrisis" solo se usa desde la pestaña Evoluciones de la ficha del
-   * paciente — cambia el título/botón y marca la fila para distinguirla
-   * de un control normal, pero es la misma tabla y el mismo permiso. */
-  tipo?: "seguimiento" | "epicrisis";
+  /** "epicrisis_atencion" cierra solo esta atención; "epicrisis_general"
+   * cierra todo el historial de tratamientos del paciente — cambia el
+   * título/botón, misma tabla y mismo permiso en los tres casos. */
+  tipo?: "seguimiento" | "epicrisis_atencion" | "epicrisis_general";
   trigger: React.ReactElement;
   onGuardado?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState(crearEvolucion, null);
-  const esEpicrisis = tipo === "epicrisis";
+  const esEpicrisis = tipo !== "seguimiento";
+  const tituloEpicrisis =
+    tipo === "epicrisis_general" ? "Registrar epicrisis general" : "Registrar epicrisis de esta atención";
 
   useCerrarAlExito(pending, !state?.error, () => {
     setOpen(false);
@@ -64,13 +65,13 @@ export function EvolucionDialog({
       <DialogTrigger render={trigger} />
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{esEpicrisis ? "Registrar epicrisis" : "Registrar evolución"}</DialogTitle>
+          <DialogTitle>{esEpicrisis ? tituloEpicrisis : "Registrar evolución"}</DialogTitle>
         </DialogHeader>
 
         <form action={formAction} className="space-y-5">
           <input type="hidden" name="pacienteId" value={pacienteId} />
+          <input type="hidden" name="atencionId" value={atencionId} />
           <input type="hidden" name="tipo" value={tipo} />
-          {citaId ? <input type="hidden" name="citaId" value={citaId} /> : null}
 
           {state?.error ? (
             <Alert variant="destructive">
@@ -117,9 +118,11 @@ export function EvolucionDialog({
               rows={5}
               required
               placeholder={
-                esEpicrisis
-                  ? "Resumen de cierre: diagnóstico, procedimientos realizados, resultado y recomendaciones..."
-                  : "¿Cómo evolucionó el paciente? Hallazgos, complicaciones, plan..."
+                tipo === "epicrisis_general"
+                  ? "Resumen de cierre de todo el historial de tratamientos del paciente: diagnóstico, procedimientos realizados a lo largo del tiempo, resultado y recomendaciones..."
+                  : tipo === "epicrisis_atencion"
+                    ? "Resumen de cierre de esta atención: diagnóstico, procedimientos realizados hoy, resultado y recomendaciones..."
+                    : "¿Cómo evolucionó el paciente? Hallazgos, complicaciones, plan..."
               }
             />
           </div>
@@ -130,7 +133,7 @@ export function EvolucionDialog({
           </div>
 
           <Button type="submit" className="w-full" disabled={pending}>
-            {pending ? "Guardando..." : esEpicrisis ? "Registrar epicrisis" : "Registrar evolución"}
+            {pending ? "Guardando..." : esEpicrisis ? tituloEpicrisis : "Registrar evolución"}
           </Button>
         </form>
       </DialogContent>
