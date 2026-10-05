@@ -172,13 +172,12 @@ type AnamnesisRow = {
   medicamentos_actuales: string[];
   medicamentos_otros: string | null;
   habitos: string[];
+  habitos_otros: string | null;
   fototipo: string | null;
   talla_cm: number | null;
   peso_kg: number | null;
   tipo_sangre: string | null;
   examen_fisico_hallazgos: string | null;
-  zona_a_tratar: string | null;
-  proximo_control_fecha: string | null;
   profesional: { nombre: string } | null;
 };
 
@@ -335,8 +334,7 @@ export default async function PacienteDetallePage({
       .select(
         `id, fecha, motivo_consulta, antecedentes_personales, antecedentes_otros,
          alergias, alergias_otras, medicamentos_actuales, medicamentos_otros, habitos,
-         fototipo, talla_cm, peso_kg, tipo_sangre, examen_fisico_hallazgos, zona_a_tratar,
-         proximo_control_fecha,
+         habitos_otros, fototipo, talla_cm, peso_kg, tipo_sangre, examen_fisico_hallazgos,
          profesional:usuarios!anamnesis_paciente_profesional_id_fkey(nombre)`,
       )
       .eq("paciente_id", id)
@@ -523,7 +521,6 @@ export default async function PacienteDetallePage({
                   pacienteId={paciente.id}
                   profesionales={profesionales}
                   usuarioActualId={usuario.id}
-                  tratamientos={tratamientosParaEvolucion}
                   ultimaAnamnesis={ultimaAnamnesis}
                   trigger={<Button size="sm">Nueva anamnesis</Button>}
                 />
@@ -564,6 +561,7 @@ export default async function PacienteDetallePage({
                       </TableCell>
                       <TableCell className="hidden max-w-xs whitespace-normal break-words text-muted-foreground lg:table-cell">
                         {etiquetasHabitos(a.habitos)}
+                        {a.habitos_otros ? ` · ${a.habitos_otros}` : ""}
                       </TableCell>
                       <TableCell className="hidden text-muted-foreground lg:table-cell">
                         {[

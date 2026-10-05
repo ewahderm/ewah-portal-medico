@@ -37,6 +37,9 @@ export const MEDICAMENTOS_ACTUALES = [
 export const HABITOS = [
   { value: "fuma", label: "Fuma" },
   { value: "exposicion_solar", label: "Exposición solar frecuente" },
+  { value: "ejercicio", label: "Hace ejercicio" },
+  { value: "alcohol", label: "Consumo de alcohol" },
+  { value: "sustancias", label: "Consumo de sustancias" },
 ];
 
 export const TIPOS_SANGRE = [

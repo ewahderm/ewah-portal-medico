@@ -29,7 +29,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Combobox } from "@/components/ui/combobox";
-import { toItems, toItemsOpcional, type Opcion } from "@/lib/forms/opciones";
+import { toItems, type Opcion } from "@/lib/forms/opciones";
 import { hoy } from "@/lib/format";
 
 type OpcionChip = { value: string; label: string };
@@ -95,6 +95,7 @@ export type UltimaAnamnesis = {
   medicamentos_actuales: string[];
   medicamentos_otros: string | null;
   habitos: string[];
+  habitos_otros: string | null;
   fototipo: string | null;
   tipo_sangre: string | null;
 };
@@ -103,7 +104,6 @@ export function AnamnesisDialog({
   pacienteId,
   profesionales,
   usuarioActualId,
-  tratamientos,
   ultimaAnamnesis,
   trigger,
   onGuardado,
@@ -111,9 +111,6 @@ export function AnamnesisDialog({
   pacienteId: string;
   profesionales: Opcion[];
   usuarioActualId: string;
-  /** Tratamientos previos de este paciente, para ligar opcionalmente esta
-   * anamnesis a uno de ellos (examen previo a un procedimiento concreto). */
-  tratamientos?: Opcion[];
   /** La anamnesis más reciente de este paciente, si existe — habilita el
    * botón "Copiar de la última anamnesis". */
   ultimaAnamnesis?: UltimaAnamnesis | null;
@@ -130,6 +127,7 @@ export function AnamnesisDialog({
   const [medicamentos, setMedicamentos] = useState<Set<string>>(new Set());
   const [medicamentosOtros, setMedicamentosOtros] = useState("");
   const [habitos, setHabitos] = useState<Set<string>>(new Set());
+  const [habitosOtros, setHabitosOtros] = useState("");
   const [fototipo, setFototipo] = useState(SIN_SELECCION);
   // Tipo de sangre no cambia entre visitas, así que sí se copia — talla y
   // peso en cambio se vuelven a medir cada vez, por eso arrancan en blanco
@@ -151,6 +149,7 @@ export function AnamnesisDialog({
     setMedicamentos(new Set(ultimaAnamnesis.medicamentos_actuales));
     setMedicamentosOtros(ultimaAnamnesis.medicamentos_otros ?? "");
     setHabitos(new Set(ultimaAnamnesis.habitos));
+    setHabitosOtros(ultimaAnamnesis.habitos_otros ?? "");
     setFototipo(ultimaAnamnesis.fototipo ?? SIN_SELECCION);
     setTipoSangre(ultimaAnamnesis.tipo_sangre ?? SIN_SELECCION);
   }
@@ -205,19 +204,6 @@ export function AnamnesisDialog({
               />
             </div>
           </div>
-
-          {tratamientos && tratamientos.length > 0 ? (
-            <div className="space-y-2">
-              <Label htmlFor="tratamientoId">Tratamiento relacionado (opcional)</Label>
-              <Combobox
-                id="tratamientoId"
-                name="tratamientoId"
-                items={toItemsOpcional(tratamientos, SIN_SELECCION, "Ninguno")}
-                defaultValue={SIN_SELECCION}
-                placeholder="Selecciona"
-              />
-            </div>
-          ) : null}
 
           <div className="space-y-2">
             <Label htmlFor="motivoConsulta">Motivo de consulta y enfermedad actual</Label>
@@ -283,6 +269,12 @@ export function AnamnesisDialog({
           <div className="space-y-2">
             <Label>Hábitos (opcional)</Label>
             <GrupoChips name="habitos" opciones={HABITOS} seleccionados={habitos} onChange={setHabitos} />
+            <Input
+              placeholder="Otros (opcional)"
+              value={habitosOtros}
+              onChange={(e) => setHabitosOtros(e.target.value)}
+              name="habitosOtros"
+            />
           </div>
 
           <div className="space-y-2 border-t pt-4">
@@ -311,22 +303,16 @@ export function AnamnesisDialog({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="fototipo">Fototipo (opcional)</Label>
-              <Combobox
-                id="fototipo"
-                name="fototipo"
-                items={[{ value: SIN_SELECCION, label: "Sin registrar" }, ...FOTOTIPOS]}
-                value={fototipo}
-                onValueChange={(v) => setFototipo(String(v ?? SIN_SELECCION))}
-                placeholder="Selecciona"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="zonaATratar">Zona a tratar (opcional)</Label>
-              <Input id="zonaATratar" name="zonaATratar" placeholder="Ej: Tercio superior" />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="fototipo">Fototipo (opcional)</Label>
+            <Combobox
+              id="fototipo"
+              name="fototipo"
+              items={[{ value: SIN_SELECCION, label: "Sin registrar" }, ...FOTOTIPOS]}
+              value={fototipo}
+              onValueChange={(v) => setFototipo(String(v ?? SIN_SELECCION))}
+              placeholder="Selecciona"
+            />
           </div>
 
           <div className="space-y-2">
@@ -337,11 +323,6 @@ export function AnamnesisDialog({
               rows={3}
               placeholder="Descripción de lo observado al examen"
             />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="proximoControlFecha">Próximo control (opcional)</Label>
-            <Input id="proximoControlFecha" name="proximoControlFecha" type="date" />
           </div>
 
           <Button type="submit" className="w-full" disabled={pending}>

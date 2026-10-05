@@ -18,7 +18,6 @@ export async function crearAnamnesis(
 ): Promise<ActionState> {
   const pacienteId = String(formData.get("pacienteId") ?? "");
   const citaId = campoOpcional(formData, "citaId");
-  const tratamientoId = valorOpcionalSelect(formData, "tratamientoId");
   const profesionalId = String(formData.get("profesionalId") ?? "");
   const fecha = String(formData.get("fecha") ?? "").trim();
   const motivoConsulta = String(formData.get("motivoConsulta") ?? "").trim();
@@ -29,13 +28,12 @@ export async function crearAnamnesis(
   const medicamentosActuales = formData.getAll("medicamentosActuales").map(String);
   const medicamentosOtros = campoOpcional(formData, "medicamentosOtros");
   const habitos = formData.getAll("habitos").map(String);
+  const habitosOtros = campoOpcional(formData, "habitosOtros");
   const fototipo = valorOpcionalSelect(formData, "fototipo");
   const tallaCm = campoOpcional(formData, "tallaCm");
   const pesoKg = campoOpcional(formData, "pesoKg");
   const tipoSangre = valorOpcionalSelect(formData, "tipoSangre");
   const examenFisicoHallazgos = campoOpcional(formData, "examenFisicoHallazgos");
-  const zonaATratar = campoOpcional(formData, "zonaATratar");
-  const proximoControlFecha = campoOpcional(formData, "proximoControlFecha");
 
   if (!pacienteId || !profesionalId || !fecha || !motivoConsulta) {
     return { error: "Fecha, profesional y motivo de consulta son obligatorios." };
@@ -61,23 +59,9 @@ export async function crearAnamnesis(
     citaIdValidado = citaId;
   }
 
-  let tratamientoIdValidado: string | null = null;
-  if (tratamientoId) {
-    const { data: tratamientoDestino } = await supabase
-      .from("tratamientos")
-      .select("id, paciente_id")
-      .eq("id", tratamientoId)
-      .maybeSingle();
-    if (!tratamientoDestino || tratamientoDestino.paciente_id !== pacienteId) {
-      return { error: "El tratamiento indicado no es válido para este paciente." };
-    }
-    tratamientoIdValidado = tratamientoId;
-  }
-
   const { error } = await supabase.from("anamnesis_paciente").insert({
     clinica_id: check.usuario.clinica_id,
     paciente_id: pacienteId,
-    tratamiento_id: tratamientoIdValidado,
     cita_id: citaIdValidado,
     profesional_id: profesionalId,
     fecha,
@@ -89,13 +73,12 @@ export async function crearAnamnesis(
     medicamentos_actuales: medicamentosActuales,
     medicamentos_otros: medicamentosOtros,
     habitos,
+    habitos_otros: habitosOtros,
     fototipo,
     talla_cm: tallaCm ? Number(tallaCm) : null,
     peso_kg: pesoKg ? Number(pesoKg) : null,
     tipo_sangre: tipoSangre,
     examen_fisico_hallazgos: examenFisicoHallazgos,
-    zona_a_tratar: zonaATratar,
-    proximo_control_fecha: proximoControlFecha,
     created_by: check.usuario.id,
   });
 
