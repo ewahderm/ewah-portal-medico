@@ -3,6 +3,15 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requirePermiso as requirePermisoBase } from "@/lib/auth/requirePermiso";
+import { requireAdminExport } from "@/lib/exportar/acceso";
+import { leerFilasXlsx } from "@/lib/exportar/xlsx";
+import { COLUMNAS_PACIENTES } from "@/lib/pacientes/exportar";
+import {
+  getTiposIdentificacionActivos,
+  getGenerosActivos,
+  getPaisesActivos,
+  getCanalesCaptacionActivos,
+} from "@/lib/catalogos";
 import type { ActionState } from "@/lib/auth/actions";
 import { valorOpcionalSelect, campoOpcional } from "@/lib/forms/opcional";
 import { nombreCompleto } from "@/lib/pacientes/nombre";
@@ -196,4 +205,157 @@ export async function toggleActivoPaciente(id: string, activo: boolean) {
   if (error) throw new Error("No se pudo actualizar el estado del paciente.");
 
   revalidatePath("/pacientes");
+}
+
+export type ImportarPacientesResultado =
+  | { error: string }
+  | { importados: number; errores: { fila: number; motivo: string }[] };
+
+// Exclusivo de Administrador (requireAdminExport, no requirePermiso) — ver
+// lib/exportar/acceso.ts. Inserta fila por fila (no un solo insert masivo)
+// a propósito: así un duplicado o un dato inválido en una fila no tumba
+// todo el archivo, y el resumen final puede decir exactamente cuál falló.
+export async function importarPacientes(formData: FormData): Promise<ImportarPacientesResultado> {
+  const usuario = await requireAdminExport();
+
+  const archivo = formData.get("archivo");
+  if (!(archivo instanceof File) || archivo.size === 0) {
+    return { error: "Selecciona un archivo .xlsx." };
+  }
+
+  const buffer = Buffer.from(await archivo.arrayBuffer());
+  const filas = leerFilasXlsx(buffer, COLUMNAS_PACIENTES);
+  if (filas.length === 0) {
+    return { error: "El archivo no tiene filas para importar." };
+  }
+
+  const supabase = await createClient();
+  const [tiposIdentificacion, generos, paises, canalesCaptacion, { data: clinica }, { count: pacientesActuales }] =
+    await Promise.all([
+      getTiposIdentificacionActivos(supabase),
+      getGenerosActivos(supabase),
+      getPaisesActivos(supabase),
+      getCanalesCaptacionActivos(supabase),
+      supabase.from("clinicas").select("planes(nombre, limite_pacientes)").eq("id", usuario.clinica_id).maybeSingle(),
+      supabase.from("pacientes").select("id", { count: "exact", head: true }).eq("clinica_id", usuario.clinica_id).eq("activo", true),
+    ]);
+
+  // Mapa de nombre (sin mayúsculas/espacios) → id, para resolver el texto
+  // legible que trae el Excel de vuelta a la llave foránea real.
+  function mapaPorNombre(filas: { id: string; nombre: string }[]) {
+    return new Map(filas.map((f) => [f.nombre.trim().toLowerCase(), f.id]));
+  }
+  const idPorTipoIdentificacion = mapaPorNombre(tiposIdentificacion);
+  const idPorGenero = mapaPorNombre(generos);
+  const idPorPais = mapaPorNombre(paises);
+  const idPorCanalCaptacion = mapaPorNombre(canalesCaptacion);
+
+  const plan = clinica?.planes as unknown as { nombre: string; limite_pacientes: number | null } | null;
+  let cuposDisponibles = plan?.limite_pacientes
+    ? plan.limite_pacientes - (pacientesActuales ?? 0)
+    : Infinity;
+  if (cuposDisponibles <= 0) {
+    return {
+      importados: 0,
+      errores: [
+        {
+          fila: 0,
+          motivo: `Tu plan ${plan?.nombre} ya alcanzó el límite de ${plan?.limite_pacientes} pacientes activos.`,
+        },
+      ],
+    };
+  }
+
+  const errores: { fila: number; motivo: string }[] = [];
+  let importados = 0;
+
+  for (let i = 0; i < filas.length; i++) {
+    const fila = filas[i];
+    const numeroFila = i + 2; // +1 por el encabezado, +1 porque Excel es 1-indexado
+
+    if (cuposDisponibles <= 0) {
+      errores.push({ fila: numeroFila, motivo: "No se importó: se alcanzó el límite de pacientes del plan." });
+      continue;
+    }
+
+    if (!fila.tipo_identificacion || !fila.numero_identificacion || !fila.primer_nombre || !fila.primer_apellido || !fila.email || !fila.telefono1) {
+      errores.push({
+        fila: numeroFila,
+        motivo: "Faltan campos obligatorios (tipo/número de identificación, nombre, apellido, correo o teléfono).",
+      });
+      continue;
+    }
+
+    const tipoIdentificacionId = idPorTipoIdentificacion.get(fila.tipo_identificacion.toLowerCase());
+    if (!tipoIdentificacionId) {
+      errores.push({ fila: numeroFila, motivo: `Tipo de identificación "${fila.tipo_identificacion}" no existe.` });
+      continue;
+    }
+
+    const generoId = fila.genero ? idPorGenero.get(fila.genero.toLowerCase()) : undefined;
+    if (fila.genero && !generoId) {
+      errores.push({ fila: numeroFila, motivo: `Género "${fila.genero}" no existe.` });
+      continue;
+    }
+
+    const nacionalidadId = fila.nacionalidad ? idPorPais.get(fila.nacionalidad.toLowerCase()) : undefined;
+    if (fila.nacionalidad && !nacionalidadId) {
+      errores.push({ fila: numeroFila, motivo: `Nacionalidad "${fila.nacionalidad}" no existe.` });
+      continue;
+    }
+
+    const paisResidenciaId = fila.pais_residencia ? idPorPais.get(fila.pais_residencia.toLowerCase()) : undefined;
+    if (fila.pais_residencia && !paisResidenciaId) {
+      errores.push({ fila: numeroFila, motivo: `País de residencia "${fila.pais_residencia}" no existe.` });
+      continue;
+    }
+
+    const canalCaptacionId = fila.canal_captacion ? idPorCanalCaptacion.get(fila.canal_captacion.toLowerCase()) : undefined;
+    if (fila.canal_captacion && !canalCaptacionId) {
+      errores.push({ fila: numeroFila, motivo: `Canal de captación "${fila.canal_captacion}" no existe.` });
+      continue;
+    }
+
+    if (fila.fecha_nacimiento && !/^\d{4}-\d{2}-\d{2}$/.test(fila.fecha_nacimiento)) {
+      errores.push({ fila: numeroFila, motivo: "Fecha de nacimiento debe tener el formato AAAA-MM-DD." });
+      continue;
+    }
+
+    const { error } = await supabase.from("pacientes").insert({
+      clinica_id: usuario.clinica_id,
+      created_by: usuario.id,
+      tipo_identificacion_id: tipoIdentificacionId,
+      numero_identificacion: fila.numero_identificacion,
+      primer_nombre: fila.primer_nombre,
+      segundo_nombre: fila.segundo_nombre || null,
+      primer_apellido: fila.primer_apellido,
+      segundo_apellido: fila.segundo_apellido || null,
+      fecha_nacimiento: fila.fecha_nacimiento || null,
+      genero_id: generoId ?? null,
+      nacionalidad_id: nacionalidadId ?? null,
+      pais_residencia_id: paisResidenciaId ?? null,
+      canal_captacion_id: canalCaptacionId ?? null,
+      email: fila.email,
+      telefono1: fila.telefono1,
+      telefono2: fila.telefono2 || null,
+      direccion: fila.direccion || null,
+      contacto_emergencia_nombre: fila.contacto_emergencia_nombre || null,
+      contacto_emergencia_telefono: fila.contacto_emergencia_telefono || null,
+    });
+
+    if (error) {
+      const motivo =
+        error.code === "23505"
+          ? "Ya existe un paciente con ese tipo y número de identificación."
+          : "No se pudo guardar este paciente.";
+      errores.push({ fila: numeroFila, motivo });
+      continue;
+    }
+
+    importados++;
+    if (cuposDisponibles !== Infinity) cuposDisponibles--;
+  }
+
+  revalidatePath("/pacientes");
+  return { importados, errores };
 }

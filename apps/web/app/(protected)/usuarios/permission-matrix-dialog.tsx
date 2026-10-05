@@ -29,6 +29,20 @@ function key(moduloId: string, permisoId: string) {
   return `${moduloId}:${permisoId}`;
 }
 
+// "Activar" es VIEW renombrado: es la casilla que decide si el rol ve el
+// módulo siquiera, y las demás (salvo Aprobar/Anular, que son acciones
+// aparte sobre datos ya existentes) no tienen sentido sin ella.
+const ORDEN_PERMISOS = ["VIEW", "CREATE", "EDIT", "DELETE", "APPROVE", "VOID"];
+const LABEL_PERMISO: Record<string, string> = {
+  VIEW: "Activar",
+  CREATE: "Crear",
+  EDIT: "Editar",
+  DELETE: "Eliminar",
+  APPROVE: "Aprobar",
+  VOID: "Anular",
+};
+const CODIGOS_DEPENDIENTES_DE_VIEW = ["CREATE", "EDIT", "DELETE"];
+
 export function PermissionMatrixDialog({
   rolId,
   rolNombre,
@@ -49,16 +63,14 @@ export function PermissionMatrixDialog({
   );
   const [, startTransition] = useTransition();
 
-  function handleToggle(moduloId: string, permisoId: string, next: boolean) {
-    const k = key(moduloId, permisoId);
-    setChecked((prev) => {
-      const copy = new Set(prev);
-      if (next) copy.add(k);
-      else copy.delete(k);
-      return copy;
-    });
-    setError(null);
+  const permisosOrdenados = [...permisos].sort(
+    (a, b) => ORDEN_PERMISOS.indexOf(a.codigo) - ORDEN_PERMISOS.indexOf(b.codigo),
+  );
+  const permisoView = permisos.find((p) => p.codigo === "VIEW");
+  const permisosDependientes = permisos.filter((p) => CODIGOS_DEPENDIENTES_DE_VIEW.includes(p.codigo));
 
+  function persistir(moduloId: string, permisoId: string, next: boolean) {
+    const k = key(moduloId, permisoId);
     startTransition(async () => {
       try {
         await toggleRolPermiso(rolId, moduloId, permisoId, next);
@@ -72,6 +84,34 @@ export function PermissionMatrixDialog({
         setError(e instanceof Error ? e.message : "No se pudo guardar el cambio.");
       }
     });
+  }
+
+  function handleToggle(moduloId: string, permisoId: string, next: boolean) {
+    setError(null);
+    setChecked((prev) => {
+      const copy = new Set(prev);
+      if (next) copy.add(key(moduloId, permisoId));
+      else copy.delete(key(moduloId, permisoId));
+      return copy;
+    });
+    persistir(moduloId, permisoId, next);
+
+    // Al desactivar "Activar" (VIEW), las casillas que dependen de ella
+    // (Crear/Editar/Eliminar) quedan sin sentido — se destildan y se
+    // revocan también, para no dejar permisos huérfanos guardados.
+    if (!next && permisoId === permisoView?.id) {
+      for (const dep of permisosDependientes) {
+        const depKey = key(moduloId, dep.id);
+        if (checked.has(depKey)) {
+          setChecked((prev) => {
+            const copy = new Set(prev);
+            copy.delete(depKey);
+            return copy;
+          });
+          persistir(moduloId, dep.id, false);
+        }
+      }
+    }
   }
 
   return (
@@ -98,29 +138,36 @@ export function PermissionMatrixDialog({
           <TableHeader>
             <TableRow>
               <TableHead>Módulo</TableHead>
-              {permisos.map((permiso) => (
+              {permisosOrdenados.map((permiso) => (
                 <TableHead key={permiso.id} className="text-center">
-                  {permiso.codigo}
+                  {LABEL_PERMISO[permiso.codigo] ?? permiso.codigo}
                 </TableHead>
               ))}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {modulos.map((modulo) => (
-              <TableRow key={modulo.id}>
-                <TableCell className="font-medium">{modulo.nombre}</TableCell>
-                {permisos.map((permiso) => (
-                  <TableCell key={permiso.id} className="text-center">
-                    <Checkbox
-                      checked={checked.has(key(modulo.id, permiso.id))}
-                      onCheckedChange={(value) =>
-                        handleToggle(modulo.id, permiso.id, value === true)
-                      }
-                    />
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))}
+            {modulos.map((modulo) => {
+              const activo = permisoView ? checked.has(key(modulo.id, permisoView.id)) : true;
+              return (
+                <TableRow key={modulo.id}>
+                  <TableCell className="font-medium">{modulo.nombre}</TableCell>
+                  {permisosOrdenados.map((permiso) => {
+                    const dependeDeActivar = CODIGOS_DEPENDIENTES_DE_VIEW.includes(permiso.codigo);
+                    return (
+                      <TableCell key={permiso.id} className="text-center">
+                        <Checkbox
+                          checked={checked.has(key(modulo.id, permiso.id))}
+                          disabled={dependeDeActivar && !activo}
+                          onCheckedChange={(value) =>
+                            handleToggle(modulo.id, permiso.id, value === true)
+                          }
+                        />
+                      </TableCell>
+                    );
+                  })}
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </DialogContent>

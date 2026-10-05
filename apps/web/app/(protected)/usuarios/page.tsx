@@ -52,6 +52,14 @@ export default async function UsuariosPage() {
       supabase.from("permisos").select("id, codigo").order("codigo"),
     ]);
 
+  // Exportar/Importar quedaron fuera de la matriz a propósito: son función
+  // exclusiva del Administrador (que ya tiene todos los permisos
+  // automáticamente, sin pasar por esta tabla), así que mostrarlas como
+  // casilla para otros roles no tendría ningún efecto real.
+  const permisosMatriz = (permisos ?? []).filter(
+    (p) => p.codigo !== "EXPORT" && p.codigo !== "IMPORT",
+  );
+
   const moduloIds: string[] = (clinicaModulos ?? []).map((cm) => cm.modulo_id);
   const { data: modulosData } = moduloIds.length
     ? await supabase.from("modulos").select("id, nombre").in("id", moduloIds)
@@ -158,7 +166,7 @@ export default async function UsuariosPage() {
                         rolId={rol.id}
                         rolNombre={rol.nombre}
                         modulos={modulos}
-                        permisos={permisos ?? []}
+                        permisos={permisosMatriz}
                         grants={(grants ?? []).filter((g) => g.rol_id === rol.id)}
                       />
                     )}

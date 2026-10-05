@@ -1,4 +1,4 @@
-import { requireUsuario } from "@/lib/auth/session";
+import { requireUsuario, esAdministrador } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { normalizarBusqueda } from "@/lib/pacientes/normalizar";
@@ -34,14 +34,16 @@ import {
 import Link from "next/link";
 import { PacienteDialog } from "./paciente-dialog";
 import { ToggleActivoButton } from "./toggle-activo-button";
+import { ImportarPacientesDialog } from "./importar-pacientes-dialog";
 import { Pagination } from "@/components/ui/pagination";
+import { ExportarXlsxLink } from "../_components/exportar-xlsx-link";
 
 export default async function PacientesPage({
   searchParams,
 }: {
   searchParams: Promise<{ q?: string; page?: string }>;
 }) {
-  await requireUsuario();
+  const usuario = await requireUsuario();
   const { q, page } = await searchParams;
   const pagina = paginaDesde(page);
   const supabase = await createClient();
@@ -119,12 +121,20 @@ export default async function PacientesPage({
             Registro de pacientes de tu clínica.
           </p>
         </div>
-        {puedeCrear ? (
-          <PacienteDialog
-            catalogos={catalogos}
-            trigger={<Button>Nuevo paciente</Button>}
-          />
-        ) : null}
+        <div className="flex items-center gap-2">
+          {esAdministrador(usuario) ? (
+            <>
+              <ExportarXlsxLink href={`/api/exportar/pacientes${q ? `?q=${encodeURIComponent(q)}` : ""}`} />
+              <ImportarPacientesDialog />
+            </>
+          ) : null}
+          {puedeCrear ? (
+            <PacienteDialog
+              catalogos={catalogos}
+              trigger={<Button>Nuevo paciente</Button>}
+            />
+          ) : null}
+        </div>
       </div>
 
       <Card>
