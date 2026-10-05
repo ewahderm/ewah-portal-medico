@@ -48,6 +48,12 @@ function formatearFechaHora(fecha: string, horaInicio: string) {
   return { fechaFormateada, horaFormateada };
 }
 
+// Búsqueda de Google Maps por texto — no requiere coordenadas (sedes.direccion
+// es solo texto libre) ni API key, a diferencia de un mapa embebido.
+function enlaceGoogleMaps(ubicacion: string): string {
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ubicacion)}`;
+}
+
 function construirContenido(params: EnviarCorreoCitaParams) {
   const { fechaFormateada, horaFormateada } = formatearFechaHora(params.fecha, params.horaInicio);
   const detalle = [
@@ -55,14 +61,20 @@ function construirContenido(params: EnviarCorreoCitaParams) {
     `Tratamiento: ${params.nombreTratamiento}`,
     `Fecha: ${fechaFormateada}`,
     `Hora: ${horaFormateada}`,
-  ].join("\n");
+    params.ubicacion ? `Ubicación: ${params.ubicacion}` : null,
+  ]
+    .filter((linea): linea is string => linea !== null)
+    .join("\n");
+  const comoLlegar = params.ubicacion
+    ? `\n\nCómo llegar: ${enlaceGoogleMaps(params.ubicacion)}`
+    : "";
 
   const nombreClinica = params.clinica.nombreComercial;
 
   if (params.tipo === "agendada") {
     return {
       asunto: `Tu cita en ${nombreClinica} quedó agendada`,
-      cuerpo: `Te escribimos de ${nombreClinica} para confirmarte que tienes una cita agendada:\n\n${detalle}\n\nTe esperamos con gusto.`,
+      cuerpo: `Te escribimos de ${nombreClinica} para confirmarte que tienes una cita agendada:\n\n${detalle}${comoLlegar}\n\nTe esperamos con gusto.`,
     };
   }
 
@@ -78,7 +90,7 @@ function construirContenido(params: EnviarCorreoCitaParams) {
   // el paciente necesita ver los datos VIGENTES de la cita, no un historial.
   return {
     asunto: `Tu cita en ${nombreClinica} fue actualizada`,
-    cuerpo: `Te escribimos de ${nombreClinica} para contarte que tu cita fue actualizada. Estos son los datos vigentes:\n\n${detalle}`,
+    cuerpo: `Te escribimos de ${nombreClinica} para contarte que tu cita fue actualizada. Estos son los datos vigentes:\n\n${detalle}${comoLlegar}`,
   };
 }
 
