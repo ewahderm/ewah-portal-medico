@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition, type ReactElement } from "react";
+import { useRouter } from "next/navigation";
 import { ImageIcon } from "lucide-react";
 import { actualizarMarcaClinica, subirLogoClinica } from "@/lib/clinicas/actions";
 import { toast } from "@/components/ui/toast";
@@ -31,6 +32,7 @@ export function MarcaDialog({
   telefonoContacto: string | null;
   logoUrl: string | null;
 }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pendingDatos, startDatosTransition] = useTransition();
@@ -38,11 +40,16 @@ export function MarcaDialog({
   const [previewLogo, setPreviewLogo] = useState<string | null>(null);
   const inputLogoRef = useRef<HTMLInputElement>(null);
 
+  // Llamar a una server action envuelta en una función intermedia (en vez de
+  // pasarla directo como `action` de un <form>) no dispara el refresco
+  // automático de Next.js — hay que pedirlo a mano, igual que en
+  // EstadoAcciones (ver atencion_entidad_module.md).
   function handleGuardarDatos(formData: FormData) {
     setError(null);
     startDatosTransition(async () => {
       try {
         await actualizarMarcaClinica(formData);
+        router.refresh();
         toast.add({ title: "Marca actualizada", type: "success" });
       } catch (e) {
         setError(e instanceof Error ? e.message : "No se pudo actualizar la marca.");
@@ -60,9 +67,11 @@ export function MarcaDialog({
     startLogoTransition(async () => {
       try {
         await subirLogoClinica(formData);
-        toast.add({ title: "Logo actualizado", type: "success" });
+        router.refresh();
         setPreviewLogo(null);
         if (inputLogoRef.current) inputLogoRef.current.value = "";
+        toast.add({ title: "Logo actualizado", type: "success" });
+        setOpen(false);
       } catch (e) {
         setError(e instanceof Error ? e.message : "No se pudo subir el logo.");
       }
