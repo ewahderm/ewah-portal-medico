@@ -6,6 +6,7 @@ import { nombreCompleto } from "@/lib/pacientes/nombre";
 import { formatoMoneda } from "@/lib/format";
 import { getSedesActivas, getMediosPagoActivos, getTiposTratamientoActivos } from "@/lib/catalogos";
 import { tieneInfoPendiente } from "@/lib/pacientes/completitud";
+import { getPacientesActivosParaPicker } from "@/lib/pacientes/picker";
 import {
   paginaDesde,
   rangoPagina,
@@ -137,7 +138,7 @@ export default async function TratamientosPage({
     { data: puedeRegistrarConsumo },
     { data: puedeRevertirConsumo },
     { data: tieneEntitlementAnexos },
-    { data: pacientesData },
+    pacientesData,
     tiposTratamiento,
     { data: profesionales },
     sedes,
@@ -154,13 +155,7 @@ export default async function TratamientosPage({
     supabase.rpc("has_permission", { modulo_code: "inventario", permiso_code: "CREATE" }),
     supabase.rpc("has_permission", { modulo_code: "inventario", permiso_code: "VOID" }),
     supabase.rpc("has_entitlement", { modulo_code: "tratamientos", feature_code: "anexos" }),
-    supabase
-      .from("pacientes")
-      .select(
-        "id, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, tipo_identificacion_id, numero_identificacion, email, telefono1",
-      )
-      .eq("activo", true)
-      .order("primer_apellido"),
+    getPacientesActivosParaPicker(supabase),
     getTiposTratamientoActivos(supabase),
     supabase.from("usuarios").select("id, nombre").eq("activo", true).order("nombre"),
     getSedesActivas(supabase),

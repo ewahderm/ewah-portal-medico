@@ -196,7 +196,14 @@ export function AgendaCalendario({
   tieneEntitlementAnexos: boolean;
 }) {
   const router = useRouter();
-  const [citaSeleccionada, setCitaSeleccionada] = useState<CitaRow | null>(null);
+  // Guarda solo el id, no una copia de la cita — así, cuando EstadoAcciones
+  // llama a router.refresh() (al "Atender") y `citas` baja fresco del
+  // servidor, el detalle abierto en ese momento lee el dato actualizado en
+  // el siguiente render sin necesitar un efecto que lo resincronice a mano.
+  const [citaSeleccionadaId, setCitaSeleccionadaId] = useState<string | null>(null);
+  const citaSeleccionada = citaSeleccionadaId
+    ? (citas.find((c) => c.id === citaSeleccionadaId) ?? null)
+    : null;
   const [nuevaCita, setNuevaCita] = useState<{
     fecha: string;
     horaInicio?: string;
@@ -319,7 +326,7 @@ export function AgendaCalendario({
         onNavigate={(nuevaFecha) => navegarUrl(nuevaFecha, vista)}
         onView={(nuevaVista) => navegarUrl(fecha, RBC_A_VISTA[nuevaVista] ?? vista)}
         onSelectSlot={handleSelectSlot}
-        onSelectEvent={(evento) => setCitaSeleccionada((evento as EventoCita).resource)}
+        onSelectEvent={(evento) => setCitaSeleccionadaId((evento as EventoCita).resource.id)}
         components={componentesCalendario}
         eventPropGetter={(evento) => {
           const cita = (evento as EventoCita).resource;
@@ -339,7 +346,7 @@ export function AgendaCalendario({
           cita={citaSeleccionada}
           open={!!citaSeleccionada}
           onOpenChange={(open) => {
-            if (!open) setCitaSeleccionada(null);
+            if (!open) setCitaSeleccionadaId(null);
           }}
           puedeEditar={puedeEditar}
           puedeCrearTratamiento={puedeCrearTratamiento}

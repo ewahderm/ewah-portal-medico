@@ -65,7 +65,14 @@ export function CitasTabla({
    * sola vez en pacientes/[id]/page.tsx y pasado hasta CitaDetalleDialog. */
   tieneEntitlementAnexos: boolean;
 }) {
-  const [citaSeleccionada, setCitaSeleccionada] = useState<CitaRow | null>(null);
+  // Guarda solo el id, no una copia de la cita — así, cuando "Atender"
+  // dispara router.refresh() y `citas` baja fresco del servidor, tanto
+  // esta tabla como el detalle que siga abierto leen el dato actualizado
+  // en el siguiente render (mismo criterio que AgendaCalendario).
+  const [citaSeleccionadaId, setCitaSeleccionadaId] = useState<string | null>(null);
+  const citaSeleccionada = citaSeleccionadaId
+    ? (citas.find((c) => c.id === citaSeleccionadaId) ?? null)
+    : null;
 
   return (
     <>
@@ -95,7 +102,7 @@ export function CitasTabla({
                 <Badge variant="outline">{ESTADO_LABEL[c.estado] ?? c.estado}</Badge>
               </TableCell>
               <TableCell className="text-right">
-                <Button variant="outline" size="sm" onClick={() => setCitaSeleccionada(c)}>
+                <Button variant="outline" size="sm" onClick={() => setCitaSeleccionadaId(c.id)}>
                   Ver detalle
                 </Button>
               </TableCell>
@@ -116,7 +123,7 @@ export function CitasTabla({
           cita={citaSeleccionada}
           open={!!citaSeleccionada}
           onOpenChange={(open) => {
-            if (!open) setCitaSeleccionada(null);
+            if (!open) setCitaSeleccionadaId(null);
           }}
           puedeEditar={puedeEditar}
           puedeCrearTratamiento={puedeCrearTratamiento}

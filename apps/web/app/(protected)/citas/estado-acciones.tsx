@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { confirmarCita, marcarNoAsistio, reprogramarCita } from "@/lib/citas/actions";
 import { crearAtencionDesdeCita } from "@/lib/atenciones/actions";
 import { opcionesHora, sumarMinutos } from "@/lib/citas/horarios";
@@ -33,6 +34,7 @@ export function EstadoAcciones({
   puedeEliminarArchivos,
   tieneEntitlementAnexos,
   pacientesPendientes = new Set(),
+  onAtendida,
 }: {
   cita: {
     id: string;
@@ -64,7 +66,13 @@ export function EstadoAcciones({
   puedeEliminarArchivos: boolean;
   tieneEntitlementAnexos: boolean;
   pacientesPendientes?: Set<string>;
+  /** Se dispara justo al crear/reabrir la atención — para que el badge de
+   * "Estado" en el detalle de la cita (que vive un nivel más arriba, en
+   * CitaDetalleDialog) se actualice en el acto, sin esperar el viaje
+   * completo de router.refresh(). */
+  onAtendida?: () => void;
 }) {
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [conflicto, setConflicto] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -94,6 +102,13 @@ export function EstadoAcciones({
         const id = await crearAtencionDesdeCita(cita.id);
         setAtencionId(id);
         setDetalleAbierto(true);
+        onAtendida?.();
+        // El server ya marcó la cita "atendida" y revalidó /citas — esto
+        // hace que ESTA página recoja ese cambio sin que el usuario tenga
+        // que recargar a mano (ver el comentario sobre atencionId arriba:
+        // las props de un server component no bajan solas a un client
+        // component ya montado).
+        router.refresh();
       } catch (e) {
         setError(e instanceof Error ? e.message : "No se pudo crear la atención.");
       }

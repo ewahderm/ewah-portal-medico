@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -56,6 +57,15 @@ export function CitaDetalleDialog({
    * pacientes/[id]/page.tsx) y pasado hacia abajo hasta aquí. */
   tieneEntitlementAnexos: boolean;
 }) {
+  // cita.estado viene fijo del server component que renderizó esta fila —
+  // "Atender" lo cambia en la base al vuelo, pero este diálogo ya está
+  // montado y no recibe props nuevas solo porque router.refresh() traiga
+  // datos frescos para la página (ese refresh sí actualiza `cita` en el
+  // próximo montaje, pero no en el que ya está abierto). Este estado local
+  // evita que el badge se quede diciendo "Agendada" hasta cerrar y volver
+  // a abrir el detalle.
+  const [estadoLocal, setEstadoLocal] = useState(cita.estado);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -97,7 +107,7 @@ export function CitaDetalleDialog({
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Estado</span>
-                <Badge>{ESTADO_LABEL[cita.estado]}</Badge>
+                <Badge>{ESTADO_LABEL[estadoLocal]}</Badge>
               </div>
               {(cita.estado === "cancelada" || cita.estado === "no_asistio") && cita.motivo ? (
                 <div className="flex justify-between">
@@ -141,6 +151,7 @@ export function CitaDetalleDialog({
               puedeEliminarArchivos={puedeEliminarArchivos}
               tieneEntitlementAnexos={tieneEntitlementAnexos}
               pacientesPendientes={pacientesPendientes}
+              onAtendida={() => setEstadoLocal("atendida")}
             />
           </div>
         ) : null}

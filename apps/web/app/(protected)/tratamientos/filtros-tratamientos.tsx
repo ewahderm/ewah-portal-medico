@@ -46,10 +46,17 @@ export function FiltrosTratamientos({
       <CardContent>
         <form method="GET" className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {/* ids con sufijo "Filtro": TratamientoDialog (que se abre sobre
+                esta misma página) usa estos mismos nombres de campo para su
+                propio formulario — sin el sufijo, dos elementos con el
+                mismo id conviven en el DOM a la vez (HTML inválido) y
+                rompen la asociación de <Label htmlFor>. El `name` NO lleva
+                el sufijo: es el nombre real del query param que lee
+                tratamientos/page.tsx vía searchParams. */}
             <div className="space-y-1.5">
-              <Label htmlFor="profesionalId">Profesional</Label>
+              <Label htmlFor="profesionalIdFiltro">Profesional</Label>
               <Combobox
-                id="profesionalId"
+                id="profesionalIdFiltro"
                 name="profesionalId"
                 items={toItems(profesionales)}
                 defaultValue={valores.profesionalId}
@@ -57,9 +64,9 @@ export function FiltrosTratamientos({
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="sedeId">Sede</Label>
+              <Label htmlFor="sedeIdFiltro">Sede</Label>
               <Combobox
-                id="sedeId"
+                id="sedeIdFiltro"
                 name="sedeId"
                 items={toItems(sedes)}
                 defaultValue={valores.sedeId}
@@ -67,9 +74,9 @@ export function FiltrosTratamientos({
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="pacienteId">Paciente</Label>
+              <Label htmlFor="pacienteIdFiltro">Paciente</Label>
               <Combobox
-                id="pacienteId"
+                id="pacienteIdFiltro"
                 name="pacienteId"
                 items={toItems(pacientes)}
                 defaultValue={valores.pacienteId}
@@ -77,9 +84,9 @@ export function FiltrosTratamientos({
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="tipoTratamientoId">Tipo de tratamiento</Label>
+              <Label htmlFor="tipoTratamientoIdFiltro">Tipo de tratamiento</Label>
               <Combobox
-                id="tipoTratamientoId"
+                id="tipoTratamientoIdFiltro"
                 name="tipoTratamientoId"
                 items={toItems(tiposTratamiento)}
                 defaultValue={valores.tipoTratamientoId}
