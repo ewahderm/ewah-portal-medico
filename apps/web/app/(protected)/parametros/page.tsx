@@ -325,7 +325,12 @@ export default async function ParametrosPage() {
                           <CardTitle>{catalogo.nombre}</CardTitle>
                           <p className="mt-1 text-sm text-muted-foreground">{catalogo.descripcion}</p>
                         </div>
-                        {catalogo.accion}
+                        <div className="flex items-center gap-2">
+                          {esAdministrador(usuario) ? (
+                            <ExportarXlsxLink href={`/api/exportar/parametros-bespoke/${catalogo.tabla}`} />
+                          ) : null}
+                          {catalogo.accion}
+                        </div>
                       </CardHeader>
                       <CardContent>{catalogo.tabla_ui}</CardContent>
                     </Card>

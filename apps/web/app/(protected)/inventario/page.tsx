@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { PackageIcon, QrCodeIcon } from "lucide-react";
-import { requireUsuario } from "@/lib/auth/session";
+import { requireUsuario, esAdministrador } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { UpsellPlan } from "../_components/upsell-plan";
 import { InventarioTabs } from "./inventario-tabs";
 import { getSedesActivas, getMotivosMovimientoActivos } from "@/lib/catalogos";
+import { ExportarXlsxLink } from "../_components/exportar-xlsx-link";
 
 type LoteRow = {
   id: string;
@@ -22,7 +23,7 @@ type LoteRow = {
 };
 
 export default async function InventarioPage() {
-  await requireUsuario();
+  const usuario = await requireUsuario();
   const supabase = await createClient();
 
   const { data: puedeVer } = await supabase.rpc("has_permission", {
@@ -91,9 +92,12 @@ export default async function InventarioPage() {
             </p>
           </div>
         </div>
-        <Button variant="outline" nativeButton={false} render={<Link href="/inventario/escanear" />}>
-          <QrCodeIcon /> Escanear
-        </Button>
+        <div className="flex gap-2">
+          {esAdministrador(usuario) ? <ExportarXlsxLink href="/api/exportar/inventario" /> : null}
+          <Button variant="outline" nativeButton={false} render={<Link href="/inventario/escanear" />}>
+            <QrCodeIcon /> Escanear
+          </Button>
+        </div>
       </div>
 
       <InventarioTabs

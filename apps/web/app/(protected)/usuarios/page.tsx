@@ -12,6 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { InviteDialog } from "./invite-dialog";
+import { ExportarXlsxLink } from "../_components/exportar-xlsx-link";
 import { CreateRolDialog } from "./create-rol-dialog";
 import { PermissionMatrixDialog } from "./permission-matrix-dialog";
 import { ResetPasswordDialog } from "./reset-password-dialog";
@@ -88,7 +89,10 @@ export default async function UsuariosPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Usuarios</CardTitle>
-          <InviteDialog roles={(roles ?? []).map((r) => ({ id: r.id, nombre: r.nombre }))} />
+          <div className="flex gap-2">
+            <ExportarXlsxLink href="/api/exportar/usuarios" />
+            <InviteDialog roles={(roles ?? []).map((r) => ({ id: r.id, nombre: r.nombre }))} />
+          </div>
         </CardHeader>
         <CardContent>
           <Table>

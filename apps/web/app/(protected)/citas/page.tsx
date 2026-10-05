@@ -12,6 +12,7 @@ import { nombreCompleto, type CitaRow } from "./tipos";
 import { getSedesActivas, getMediosPagoActivos, getTiposTratamientoActivos } from "@/lib/catalogos";
 import { tieneInfoPendiente } from "@/lib/pacientes/completitud";
 import { getPacientesActivosParaPicker } from "@/lib/pacientes/picker";
+import { ExportarXlsxLink } from "../_components/exportar-xlsx-link";
 
 type Vista = "day" | "week" | "month";
 
@@ -167,6 +168,16 @@ export default async function CitasPage({
           </p>
         </div>
         <div className="flex gap-2">
+          {esAdministrador(usuario) ? (
+            <ExportarXlsxLink
+              href={`/api/exportar/citas?${new URLSearchParams({
+                desde: format(desde, "yyyy-MM-dd"),
+                hasta: format(hasta, "yyyy-MM-dd"),
+                ...(sedeId ? { sedeId } : {}),
+                ...(profesionalId ? { profesionalId } : {}),
+              }).toString()}`}
+            />
+          ) : null}
           {puedeCrear ? (
             <BloqueoDialog
               profesionales={profesionales}

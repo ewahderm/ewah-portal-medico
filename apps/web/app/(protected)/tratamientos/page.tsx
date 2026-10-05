@@ -34,6 +34,7 @@ import { ConsentimientoDialog } from "./consentimiento-dialog";
 import { InsumosDialog } from "./insumos-dialog";
 import { FiltrosTratamientos } from "./filtros-tratamientos";
 import { Pagination } from "@/components/ui/pagination";
+import { ExportarXlsxLink } from "../_components/exportar-xlsx-link";
 
 type TratamientoRow = {
   id: string;
@@ -209,18 +210,27 @@ export default async function TratamientosPage({
             edita: se anula (con motivo) y se corrige con uno nuevo.
           </p>
         </div>
-        {puedeCrear ? (
-          <TratamientoDialog
-            pacientes={pacientes}
-            tiposTratamiento={tiposTratamiento ?? []}
-            profesionales={profesionales ?? []}
-            sedes={sedes ?? []}
-            mediosPago={mediosPago ?? []}
-            usuarioActualId={usuario.id}
-            pacientesPendientes={pacientesPendientes}
-            trigger={<Button>Nuevo tratamiento</Button>}
-          />
-        ) : null}
+        <div className="flex items-center gap-2">
+          {esAdministrador(usuario) ? (
+            <ExportarXlsxLink
+              href={`/api/exportar/tratamientos?${new URLSearchParams(
+                Object.fromEntries(Object.entries(filtrosActivos).filter(([, v]) => v)) as Record<string, string>,
+              ).toString()}`}
+            />
+          ) : null}
+          {puedeCrear ? (
+            <TratamientoDialog
+              pacientes={pacientes}
+              tiposTratamiento={tiposTratamiento ?? []}
+              profesionales={profesionales ?? []}
+              sedes={sedes ?? []}
+              mediosPago={mediosPago ?? []}
+              usuarioActualId={usuario.id}
+              pacientesPendientes={pacientesPendientes}
+              trigger={<Button>Nuevo tratamiento</Button>}
+            />
+          ) : null}
+        </div>
       </div>
 
       <FiltrosTratamientos

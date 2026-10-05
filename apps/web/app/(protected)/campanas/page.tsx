@@ -1,5 +1,5 @@
 import { MegaphoneIcon, UsersIcon, PhoneCallIcon, CalendarCheckIcon, SyringeIcon, WalletIcon } from "lucide-react";
-import { requireUsuario } from "@/lib/auth/session";
+import { requireUsuario, esAdministrador } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { listarFunnelCampana } from "@/lib/campanas/actions";
 import { formatoMoneda } from "@/lib/format";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { UpsellPlan } from "../_components/upsell-plan";
 import { CampanaDialog } from "./campana-dialog";
+import { ExportarXlsxLink } from "../_components/exportar-xlsx-link";
 import { ToggleActivoCampanaButton } from "./toggle-activo-campana-button";
 
 type CampanaRow = {
@@ -42,7 +43,7 @@ function EtapaFunnel({
 }
 
 export default async function CampanasPage() {
-  await requireUsuario();
+  const usuario = await requireUsuario();
   const supabase = await createClient();
 
   const { data: puedeVer } = await supabase.rpc("has_permission", {
@@ -105,12 +106,15 @@ export default async function CampanasPage() {
                 contactados, con cita agendada y convertidos en tratamiento.
               </p>
             </div>
-            {puedeCrear ? (
-              <CampanaDialog
-                canalesCaptacion={canalesCaptacion}
-                trigger={<Button>Nueva campaña</Button>}
-              />
-            ) : null}
+            <div className="flex gap-2">
+              {esAdministrador(usuario) ? <ExportarXlsxLink href="/api/exportar/campanas" /> : null}
+              {puedeCrear ? (
+                <CampanaDialog
+                  canalesCaptacion={canalesCaptacion}
+                  trigger={<Button>Nueva campaña</Button>}
+                />
+              ) : null}
+            </div>
           </div>
         </div>
       </div>

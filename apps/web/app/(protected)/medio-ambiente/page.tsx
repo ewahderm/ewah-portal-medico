@@ -1,5 +1,5 @@
 import { LeafIcon } from "lucide-react";
-import { requireUsuario } from "@/lib/auth/session";
+import { requireUsuario, esAdministrador } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import {
   getSedesActivas,
@@ -10,6 +10,7 @@ import {
 } from "@/lib/catalogos";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { MedioAmbienteTabs } from "./medio-ambiente-tabs";
+import { ExportarXlsxLink } from "../_components/exportar-xlsx-link";
 
 export default async function MedioAmbientePage() {
   const usuario = await requireUsuario();
@@ -48,18 +49,21 @@ export default async function MedioAmbientePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start gap-3">
-        <div className="flex size-11 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-          <LeafIcon className="size-6" />
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3">
+          <div className="flex size-11 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+            <LeafIcon className="size-6" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-semibold">Medio Ambiente</h1>
+            <p className="text-sm text-muted-foreground">
+              Registros de cumplimiento normativo: temperatura y humedad, cadena de frío,
+              residuos, extintores y limpieza. Ningún registro guardado se puede borrar ni
+              editar — son evidencia ante una auditoría o visita de habilitación.
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl font-semibold">Medio Ambiente</h1>
-          <p className="text-sm text-muted-foreground">
-            Registros de cumplimiento normativo: temperatura y humedad, cadena de frío,
-            residuos, extintores y limpieza. Ningún registro guardado se puede borrar ni
-            editar — son evidencia ante una auditoría o visita de habilitación.
-          </p>
-        </div>
+        {esAdministrador(usuario) ? <ExportarXlsxLink href="/api/exportar/medio-ambiente" /> : null}
       </div>
 
       <MedioAmbienteTabs
