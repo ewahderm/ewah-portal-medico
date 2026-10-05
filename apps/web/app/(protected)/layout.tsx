@@ -51,7 +51,7 @@ export default async function ProtectedLayout({
                 <img
                   src={logoClinicaUrl}
                   alt={nombreClinica}
-                  className="h-8 max-w-[160px] object-contain"
+                  className="h-[42px] max-w-[210px] object-contain"
                 />
               ) : (
                 <EwahLogo variant="dark" />
