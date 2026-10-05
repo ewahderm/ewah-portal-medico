@@ -68,13 +68,15 @@ type FilaCorreoCita = {
   tipos_tratamiento: { nombre: string } | null;
   profesional: { nombre: string } | null;
   consultorios: { nombre: string; sedes: { nombre: string; direccion: string | null } | null } | null;
+  clinicas: { nombre: string; nombre_comercial: string | null; correo_notificaciones: string | null; telefono_contacto: string | null } | null;
 };
 
 const SELECT_CORREO_CITA = `fecha, hora_inicio, hora_fin, updated_at,
    pacientes(primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, email),
    tipos_tratamiento(nombre),
    profesional:usuarios!citas_profesional_id_fkey(nombre),
-   consultorios(nombre, sedes(nombre, direccion))`;
+   consultorios(nombre, sedes(nombre, direccion)),
+   clinicas(nombre, nombre_comercial, correo_notificaciones, telefono_contacto)`;
 
 // Se usa siempre a partir del id de una cita YA guardada (insert o update
 // exitosos), en una consulta aparte de la que crea/actualiza la cita: así,
@@ -103,6 +105,7 @@ async function enviarCorreoCitaPorId(
     const ubicacion = fila.consultorios
       ? [fila.consultorios.nombre, sede?.nombre, sede?.direccion].filter(Boolean).join(", ")
       : null;
+    const nombreComercial = fila.clinicas?.nombre_comercial || fila.clinicas?.nombre || "tu clínica";
 
     await enviarCorreoCita({
       email: fila.pacientes.email,
@@ -111,12 +114,17 @@ async function enviarCorreoCitaPorId(
       fecha: fila.fecha,
       horaInicio: fila.hora_inicio,
       horaFin: fila.hora_fin,
-      nombreProfesional: fila.profesional?.nombre ?? "el equipo de EWAH",
+      nombreProfesional: fila.profesional?.nombre ?? "el equipo de tu clínica",
       nombreTratamiento: fila.tipos_tratamiento?.nombre ?? "tu tratamiento",
       motivo,
       citaId,
       actualizadoEn: fila.updated_at,
       ubicacion,
+      clinica: {
+        nombreComercial,
+        correoNotificaciones: fila.clinicas?.correo_notificaciones,
+        telefono: fila.clinicas?.telefono_contacto,
+      },
     });
   } catch (error) {
     console.error("[citas] No se pudo enviar el correo de la cita:", error);

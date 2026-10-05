@@ -1,6 +1,6 @@
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
-import { getResendClient, REMITENTE_CORREO } from "./resend";
+import { getResendClient, construirRemitente } from "./resend";
 import { generarIcsCita } from "./ics";
 
 export type TipoCorreoCita = "agendada" | "actualizada" | "cancelada";
@@ -26,6 +26,13 @@ export type EnviarCorreoCitaParams = {
   /** `updated_at` de la cita — se usa como SEQUENCE del .ics (ver ics.ts). */
   actualizadoEn: string;
   ubicacion?: string | null;
+  /** Identidad de la clínica que atiende — el llamador ya resuelve el
+   * fallback a clinicas.nombre si no hay nombre_comercial configurado. */
+  clinica: {
+    nombreComercial: string;
+    correoNotificaciones?: string | null;
+    telefono?: string | null;
+  };
 };
 
 // Mismo remitente que ya se usa para el correo — el organizador del evento
@@ -50,26 +57,28 @@ function construirContenido(params: EnviarCorreoCitaParams) {
     `Hora: ${horaFormateada}`,
   ].join("\n");
 
+  const nombreClinica = params.clinica.nombreComercial;
+
   if (params.tipo === "agendada") {
     return {
-      asunto: "Tu cita en EWAH quedó agendada",
-      cuerpo: `Te escribimos de EWAH By Dra. Lorena Pinzón para confirmarte que tienes una cita agendada:\n\n${detalle}\n\nTe esperamos con gusto.`,
+      asunto: `Tu cita en ${nombreClinica} quedó agendada`,
+      cuerpo: `Te escribimos de ${nombreClinica} para confirmarte que tienes una cita agendada:\n\n${detalle}\n\nTe esperamos con gusto.`,
     };
   }
 
   if (params.tipo === "cancelada") {
     const motivoTexto = params.motivo ? `\n\nMotivo: ${params.motivo}` : "";
     return {
-      asunto: "Tu cita en EWAH fue cancelada",
-      cuerpo: `Te escribimos de EWAH By Dra. Lorena Pinzón para informarte que tu cita programada para el ${fechaFormateada} a las ${horaFormateada} fue cancelada.${motivoTexto}\n\nSi deseas reagendar, contáctanos con gusto.`,
+      asunto: `Tu cita en ${nombreClinica} fue cancelada`,
+      cuerpo: `Te escribimos de ${nombreClinica} para informarte que tu cita programada para el ${fechaFormateada} a las ${horaFormateada} fue cancelada.${motivoTexto}\n\nSi deseas reagendar, contáctanos con gusto.`,
     };
   }
 
   // "actualizada" cubre confirmaciones y reprogramaciones: en ambos casos
   // el paciente necesita ver los datos VIGENTES de la cita, no un historial.
   return {
-    asunto: "Tu cita en EWAH fue actualizada",
-    cuerpo: `Te escribimos de EWAH By Dra. Lorena Pinzón para contarte que tu cita fue actualizada. Estos son los datos vigentes:\n\n${detalle}`,
+    asunto: `Tu cita en ${nombreClinica} fue actualizada`,
+    cuerpo: `Te escribimos de ${nombreClinica} para contarte que tu cita fue actualizada. Estos son los datos vigentes:\n\n${detalle}`,
   };
 }
 
@@ -92,7 +101,11 @@ export async function enviarCorreoCita(params: EnviarCorreoCitaParams): Promise<
   }
 
   const { asunto, cuerpo } = construirContenido(params);
-  const texto = `Hola ${params.nombrePaciente},\n\n${cuerpo}\n\nFamilia EWAH By Dra. Lorena Pinzón`;
+  const remitente = construirRemitente(params.clinica.nombreComercial);
+  const telefonoLinea = params.clinica.telefono
+    ? `\n\nSi tienes dudas, contáctanos al ${params.clinica.telefono}.`
+    : "";
+  const texto = `Hola ${params.nombrePaciente},\n\n${cuerpo}${telefonoLinea}\n\nEquipo de ${params.clinica.nombreComercial}`;
 
   const cancelada = params.tipo === "cancelada";
   const ics = generarIcsCita({
@@ -102,19 +115,20 @@ export async function enviarCorreoCita(params: EnviarCorreoCitaParams): Promise<
     fecha: params.fecha,
     horaInicio: params.horaInicio,
     horaFin: params.horaFin,
-    resumen: `${params.nombreTratamiento} — EWAH`,
+    resumen: `${params.nombreTratamiento} — ${params.clinica.nombreComercial}`,
     descripcion: `Profesional: ${params.nombreProfesional}\nTratamiento: ${params.nombreTratamiento}`,
     ubicacion: params.ubicacion,
-    organizerEmail: extraerEmailRemitente(REMITENTE_CORREO),
-    organizerNombre: "EWAH By Dra. Lorena Pinzón",
+    organizerEmail: extraerEmailRemitente(remitente),
+    organizerNombre: params.clinica.nombreComercial,
     attendeeEmail: params.email,
     attendeeNombre: params.nombrePaciente,
   });
 
   try {
     const { error } = await cliente.emails.send({
-      from: REMITENTE_CORREO,
+      from: remitente,
       to: params.email,
+      replyTo: params.clinica.correoNotificaciones || undefined,
       subject: asunto,
       text: texto,
       attachments: [

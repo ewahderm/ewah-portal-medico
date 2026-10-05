@@ -1,4 +1,4 @@
-import { CheckIcon, XIcon } from "lucide-react";
+import { CheckIcon, ImageIcon, PencilIcon, XIcon } from "lucide-react";
 import { requireUsuario, esAdministrador } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { REGISTRO_MODULOS } from "@/lib/modulos/registro";
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SolicitarPlanDialog } from "./solicitar-plan-dialog";
 import { CambiarPlanPruebaButton } from "./cambiar-plan-prueba-button";
+import { MarcaDialog } from "./marca-dialog";
 
 type Plan = { id: string; codigo: string; nombre: string; precio_mensual: number | null };
 
@@ -32,7 +33,9 @@ export default async function SuscripcionPage() {
     await Promise.all([
       supabase
         .from("clinicas")
-        .select("plan_id, planes(id, codigo, nombre, precio_mensual)")
+        .select(
+          "nombre, nombre_comercial, logo_storage_path, correo_notificaciones, telefono_contacto, plan_id, planes(id, codigo, nombre, precio_mensual)",
+        )
         .single(),
       supabase.from("planes").select("id, codigo, nombre, precio_mensual").order("precio_mensual"),
       supabase.from("plan_modulos").select("plan_id, modulo_id, incluido, modulos(codigo)"),
@@ -41,6 +44,9 @@ export default async function SuscripcionPage() {
 
   const planActual = clinica?.planes as unknown as Plan | null;
   const todosLosPlanes = (planes ?? []) as Plan[];
+  const logoUrl = clinica?.logo_storage_path
+    ? supabase.storage.from("clinica-logos").getPublicUrl(clinica.logo_storage_path).data.publicUrl
+    : null;
 
   function moduloIncluido(planId: string, moduloCodigo: string) {
     return (plan_modulos ?? []).some((pm) => {
@@ -69,6 +75,45 @@ export default async function SuscripcionPage() {
           El plan de tu clínica determina qué módulos y funciones tienes disponibles.
         </p>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Marca y notificaciones</CardTitle>
+        </CardHeader>
+        <CardContent className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border bg-muted">
+              {logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={logoUrl} alt="Logo de la clínica" className="size-full object-contain" />
+              ) : (
+                <ImageIcon className="size-6 text-muted-foreground" />
+              )}
+            </div>
+            <div>
+              <p className="text-lg font-semibold">{clinica?.nombre_comercial || clinica?.nombre}</p>
+              <p className="text-sm text-muted-foreground">
+                {clinica?.correo_notificaciones || "Sin correo de notificaciones configurado"}
+                {clinica?.telefono_contacto ? ` · ${clinica.telefono_contacto}` : ""}
+              </p>
+            </div>
+          </div>
+          {esAdministrador(usuario) ? (
+            <MarcaDialog
+              trigger={
+                <Button variant="outline" size="sm">
+                  <PencilIcon /> Editar
+                </Button>
+              }
+              nombreLegal={clinica?.nombre ?? ""}
+              nombreComercial={clinica?.nombre_comercial ?? null}
+              correoNotificaciones={clinica?.correo_notificaciones ?? null}
+              telefonoContacto={clinica?.telefono_contacto ?? null}
+              logoUrl={logoUrl}
+            />
+          ) : null}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

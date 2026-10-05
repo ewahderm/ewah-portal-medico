@@ -1,7 +1,7 @@
 import { format, addDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getResendClient, REMITENTE_CORREO } from "@/lib/email/resend";
+import { getResendClient, construirRemitente } from "@/lib/email/resend";
 import { nombreCompleto } from "@/lib/pacientes/nombre";
 
 type FilaRecordatorio = {
@@ -17,6 +17,7 @@ type FilaRecordatorio = {
   profesional: { nombre: string; email: string } | null;
   consultorios: { sedes: { nombre: string } | null } | null;
   tipos_tratamiento: { nombre: string } | null;
+  clinicas: { nombre: string; nombre_comercial: string | null } | null;
 };
 
 /**
@@ -49,6 +50,7 @@ function escapeHtml(texto: string): string {
 
 function construirHtmlRecordatorio(
   nombreProfesional: string,
+  nombreClinica: string,
   fechaTexto: string,
   citas: { hora: string; paciente: string; sede: string; tratamiento: string; observaciones: string }[],
 ) {
@@ -94,7 +96,7 @@ function construirHtmlRecordatorio(
         </p>
       </div>
       <div style="padding: 16px 24px; background-color: #f4f7f9; border-top: 1px solid #e2e8f0;">
-        <p style="font-size: 12px; color: #94a3b8; margin: 0;">Familia EWAH By Dra. Lorena Pinzón</p>
+        <p style="font-size: 12px; color: #94a3b8; margin: 0;">Equipo de ${escapeHtml(nombreClinica)}</p>
       </div>
     </div>
   </div>`;
@@ -130,7 +132,8 @@ export async function enviarRecordatoriosCitasManana(
        pacientes(primer_nombre, segundo_nombre, primer_apellido, segundo_apellido),
        profesional:usuarios!citas_profesional_id_fkey(nombre, email),
        consultorios(sedes(nombre)),
-       tipos_tratamiento(nombre)`,
+       tipos_tratamiento(nombre),
+       clinicas(nombre, nombre_comercial)`,
     )
     .eq("fecha", fecha)
     // Solo confirmadas, a pedido explícito — "agendada" todavía no la
@@ -151,12 +154,23 @@ export async function enviarRecordatoriosCitasManana(
   // día, no un correo por cita — un profesional_id pertenece a un único
   // usuario, que a su vez pertenece a una única clínica, así que agrupar
   // solo por profesional_id ya es suficiente (no hace falta clinica_id).
-  const porProfesional = new Map<string, { profesional: { nombre: string; email: string }; citas: FilaRecordatorio[] }>();
+  const porProfesional = new Map<
+    string,
+    { profesional: { nombre: string; email: string }; nombreClinica: string; citas: FilaRecordatorio[] }
+  >();
   for (const fila of filas) {
     if (!fila.profesional?.email) continue; // sin correo registrado: nada que hacer
     const entrada = porProfesional.get(fila.profesional_id);
-    if (entrada) entrada.citas.push(fila);
-    else porProfesional.set(fila.profesional_id, { profesional: fila.profesional, citas: [fila] });
+    if (entrada) {
+      entrada.citas.push(fila);
+    } else {
+      const nombreClinica = fila.clinicas?.nombre_comercial || fila.clinicas?.nombre || "tu clínica";
+      porProfesional.set(fila.profesional_id, {
+        profesional: fila.profesional,
+        nombreClinica,
+        citas: [fila],
+      });
+    }
   }
 
   const fechaTexto = format(new Date(`${fecha}T00:00:00`), "EEEE d 'de' MMMM", { locale: es });
@@ -170,9 +184,10 @@ export async function enviarRecordatoriosCitasManana(
   // el campo `error` de cada resultado resuelto, no solo si la promesa
   // truena.
   const resultados = await Promise.allSettled(
-    [...porProfesional.values()].map(async ({ profesional, citas }) => {
+    [...porProfesional.values()].map(async ({ profesional, nombreClinica, citas }) => {
       const html = construirHtmlRecordatorio(
         profesional.nombre,
+        nombreClinica,
         fechaTexto,
         citas.map((c) => ({
           hora: c.hora_inicio.slice(0, 5),
@@ -183,7 +198,7 @@ export async function enviarRecordatoriosCitasManana(
         })),
       );
       const { error: errorEnvio } = await cliente.emails.send({
-        from: REMITENTE_CORREO,
+        from: construirRemitente(nombreClinica),
         to: profesional.email,
         subject: `Tus citas de mañana, ${fechaTexto}`,
         html,

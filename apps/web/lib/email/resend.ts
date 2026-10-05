@@ -28,3 +28,14 @@ export function getResendClient(): Resend | null {
 // RESEND_FROM_EMAIL en el entorno — no hace falta tocar código.
 export const REMITENTE_CORREO =
   process.env.RESEND_FROM_EMAIL || "EWAH By Dra. Lorena Pinzón <onboarding@resend.dev>";
+
+// El dominio/dirección técnica del remitente se mantiene compartido (ver
+// comentario arriba); lo único que cambia por clínica es el nombre visible
+// antes de "<...>" — así cada clínica se ve como ella misma ante su
+// paciente aunque el correo salga técnicamente del mismo buzón.
+export function construirRemitente(nombreComercial?: string | null): string {
+  if (!nombreComercial) return REMITENTE_CORREO;
+  const match = REMITENTE_CORREO.match(/<([^>]+)>/);
+  const email = match ? match[1] : REMITENTE_CORREO;
+  return `${nombreComercial} <${email}>`;
+}
