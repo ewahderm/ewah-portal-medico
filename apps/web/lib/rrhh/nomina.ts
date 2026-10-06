@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requirePermiso as requirePermisoBase } from "@/lib/auth/requirePermiso";
 import { campoOpcional } from "@/lib/forms/opcional";
 import { rangoPagina, esRangoFueraDeLimite } from "@/lib/pagination";
-import { salarioVigente, cargoVigente } from "./calculo";
+import { salarioVigente, cargoVigente, fondoSolidaridadTramos } from "./calculo";
 import {
   calcularAuxilioTransporte,
   calcularDeduccionSalud,
@@ -14,6 +14,8 @@ import {
   calcularAportePatronalPension,
   calcularAporteArl,
   calcularAporteParafiscales,
+  ibcMensual,
+  porcentajeFondoSolidaridad,
 } from "./calculo";
 
 function requirePermisoCrear() {
@@ -28,12 +30,15 @@ function requirePermisoAnular() {
 
 export type DesgloseNomina = {
   esColombia: boolean;
+  salarioIntegral: boolean;
   salarioBase: number;
   auxilioTransporte: number;
   comisiones: number;
   comisionesIncluidasIbc: boolean;
   deduccionSalud: number;
   deduccionPension: number;
+  deduccionFsp: number;
+  porcentajeFsp: number;
   aportePatronalSalud: number;
   aportePatronalPension: number;
   aporteArl: number;
@@ -79,10 +84,12 @@ export async function calcularComprobanteNominaPreview(
     .eq("id", check.usuario.clinica_id)
     .single();
   const esColombia = (clinica?.paises as unknown as { codigo: string } | null)?.codigo === "CO";
-  const exonerado = clinica?.exoneracion_aportes_salud_parafiscales ?? false;
+  const clinicaExonerada = clinica?.exoneracion_aportes_salud_parafiscales ?? false;
 
-  const salarioMensual = await salarioVigente(supabase, empleadoId, fechaInicio);
-  if (salarioMensual === null) throw new Error("El empleado no tiene un salario registrado en su historial.");
+  const vigente = await salarioVigente(supabase, empleadoId, fechaInicio);
+  if (vigente === null) throw new Error("El empleado no tiene un salario registrado en su historial.");
+  const salarioMensual = vigente.salario;
+  const salarioIntegral = vigente.tipoSalario === "integral";
 
   const comisiones = Number(formData.get("comisiones") ?? 0) || 0;
   const comisionesIncluidasIbc = formData.get("comisionesIncluidasIbc") === "on";
@@ -93,10 +100,13 @@ export async function calcularComprobanteNominaPreview(
   let auxilioTransporte = 0;
   let deduccionSalud = 0;
   let deduccionPension = 0;
+  let deduccionFsp = 0;
+  let porcentajeFsp = 0;
   let aportePatronalSalud = 0;
   let aportePatronalPension = 0;
   let aporteArl = 0;
   let aporteParafiscales = 0;
+  let exonerado = false;
 
   if (esColombia) {
     const anio = Number(fechaInicio.slice(0, 4));
@@ -106,21 +116,37 @@ export async function calcularComprobanteNominaPreview(
       .eq("pais_id", clinica!.pais_operacion_id)
       .eq("anio", anio)
       .maybeSingle();
+    const smlv = valoresLegales?.smlv ? Number(valoresLegales.smlv) : null;
 
-    if (valoresLegales?.smlv && valoresLegales.auxilio_transporte) {
+    // Salario integral nunca lleva auxilio de transporte (supera 2 SMLMV
+    // por definición) — se deja explícito en vez de depender del umbral.
+    if (!salarioIntegral && smlv && valoresLegales?.auxilio_transporte) {
       // La elegibilidad (<= 2 SMLV) se evalúa sobre el salario MENSUAL
       // completo, nunca sobre la mitad — es una condición del salario del
       // trabajador, no del período de pago.
-      const auxilioMensual = calcularAuxilioTransporte(salarioMensual, valoresLegales.smlv, valoresLegales.auxilio_transporte);
+      const auxilioMensual = calcularAuxilioTransporte(salarioMensual, smlv, Number(valoresLegales.auxilio_transporte));
       auxilioTransporte = auxilioMensual / divisor;
     }
 
-    const ibc = salarioPeriodo + (comisionesIncluidasIbc ? comisiones : 0);
+    // Exoneración (art. 114-1 ET) solo para trabajadores que devengan menos
+    // de 10 SMLMV — nunca para salario integral (>= 13 SMLMV).
+    exonerado = clinicaExonerada && !salarioIntegral && smlv !== null && salarioMensual < smlv * 10;
+
+    // IBC mensual (70% si es integral, tope 25 SMLMV), luego al período.
+    const comisionesMensualesIbc = comisionesIncluidasIbc ? comisiones * divisor : 0;
+    const ibcMes = ibcMensual(salarioMensual, comisionesMensualesIbc, vigente.tipoSalario, smlv);
+    const ibc = ibcMes / divisor;
     deduccionSalud = calcularDeduccionSalud(ibc);
     deduccionPension = calcularDeduccionPension(ibc);
     aportePatronalSalud = calcularAportePatronalSalud(ibc, exonerado);
     aportePatronalPension = calcularAportePatronalPension(ibc);
     aporteParafiscales = calcularAporteParafiscales(ibc, exonerado);
+
+    if (smlv) {
+      const tramos = await fondoSolidaridadTramos(supabase, clinica!.pais_operacion_id, fechaInicio);
+      porcentajeFsp = porcentajeFondoSolidaridad(ibcMes, smlv, tramos);
+      deduccionFsp = redondear(ibc * porcentajeFsp);
+    }
 
     const cargo = await cargoVigente(supabase, empleadoId, fechaInicio);
     if (cargo?.claseRiesgoId) {
@@ -133,16 +159,19 @@ export async function calcularComprobanteNominaPreview(
     }
   }
 
-  const netoPagar = salarioPeriodo + auxilioTransporte + comisiones - deduccionSalud - deduccionPension;
+  const netoPagar = salarioPeriodo + auxilioTransporte + comisiones - deduccionSalud - deduccionPension - deduccionFsp;
 
   return {
     esColombia,
+    salarioIntegral,
     salarioBase: redondear(salarioPeriodo),
     auxilioTransporte: redondear(auxilioTransporte),
     comisiones,
     comisionesIncluidasIbc,
     deduccionSalud,
     deduccionPension,
+    deduccionFsp,
+    porcentajeFsp,
     aportePatronalSalud,
     aportePatronalPension,
     aporteArl,
@@ -191,6 +220,8 @@ export async function generarComprobanteNomina(empleadoId: string, formData: For
     comisiones_incluidas_ibc: formData.get("comisionesIncluidasIbc") === "on",
     deduccion_salud: numeroFormulario(formData, "deduccionSalud"),
     deduccion_pension: numeroFormulario(formData, "deduccionPension"),
+    deduccion_fsp: numeroFormulario(formData, "deduccionFsp"),
+    salario_integral: formData.get("salarioIntegral") === "on",
     aporte_patronal_salud: numeroFormulario(formData, "aportePatronalSalud"),
     aporte_patronal_pension: numeroFormulario(formData, "aportePatronalPension"),
     aporte_arl: numeroFormulario(formData, "aporteArl"),
@@ -234,6 +265,8 @@ export async function editarComprobanteNomina(id: string, empleadoId: string, fo
       comisiones_incluidas_ibc: formData.get("comisionesIncluidasIbc") === "on",
       deduccion_salud: numeroFormulario(formData, "deduccionSalud"),
       deduccion_pension: numeroFormulario(formData, "deduccionPension"),
+      deduccion_fsp: numeroFormulario(formData, "deduccionFsp"),
+      salario_integral: formData.get("salarioIntegral") === "on",
       aporte_patronal_salud: numeroFormulario(formData, "aportePatronalSalud"),
       aporte_patronal_pension: numeroFormulario(formData, "aportePatronalPension"),
       aporte_arl: numeroFormulario(formData, "aporteArl"),

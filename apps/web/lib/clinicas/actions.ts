@@ -74,7 +74,22 @@ export async function actualizarDatosBasicosClinica(formData: FormData) {
   if (!paisOperacionId) throw new Error("Selecciona un país.");
   const exoneracionAportes = formData.get("exoneracionAportes") === "on";
 
+  const nit = String(formData.get("nit") ?? "").trim();
+  if (!nit) throw new Error("El número de identificación es obligatorio.");
+
   const supabase = await createClient();
+
+  // RPC aparte (0059) para no cambiar la firma de la función principal; el
+  // mensaje de "ya existe otra clínica con ese número" es apto para mostrar.
+  const { error: errorNit } = await supabase.rpc("fn_actualizar_nit_clinica", { p_nit: nit });
+  if (errorNit) {
+    throw new Error(
+      errorNit.message.includes("Ya existe otra clínica")
+        ? errorNit.message
+        : "No se pudo actualizar el número de identificación.",
+    );
+  }
+
   const { error } = await supabase.rpc("fn_actualizar_datos_basicos_clinica", {
     p_pais_operacion_id: paisOperacionId,
     p_exoneracion_aportes: exoneracionAportes,

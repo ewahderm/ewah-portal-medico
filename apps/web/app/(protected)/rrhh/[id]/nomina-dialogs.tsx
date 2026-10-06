@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/dialog";
 import { Combobox } from "@/components/ui/combobox";
 import { TIPO_PERIODO_NOMINA } from "@/lib/rrhh/constantes";
+import { formatoPorcentaje } from "@/lib/format";
 
 // ============================================================
 // Nómina — desglose editable (compartido entre "generar" y "editar")
@@ -45,6 +46,15 @@ function CamposDesgloseNomina({ desglose }: { desglose: DesgloseNomina }) {
         <p className="text-xs font-semibold text-muted-foreground">
           Detalle del pago — puedes ajustar cualquier valor antes de guardar
         </p>
+        <input type="hidden" name="salarioIntegral" value={desglose.salarioIntegral ? "on" : ""} />
+        {desglose.salarioIntegral ? (
+          <Alert>
+            <AlertDescription className="text-xs">
+              Salario integral: los aportes y parafiscales se calculan sobre el 70% del salario, no hay
+              auxilio de transporte ni exoneración, y no causa prima, cesantías ni intereses.
+            </AlertDescription>
+          </Alert>
+        ) : null}
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
             <Label htmlFor="salarioBase" className="text-xs">Salario básico del período</Label>
@@ -74,11 +84,22 @@ function CamposDesgloseNomina({ desglose }: { desglose: DesgloseNomina }) {
                 <Label htmlFor="deduccionPension" className="text-xs">Deducción pensión (4%)</Label>
                 <Input id="deduccionPension" name="deduccionPension" type="number" step="1" defaultValue={desglose.deduccionPension} />
               </div>
+              <div className="col-span-2 space-y-1">
+                <Label htmlFor="deduccionFsp" className="text-xs">
+                  Fondo de Solidaridad Pensional
+                  {desglose.porcentajeFsp ? ` (${formatoPorcentaje(desglose.porcentajeFsp)})` : ""}
+                </Label>
+                <Input id="deduccionFsp" name="deduccionFsp" type="number" step="1" defaultValue={desglose.deduccionFsp} />
+                <p className="text-xs text-muted-foreground">
+                  Aplica desde 4 salarios mínimos de base de cotización (Ley 797 de 2003). Si no aplica, queda en 0.
+                </p>
+              </div>
             </>
           ) : (
             <>
               <input type="hidden" name="deduccionSalud" value={desglose.deduccionSalud} />
               <input type="hidden" name="deduccionPension" value={desglose.deduccionPension} />
+              <input type="hidden" name="deduccionFsp" value={desglose.deduccionFsp} />
             </>
           )}
           <div className="space-y-1">
@@ -254,6 +275,8 @@ type ComprobanteNominaRow = {
   comisiones_incluidas_ibc: boolean;
   deduccion_salud: number;
   deduccion_pension: number;
+  deduccion_fsp: number;
+  salario_integral: boolean;
   aporte_patronal_salud: number;
   aporte_patronal_pension: number;
   aporte_arl: number;
@@ -272,12 +295,15 @@ export function EditarNominaDialog({ comprobante, empleadoId, onGuardado }: { co
 
   const desglose: DesgloseNomina = {
     esColombia: true,
+    salarioIntegral: comprobante.salario_integral,
     salarioBase: comprobante.salario_base,
     auxilioTransporte: comprobante.auxilio_transporte,
     comisiones: comprobante.comisiones,
     comisionesIncluidasIbc: comprobante.comisiones_incluidas_ibc,
     deduccionSalud: comprobante.deduccion_salud,
     deduccionPension: comprobante.deduccion_pension,
+    deduccionFsp: comprobante.deduccion_fsp,
+    porcentajeFsp: 0,
     aportePatronalSalud: comprobante.aporte_patronal_salud,
     aportePatronalPension: comprobante.aporte_patronal_pension,
     aporteArl: comprobante.aporte_arl,

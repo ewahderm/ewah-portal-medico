@@ -7,6 +7,7 @@ import { HistorialTab } from "./historial-tab";
 import { IncapacidadesTab } from "./incapacidades-tab";
 import { VacacionesTab } from "./vacaciones-tab";
 import { NominaEmpleadoTab } from "./nomina-empleado-tab";
+import { PrestacionesCard } from "./prestaciones-card";
 import type { Opcion } from "@/lib/forms/opciones";
 
 type Empleado = { id: string; categoria_contrato: string | null };
@@ -77,7 +78,7 @@ export function EmpleadoDetalleTabs({
       ) : null}
 
       {puedeVerNomina ? (
-        <TabsContent value="nomina" className="pt-4">
+        <TabsContent value="nomina" className="space-y-6 pt-4">
           <NominaEmpleadoTab
             empleadoId={empleado.id}
             esLaboral={esLaboral}
@@ -85,6 +86,14 @@ export function EmpleadoDetalleTabs({
             puedeEditar={puedeEditarNomina}
             puedeAnular={puedeAnularNomina}
           />
+          {esLaboral ? (
+            <PrestacionesCard
+              empleadoId={empleado.id}
+              puedeCrear={puedeCrearNomina}
+              puedeEditar={puedeEditarNomina}
+              puedeAnular={puedeAnularNomina}
+            />
+          ) : null}
         </TabsContent>
       ) : null}
     </Tabs>

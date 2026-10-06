@@ -42,6 +42,7 @@ type ClinicaDatosBasicos = {
   rolActorId: string | null;
   tipoTransaccionInvimaId: string | null;
   codigoHabilitacion: string | null;
+  nit: string;
   claseRiesgoId: string | null;
   departamentoId: string | null;
   ciudadId: string | null;
@@ -148,6 +149,14 @@ export function DatosBasicosClinicaDialog({
                 <Combobox id="tipoDocumentoId" name="tipoDocumentoId" items={itemsTiposDocumento}
                   defaultValue={clinica.tipoDocumentoId ?? SIN_SELECCION} />
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="nit" className="font-semibold">Número de identificación</Label>
+              <Input id="nit" name="nit" defaultValue={clinica.nit} required placeholder="Ej. 901759965-1" />
+              <p className="text-xs text-muted-foreground">
+                El número del documento elegido arriba (NIT con dígito de verificación, cédula, etc.).
+                Es el mismo que aparece en los comprobantes de nómina.
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="direccion" className="font-semibold">Dirección</Label>

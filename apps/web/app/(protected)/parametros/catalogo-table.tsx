@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { toggleValorCatalogo } from "@/lib/parametros/actions";
 import { Badge } from "@/components/ui/badge";
+import { formatoPorcentaje } from "@/lib/format";
 import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -19,15 +20,18 @@ type ValorCatalogo = {
   codigo: string | null;
   nombre: string;
   activo: boolean;
+  extra?: number | null;
 };
 
 export function CatalogoTable({
   tabla,
   valores,
+  columnaExtra,
   editable,
 }: {
   tabla: string;
   valores: ValorCatalogo[];
+  columnaExtra?: { etiqueta: string; formato: "porcentaje" };
   editable: boolean;
 }) {
   const [error, setError] = useState<string | null>(null);
@@ -61,6 +65,7 @@ export function CatalogoTable({
           <TableRow>
             <TableHead className="hidden md:table-cell">Código</TableHead>
             <TableHead>Nombre</TableHead>
+            {columnaExtra ? <TableHead>{columnaExtra.etiqueta}</TableHead> : null}
             <TableHead className="text-right">Activo</TableHead>
           </TableRow>
         </TableHeader>
@@ -71,6 +76,9 @@ export function CatalogoTable({
                 {valor.codigo ?? "—"}
               </TableCell>
               <TableCell>{valor.nombre}</TableCell>
+              {columnaExtra ? (
+                <TableCell className="font-medium tabular-nums">{formatoPorcentaje(valor.extra ?? null)}</TableCell>
+              ) : null}
               <TableCell className="text-right">
                 {editable ? (
                   <Switch
@@ -87,7 +95,7 @@ export function CatalogoTable({
           ))}
           {valores.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={3} className="text-center text-muted-foreground">
+              <TableCell colSpan={columnaExtra ? 4 : 3} className="text-center text-muted-foreground">
                 Todavía no hay valores registrados en este catálogo.
               </TableCell>
             </TableRow>

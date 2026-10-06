@@ -5,6 +5,8 @@ import { PlusIcon, DownloadIcon } from "lucide-react";
 import { registrarCambioCargo, registrarCambioSalario, listarHistorialEmpleado } from "@/lib/rrhh/historial";
 import { urlFirmadaDocumentoRrhh } from "@/lib/rrhh/documentos";
 import { formatoMoneda } from "@/lib/format";
+import { TIPOS_SALARIO } from "@/lib/rrhh/constantes";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -106,6 +108,14 @@ function CambioSalarioDialog({ empleadoId, onCreado }: { empleadoId: string; onC
             <Input id="salario" name="salario" type="number" min="0" step="1000" required />
           </div>
           <div className="space-y-2">
+            <Label htmlFor="tipoSalario">Tipo de salario</Label>
+            <Combobox id="tipoSalario" name="tipoSalario" items={[...TIPOS_SALARIO]} defaultValue="ordinario" />
+            <p className="text-xs text-muted-foreground">
+              Integral (CST art. 132): mínimo 13 salarios mínimos. Incluye prima, cesantías e intereses —
+              no se liquidan aparte — y los aportes se calculan sobre el 70%.
+            </p>
+          </div>
+          <div className="space-y-2">
             <Label htmlFor="fechaInicio">Fecha de inicio</Label>
             <Input id="fechaInicio" name="fechaInicio" type="date" required />
           </div>
@@ -199,7 +209,12 @@ export function HistorialTab({ empleadoId, cargos, puedeCrear }: { empleadoId: s
               {historial.salarios.map((h) => (
                 <TableRow key={h.id}>
                   <TableCell className="text-muted-foreground">{h.fecha_inicio}</TableCell>
-                  <TableCell className="font-medium">{formatoMoneda(h.salario)}</TableCell>
+                  <TableCell className="font-medium">
+                    {formatoMoneda(h.salario)}
+                    {h.tipo_salario === "integral" ? (
+                      <Badge variant="outline" className="ml-2">Integral</Badge>
+                    ) : null}
+                  </TableCell>
                   <TableCell className="text-right">
                     {h.acta_storage_path ? (
                       <Button variant="ghost" size="sm" onClick={() => descargar(h.acta_storage_path!)}>

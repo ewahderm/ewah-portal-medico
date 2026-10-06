@@ -14,8 +14,50 @@ const CONFIG: Record<
     select: string;
     columnas: ColumnaXlsx[];
     mapear: (fila: Record<string, unknown>) => Record<string, unknown>;
+    // Columna de orden — "orden" salvo tablas que no la tienen.
+    ordenarPor?: string;
   }
 > = {
+  cargos: {
+    nombre: "Cargos",
+    select: "codigo, nombre, activo, clases_riesgo(nombre, tarifa_arl)",
+    columnas: [
+      { header: "Nombre", key: "nombre" },
+      { header: "Código", key: "codigo" },
+      { header: "Clase de riesgo", key: "clase" },
+      { header: "Aporte ARL empleador (%)", key: "tarifa" },
+      { header: "Activo", key: "activo" },
+    ],
+    mapear: (f) => {
+      const clase = f.clases_riesgo as { nombre: string; tarifa_arl: number | null } | null;
+      return {
+        nombre: f.nombre,
+        codigo: f.codigo ?? "",
+        clase: clase?.nombre ?? "",
+        tarifa: clase?.tarifa_arl != null ? Number(clase.tarifa_arl) * 100 : "",
+        activo: f.activo ? "Sí" : "No",
+      };
+    },
+  },
+  valores_legales_pais: {
+    nombre: "Valores legales por año",
+    select: "anio, smlv, auxilio_transporte, norma, paises(nombre)",
+    ordenarPor: "anio",
+    columnas: [
+      { header: "País", key: "pais" },
+      { header: "Año", key: "anio" },
+      { header: "Salario mínimo", key: "smlv" },
+      { header: "Auxilio de transporte", key: "auxilio" },
+      { header: "Norma", key: "norma" },
+    ],
+    mapear: (f) => ({
+      pais: (f.paises as { nombre: string } | null)?.nombre ?? "",
+      anio: f.anio,
+      smlv: f.smlv ?? "",
+      auxilio: f.auxilio_transporte ?? "",
+      norma: f.norma ?? "",
+    }),
+  },
   consultorios: {
     nombre: "Consultorios",
     select: "codigo, nombre, activo, sedes(nombre)",
@@ -165,7 +207,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ tab
   }
 
   const supabase = await createClient();
-  const { data } = await supabase.from(tabla).select(config.select).order("orden");
+  const { data } = await supabase.from(tabla).select(config.select).order(config.ordenarPor ?? "orden");
   const filas = (data ?? []).map((f) => config.mapear(f as unknown as Record<string, unknown>));
 
   const libro = construirLibroXlsx([{ nombre: config.nombre, columnas: config.columnas, filas }]);

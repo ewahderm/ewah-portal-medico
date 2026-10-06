@@ -32,3 +32,17 @@ export const TIPO_PERIODO_NOMINA = [
 
 export const MAX_DOCUMENTO_BYTES = 10 * 1024 * 1024;
 export const TIPOS_DOCUMENTO_PERMITIDOS = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+
+export const TIPOS_SALARIO = [
+  { value: "ordinario", label: "Ordinario" },
+  { value: "integral", label: "Integral" },
+] as const;
+
+export const TIPOS_LIQUIDACION_PRESTACIONES = [
+  { value: "prima_primer_semestre", label: "Prima 1er semestre (junio)" },
+  { value: "fin_de_anio", label: "Fin de año (prima 2º semestre + cesantías + intereses)" },
+] as const;
+
+export function labelTipoLiquidacion(tipo: string): string {
+  return TIPOS_LIQUIDACION_PRESTACIONES.find((t) => t.value === tipo)?.label ?? tipo;
+}

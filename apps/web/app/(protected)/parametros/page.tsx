@@ -39,6 +39,8 @@ import { TipoTratamientoDialog } from "./tipo-tratamiento-dialog";
 import { DatosBasicosClinicaDialog } from "./datos-basicos-clinica-dialog";
 import { CupsTab } from "./cups-tab";
 import { buscarCups } from "@/lib/parametros/cups";
+import { formatoPorcentaje } from "@/lib/format";
+import { ValoresLegalesTable, type ValorLegalRow } from "./valores-legales-table";
 import {
   getSedesActivas,
   getTiposIdentificacionActivos,
@@ -128,11 +130,21 @@ export default async function ParametrosPage() {
   ] = await Promise.all([
     Promise.all(
       CATALOGOS.map(async (catalogo) => {
-        const { data } = await supabase
-          .from(catalogo.tabla)
-          .select("id, codigo, nombre, activo")
-          .order("orden");
-        return { ...catalogo, valores: data ?? [] };
+        const columnas = catalogo.columnaExtra
+          ? `id, codigo, nombre, activo, ${catalogo.columnaExtra.campo}`
+          : "id, codigo, nombre, activo";
+        const { data } = await supabase.from(catalogo.tabla).select(columnas).order("orden");
+        const filas = (data ?? []) as unknown as Record<string, unknown>[];
+        return {
+          ...catalogo,
+          valores: filas.map((f) => ({
+            id: f.id as string,
+            codigo: (f.codigo as string | null) ?? null,
+            nombre: f.nombre as string,
+            activo: f.activo as boolean,
+            extra: catalogo.columnaExtra ? ((f[catalogo.columnaExtra.campo] as number | null) ?? null) : null,
+          })),
+        };
       }),
     ),
     getSedesActivas(supabase),
@@ -169,7 +181,7 @@ export default async function ParametrosPage() {
     supabase
       .from("clinicas")
       .select(
-        `agencia_regulatoria, pais_operacion_id, exoneracion_aportes_salud_parafiscales,
+        `nit, agencia_regulatoria, pais_operacion_id, exoneracion_aportes_salud_parafiscales,
          direccion, telefono, email, tipo_persona_id, tipo_documento_id, rol_actor_id,
          tipo_transaccion_invima_id, codigo_habilitacion, clase_riesgo_id, departamento_id, ciudad_id`,
       )
@@ -182,7 +194,7 @@ export default async function ParametrosPage() {
       .eq("activo", true),
     supabase
       .from("cargos")
-      .select("id, nombre, codigo, activo, clase_riesgo_id, clases_riesgo(nombre)")
+      .select("id, nombre, codigo, activo, clase_riesgo_id, clases_riesgo(nombre, tarifa_arl)")
       .order("orden"),
     supabase
       .from("tipos_tratamiento")
@@ -217,7 +229,19 @@ export default async function ParametrosPage() {
   const agenciaRegulatoria = clinicaData.data?.agencia_regulatoria ?? "INVIMA";
   const paisOperacionId = clinicaData.data?.pais_operacion_id ?? "";
   const exoneracionAportes = clinicaData.data?.exoneracion_aportes_salud_parafiscales ?? false;
-  const clasesRiesgo = await getClasesRiesgoActivas(supabase, paisOperacionId);
+  // La tarifa ARL (100% a cargo del empleador) va en la etiqueta: así se ve,
+  // sin poder editarse, junto al riesgo elegido en Cargos y en Datos básicos.
+  const { data: valoresLegalesData } = await supabase
+    .from("valores_legales_pais")
+    .select("id, anio, smlv, auxilio_transporte, norma")
+    .eq("pais_id", paisOperacionId)
+    .order("anio", { ascending: false });
+  const valoresLegales = (valoresLegalesData ?? []) as ValorLegalRow[];
+
+  const clasesRiesgo = (await getClasesRiesgoActivas(supabase, paisOperacionId)).map((c) => ({
+    id: c.id,
+    nombre: c.tarifa_arl === null ? c.nombre : `${c.nombre} · aporte ARL empleador ${formatoPorcentaje(Number(c.tarifa_arl))}`,
+  }));
   const claseRiesgoDefaultId = clinicaData.data?.clase_riesgo_id ?? null;
   const datosBasicosClinica = {
     paisOperacionId,
@@ -230,6 +254,7 @@ export default async function ParametrosPage() {
     rolActorId: clinicaData.data?.rol_actor_id ?? null,
     tipoTransaccionInvimaId: clinicaData.data?.tipo_transaccion_invima_id ?? null,
     codigoHabilitacion: clinicaData.data?.codigo_habilitacion ?? null,
+    nit: clinicaData.data?.nit ?? "",
     claseRiesgoId: claseRiesgoDefaultId,
     departamentoId: clinicaData.data?.departamento_id ?? null,
     ciudadId: clinicaData.data?.ciudad_id ?? null,
@@ -338,6 +363,14 @@ export default async function ParametrosPage() {
           editable
         />
       ),
+    },
+    {
+      tabla: "valores_legales_pais",
+      nombre: "Salario mínimo y auxilio de transporte",
+      descripcion: "Valores legales de cada año con su decreto de origen — Nómina y Prestaciones usan el del año de cada período.",
+      modulo: "rrhh" as ModuloCatalogo,
+      accion: <Badge variant="outline">Administrado por EWAH Tech</Badge>,
+      tabla_ui: <ValoresLegalesTable valores={valoresLegales} />,
     },
     {
       tabla: "cups",
@@ -477,6 +510,7 @@ export default async function ParametrosPage() {
                         <CatalogoTable
                           tabla={catalogo.tabla}
                           valores={catalogo.valores}
+                          columnaExtra={catalogo.columnaExtra}
                           editable={!catalogo.esGlobal}
                         />
                       </CardContent>

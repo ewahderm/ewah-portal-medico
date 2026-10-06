@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { formatoPorcentaje } from "@/lib/format";
 import { toggleCargo } from "@/lib/parametros/cargos";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -22,7 +23,7 @@ export type CargoRow = {
   codigo: string | null;
   activo: boolean;
   clase_riesgo_id: string | null;
-  clases_riesgo: { nombre: string } | null;
+  clases_riesgo: { nombre: string; tarifa_arl: number | null } | null;
 };
 
 export function CargosTable({
@@ -63,6 +64,7 @@ export function CargosTable({
           <TableRow>
             <TableHead>Nombre</TableHead>
             <TableHead className="hidden md:table-cell">Clase de riesgo</TableHead>
+            <TableHead className="hidden md:table-cell">Aporte ARL empleador</TableHead>
             <TableHead className="hidden md:table-cell">Código</TableHead>
             <TableHead className="text-right">Acciones</TableHead>
           </TableRow>
@@ -73,6 +75,11 @@ export function CargosTable({
               <TableCell>{valor.nombre}</TableCell>
               <TableCell className="hidden text-muted-foreground md:table-cell">
                 {valor.clases_riesgo?.nombre ?? "—"}
+              </TableCell>
+              <TableCell className="hidden font-medium tabular-nums md:table-cell">
+                {valor.clases_riesgo?.tarifa_arl != null
+                  ? formatoPorcentaje(Number(valor.clases_riesgo.tarifa_arl))
+                  : "—"}
               </TableCell>
               <TableCell className="hidden font-mono text-xs text-muted-foreground md:table-cell">
                 {valor.codigo ?? "—"}
@@ -100,7 +107,7 @@ export function CargosTable({
           ))}
           {valores.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={4} className="text-center text-muted-foreground">
+              <TableCell colSpan={5} className="text-center text-muted-foreground">
                 Todavía no hay cargos registrados.
               </TableCell>
             </TableRow>

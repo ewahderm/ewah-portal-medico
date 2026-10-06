@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requirePermiso as requirePermisoBase } from "@/lib/auth/requirePermiso";
+import { formatoMoneda } from "@/lib/format";
+import { MINIMO_SMLV_SALARIO_INTEGRAL } from "./calculo";
 
 function requirePermiso() {
   return requirePermisoBase("rrhh", "CREATE");
@@ -55,6 +57,7 @@ export async function registrarCambioCargo(empleadoId: string, formData: FormDat
 export async function registrarCambioSalario(empleadoId: string, formData: FormData) {
   const salario = Number(formData.get("salario"));
   const fechaInicio = String(formData.get("fechaInicio") ?? "");
+  const tipoSalario = formData.get("tipoSalario") === "integral" ? "integral" : "ordinario";
   if (!Number.isFinite(salario) || salario <= 0) throw new Error("El salario debe ser mayor a cero.");
   if (!fechaInicio) throw new Error("La fecha de inicio es obligatoria.");
 
@@ -62,12 +65,37 @@ export async function registrarCambioSalario(empleadoId: string, formData: FormD
   if (!check.ok) throw new Error(check.error);
 
   const supabase = await createClient();
+
+  // Salario integral (CST art. 132): mínimo 10 SMLMV + 30% prestacional =
+  // 13 SMLMV del año en que empieza a regir. Solo se valida si hay valor
+  // legal cargado para ese año/país; si no, no se bloquea el registro.
+  if (tipoSalario === "integral") {
+    const { data: clinica } = await supabase
+      .from("clinicas")
+      .select("pais_operacion_id")
+      .eq("id", check.usuario.clinica_id)
+      .single();
+    const { data: valores } = await supabase
+      .from("valores_legales_pais")
+      .select("smlv")
+      .eq("pais_id", clinica?.pais_operacion_id ?? "")
+      .eq("anio", Number(fechaInicio.slice(0, 4)))
+      .maybeSingle();
+    if (valores?.smlv && salario < valores.smlv * MINIMO_SMLV_SALARIO_INTEGRAL) {
+      throw new Error(
+        `El salario integral debe ser de al menos ${MINIMO_SMLV_SALARIO_INTEGRAL} salarios mínimos ` +
+          `(${formatoMoneda(valores.smlv * MINIMO_SMLV_SALARIO_INTEGRAL)} en ${fechaInicio.slice(0, 4)}).`,
+      );
+    }
+  }
+
   const actaStoragePath = await subirActaOpcional(supabase, check.usuario.clinica_id, empleadoId, formData);
 
   const { error } = await supabase.from("historial_salarios_empleado").insert({
     clinica_id: check.usuario.clinica_id,
     empleado_id: empleadoId,
     salario,
+    tipo_salario: tipoSalario,
     fecha_inicio: fechaInicio,
     acta_storage_path: actaStoragePath,
     created_by: check.usuario.id,
@@ -87,7 +115,7 @@ export async function listarHistorialEmpleado(empleadoId: string) {
       .order("fecha_inicio", { ascending: false }),
     supabase
       .from("historial_salarios_empleado")
-      .select("id, fecha_inicio, salario, acta_storage_path")
+      .select("id, fecha_inicio, salario, tipo_salario, acta_storage_path")
       .eq("empleado_id", empleadoId)
       .order("fecha_inicio", { ascending: false }),
   ]);

@@ -90,6 +90,8 @@ export async function generarPdfComprobanteNomina(datos: {
     comisiones: number;
     deduccion_salud: number;
     deduccion_pension: number;
+    deduccion_fsp?: number | null;
+    salario_integral?: boolean | null;
     aporte_patronal_salud: number;
     aporte_patronal_pension: number;
     aporte_arl: number;
@@ -112,6 +114,7 @@ export async function generarPdfComprobanteNomina(datos: {
   y = drawFila(page, font, y, "Empleado", empleado.nombre);
   y = drawFila(page, font, y, "Identificación", empleado.identificacion ?? "—");
   y = drawFila(page, font, y, "Período", `${c.tipo_periodo === "quincenal" ? "Quincenal" : "Mensual"} · ${c.fecha_inicio} a ${c.fecha_fin}`);
+  if (c.salario_integral) y = drawFila(page, font, y, "Tipo de salario", "Integral (aportes sobre el 70%)");
   y -= 10;
 
   y = drawSeccion(page, fontBold, y, "DEVENGADO");
@@ -125,9 +128,11 @@ export async function generarPdfComprobanteNomina(datos: {
   y = drawSeccion(page, fontBold, y, "DEDUCCIONES");
   y = drawFila(page, font, y, "Salud (4%)", formatoMoneda(c.deduccion_salud));
   y = drawFila(page, font, y, "Pensión (4%)", formatoMoneda(c.deduccion_pension));
+  const fsp = c.deduccion_fsp ?? 0;
+  if (fsp) y = drawFila(page, font, y, "Fondo de Solidaridad Pensional", formatoMoneda(fsp));
   if (c.retencion_fuente) y = drawFila(page, font, y, "Retención en la fuente", formatoMoneda(c.retencion_fuente));
   if (c.otras_deducciones) y = drawFila(page, font, y, "Otras deducciones", formatoMoneda(c.otras_deducciones));
-  const totalDeducciones = c.deduccion_salud + c.deduccion_pension + c.retencion_fuente + c.otras_deducciones;
+  const totalDeducciones = c.deduccion_salud + c.deduccion_pension + fsp + c.retencion_fuente + c.otras_deducciones;
   y = drawFila(page, font, y, "Total deducciones", formatoMoneda(totalDeducciones), { bold: fontBold, destacado: true });
   y -= 18;
 
@@ -212,4 +217,88 @@ export async function generarPdfComprobanteHonorarios(datos: {
 
   const bytes = await doc.save();
   descargarBytes(bytes, `honorarios-${empleado.nombre.replace(/\s+/g, "-")}-${c.fecha_inicio}.pdf`);
+}
+
+export async function generarPdfLiquidacionPrestaciones(datos: {
+  clinica: ClinicaInfo;
+  empleado: EmpleadoInfo & { fondoCesantias: string | null };
+  liquidacion: {
+    tipo: string;
+    anio: number;
+    fecha_inicio: string;
+    fecha_fin: string;
+    base_prima: number;
+    dias_prima: number;
+    valor_prima: number;
+    base_cesantias: number;
+    dias_cesantias: number;
+    valor_cesantias: number;
+    valor_intereses_cesantias: number;
+    total_pagar_trabajador: number;
+    total_consignar_fondo: number;
+    aprobado: boolean;
+    aprobado_en: string | null;
+  };
+}) {
+  const { clinica, empleado, liquidacion: l } = datos;
+  const esFinDeAnio = l.tipo === "fin_de_anio";
+  const doc = await PDFDocument.create();
+  const page = doc.addPage([595, 842]);
+  const font = await doc.embedFont(StandardFonts.Helvetica);
+  const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
+
+  const titulo = esFinDeAnio
+    ? `Liquidación de prestaciones sociales — fin de año ${l.anio}`
+    : `Liquidación de prima de servicios — 1er semestre ${l.anio}`;
+  let y = await construirEncabezado(doc, page, font, fontBold, clinica, titulo);
+
+  y = drawFila(page, font, y, "Empleado", empleado.nombre);
+  y = drawFila(page, font, y, "Identificación", empleado.identificacion ?? "—");
+  y = drawFila(page, font, y, "Período liquidado", `${l.fecha_inicio} a ${l.fecha_fin}`);
+  y -= 10;
+
+  y = drawSeccion(page, fontBold, y, "A PAGAR AL TRABAJADOR");
+  y = drawFila(page, font, y, `Prima de servicios (${l.dias_prima} días · base ${formatoMoneda(l.base_prima)})`, formatoMoneda(l.valor_prima));
+  if (esFinDeAnio) {
+    y = drawFila(page, font, y, "Intereses sobre cesantías (12% anual)", formatoMoneda(l.valor_intereses_cesantias));
+  }
+  y -= 14;
+  page.drawRectangle({ x: 45, y: y - 6, width: 505, height: 26, color: rgb(0.0, 0.79, 0.93), opacity: 0.15 });
+  y = drawFila(page, fontBold, y, "TOTAL A PAGAR", formatoMoneda(l.total_pagar_trabajador), { bold: fontBold, destacado: true });
+  y -= 18;
+
+  if (esFinDeAnio) {
+    y = drawSeccion(page, fontBold, y, "A CONSIGNAR EN EL FONDO DE CESANTÍAS (no se paga al trabajador)");
+    y = drawFila(page, font, y, `Cesantías (${l.dias_cesantias} días · base ${formatoMoneda(l.base_cesantias)})`, formatoMoneda(l.valor_cesantias));
+    y = drawFila(page, font, y, "Fondo", empleado.fondoCesantias ?? "—");
+    y -= 6;
+    y = drawFila(page, fontBold, y, "TOTAL A CONSIGNAR", formatoMoneda(l.total_consignar_fondo), { bold: fontBold, destacado: true });
+    y -= 10;
+  }
+
+  const notas = esFinDeAnio
+    ? [
+        "Prima: CST art. 306 (2º pago a más tardar el 20 de diciembre).",
+        "Cesantías: CST art. 249 — se consignan al fondo antes del 14 de febrero del año siguiente.",
+        "Intereses: Ley 52 de 1975 — se pagan al trabajador en enero del año siguiente.",
+      ]
+    : ["Prima: CST art. 306 (1er pago a más tardar el 30 de junio)."];
+  for (const nota of notas) {
+    page.drawText(nota, { x: 50, y, size: 8, font, color: rgb(0.35, 0.38, 0.42) });
+    y -= 12;
+  }
+  y -= 10;
+
+  page.drawText(
+    l.aprobado && l.aprobado_en
+      ? `Liquidación aprobada el ${new Date(l.aprobado_en).toLocaleDateString("es-CO")}`
+      : "BORRADOR — pendiente de aprobación",
+    { x: 50, y, size: 9, font: fontBold, color: l.aprobado ? rgb(0.1, 0.5, 0.2) : rgb(0.7, 0.35, 0) },
+  );
+  y -= 50;
+  page.drawLine({ start: { x: 50, y }, end: { x: 250, y }, thickness: 0.5, color: rgb(0.4, 0.4, 0.4) });
+  page.drawText("Firma del trabajador", { x: 50, y: y - 12, size: 8, font, color: rgb(0.35, 0.38, 0.42) });
+
+  const bytes = await doc.save();
+  descargarBytes(bytes, `prestaciones-${l.tipo}-${l.anio}-${empleado.nombre.replace(/\s+/g, "-")}.pdf`);
 }

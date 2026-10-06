@@ -24,6 +24,9 @@ export type CatalogoConfig = {
   descripcion: string;
   esGlobal: boolean;
   modulo: ModuloCatalogo;
+  // Columna adicional de SOLO LECTURA (ej. la tarifa ARL de una clase de
+  // riesgo). `campo` es una columna real de `tabla`, nunca viene del cliente.
+  columnaExtra?: { campo: string; etiqueta: string; formato: "porcentaje" };
 };
 
 export const CATALOGOS: CatalogoConfig[] = [
@@ -149,9 +152,10 @@ export const CATALOGOS: CatalogoConfig[] = [
   {
     tabla: "clases_riesgo",
     nombre: "Clases de riesgo",
-    descripcion: "Nivel de riesgo laboral de un cargo — la tarifa de ARL asociada solo aplica en Colombia.",
+    descripcion: "Nivel de riesgo laboral de un cargo y su aporte a ARL, 100% a cargo del empleador (Decreto 1772 de 1994, art. 13 — valor inicial). Solo aplica en Colombia.",
     esGlobal: true,
     modulo: "rrhh",
+    columnaExtra: { campo: "tarifa_arl", etiqueta: "Aporte empleador (ARL)", formato: "porcentaje" },
   },
   {
     tabla: "tipos_persona",
