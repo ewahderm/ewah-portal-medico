@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useMemo, useState } from "react";
 import { crearAtencionSinCita } from "@/lib/atenciones/actions";
 import { useCerrarAlExito } from "@/lib/forms/cerrarAlExito";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { toItems, type Opcion } from "@/lib/forms/opciones";
 import { hoy } from "@/lib/format";
 import { AtencionDetalleDialog } from "./atencion-detalle-dialog";
+import { PacienteRapidoDialog } from "../pacientes/paciente-rapido-dialog";
 
 // Un paciente llega sin cita agendada y se le atiende igual — este
 // formulario crea la atención (sin cita_id) y abre de inmediato su
@@ -73,7 +74,26 @@ export function AtencionSinCitaDialog({
   const [state, formAction, pending] = useActionState(crearAtencionSinCita, null);
   const [pacienteId, setPacienteId] = useState(pacienteFijo?.id ?? "");
   const [atencionCreada, setAtencionCreada] = useState<string | null>(null);
-  const pacientePendiente = pacientesPendientes.has(pacienteId);
+  const [pacientesLocal, setPacientesLocal] = useState(pacientes);
+  // Igual criterio que CitaDialog: un paciente creado por PacienteRapidoDialog
+  // nace "pendiente" (sin documento) y el set que llega por prop nunca lo va
+  // a incluir porque lo calculó el servidor antes de abrir este diálogo.
+  const [pacientesPendientesExtra, setPacientesPendientesExtra] = useState<Set<string>>(
+    new Set(),
+  );
+  const pacientesPendientesTotal = useMemo(
+    () => new Set([...pacientesPendientes, ...pacientesPendientesExtra]),
+    [pacientesPendientes, pacientesPendientesExtra],
+  );
+  const itemsPaciente = useMemo(
+    () =>
+      pacientesLocal.map((p) => ({
+        value: p.id,
+        label: pacientesPendientesTotal.has(p.id) ? `${p.nombre} — Información pendiente` : p.nombre,
+      })),
+    [pacientesLocal, pacientesPendientesTotal],
+  );
+  const pacientePendiente = pacientesPendientesTotal.has(pacienteId);
 
   useCerrarAlExito(pending, !state?.error, () => {
     setOpen(false);
@@ -97,13 +117,24 @@ export function AtencionSinCitaDialog({
             ) : null}
 
             <div className="space-y-2">
-              <Label htmlFor="pacienteId">Paciente</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="pacienteId">Paciente</Label>
+                {pacienteFijo ? null : (
+                  <PacienteRapidoDialog
+                    onCreado={(nuevo) => {
+                      setPacientesLocal((actual) => [...actual, nuevo]);
+                      setPacientesPendientesExtra((actual) => new Set([...actual, nuevo.id]));
+                      setPacienteId(nuevo.id);
+                    }}
+                  />
+                )}
+              </div>
               <Combobox
                 id="pacienteId"
                 name="pacienteId"
                 required
                 disabled={Boolean(pacienteFijo)}
-                items={toItems(pacientes)}
+                items={itemsPaciente}
                 value={pacienteId}
                 onValueChange={(valor) => setPacienteId(String(valor ?? ""))}
                 placeholder="Selecciona un paciente"
@@ -169,7 +200,7 @@ export function AtencionSinCitaDialog({
           puedeRevertirConsumo={puedeRevertirConsumo}
           puedeEliminarArchivos={puedeEliminarArchivos}
           tieneEntitlementAnexos={tieneEntitlementAnexos}
-          pacientesPendientes={pacientesPendientes}
+          pacientesPendientes={pacientesPendientesTotal}
         />
       ) : null}
     </>
