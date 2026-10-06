@@ -188,7 +188,9 @@ export default async function ParametrosPage() {
       .order("orden"),
     supabase
       .from("tipos_tratamiento")
-      .select("id, nombre, codigo, codigo_habilitacion, cups_id, activo, cups(codigo, descripcion)")
+      .select(
+        "id, nombre, codigo, servicio_habilitado_id, cups_id, activo, cups(codigo, descripcion), clinica_servicios_habilitados(codigo_habilitacion, practicas_medicas(nombre))",
+      )
       .order("orden"),
     getPaisesActivos(supabase),
     getTiposPersonaActivos(supabase),
@@ -204,6 +206,13 @@ export default async function ParametrosPage() {
   ]);
 
   const cupsTabInicial = await buscarCups("");
+
+  // Opciones del desplegable de código de habilitación en Tipos de
+  // tratamiento (0057): los servicios que la clínica habilitó.
+  const serviciosOpciones = serviciosHabilitados.map((s) => ({
+    id: s.id,
+    nombre: `${s.codigo_habilitacion ?? "Sin código"} — ${s.practicas_medicas?.nombre ?? ""}`,
+  }));
 
   // "INVIMA" hoy — vive en clinicas.agencia_regulatoria para que una
   // clínica en otro país (FDA, COFEPRIS...) vea su propia agencia sin
@@ -347,12 +356,13 @@ export default async function ParametrosPage() {
       descripcion: "Menú de tratamientos que ofrece tu clínica, con su código de habilitación y CUPS asociado.",
       modulo: "tratamientos" as ModuloCatalogo,
       accion: (
-        <TipoTratamientoDialog cups={cupsActivos} trigger={<Button size="sm">Agregar tipo de tratamiento</Button>} />
+        <TipoTratamientoDialog cups={cupsActivos} servicios={serviciosOpciones} trigger={<Button size="sm">Agregar tipo de tratamiento</Button>} />
       ),
       tabla_ui: (
         <TiposTratamientoTable
           valores={(tiposTratamientoData.data ?? []) as unknown as TipoTratamientoRow[]}
           cups={cupsActivos}
+          servicios={serviciosOpciones}
           editable
         />
       ),

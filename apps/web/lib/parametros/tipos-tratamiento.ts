@@ -14,7 +14,7 @@ function datosTipoTratamientoDesdeForm(formData: FormData) {
   return {
     nombre: String(formData.get("nombre") ?? "").trim(),
     codigo: campoOpcional(formData, "codigo"),
-    codigoHabilitacion: campoOpcional(formData, "codigoHabilitacion"),
+    servicioHabilitadoId: valorOpcionalSelect(formData, "servicioHabilitadoId"),
     cupsId: valorOpcionalSelect(formData, "cupsId"),
   };
 }
@@ -34,7 +34,7 @@ export async function crearTipoTratamiento(
     clinica_id: check.usuario.clinica_id,
     nombre: datos.nombre,
     codigo: datos.codigo,
-    codigo_habilitacion: datos.codigoHabilitacion,
+    servicio_habilitado_id: datos.servicioHabilitadoId,
     cups_id: datos.cupsId,
   });
   if (error) {
@@ -65,7 +65,7 @@ export async function editarTipoTratamiento(
     .update({
       nombre: datos.nombre,
       codigo: datos.codigo,
-      codigo_habilitacion: datos.codigoHabilitacion,
+      servicio_habilitado_id: datos.servicioHabilitadoId,
       cups_id: datos.cupsId,
     })
     .eq("id", id);

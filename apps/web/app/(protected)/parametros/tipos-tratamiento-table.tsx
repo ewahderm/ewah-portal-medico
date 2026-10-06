@@ -14,6 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { TipoTratamientoDialog } from "./tipo-tratamiento-dialog";
+import type { Opcion } from "@/lib/forms/opciones";
 
 type CupsOpcion = { id: string; codigo: string; descripcion: string };
 
@@ -21,7 +22,11 @@ export type TipoTratamientoRow = {
   id: string;
   nombre: string;
   codigo: string | null;
-  codigo_habilitacion: string | null;
+  servicio_habilitado_id: string | null;
+  clinica_servicios_habilitados: {
+    codigo_habilitacion: string | null;
+    practicas_medicas: { nombre: string } | null;
+  } | null;
   cups_id: string | null;
   activo: boolean;
   cups: { codigo: string; descripcion: string } | null;
@@ -30,10 +35,12 @@ export type TipoTratamientoRow = {
 export function TiposTratamientoTable({
   valores,
   cups,
+  servicios,
   editable,
 }: {
   valores: TipoTratamientoRow[];
   cups: CupsOpcion[];
+  servicios: Opcion[];
   editable: boolean;
 }) {
   const [error, setError] = useState<string | null>(null);
@@ -77,8 +84,17 @@ export function TiposTratamientoTable({
               <TableCell className="hidden font-mono text-xs text-muted-foreground md:table-cell">
                 {valor.codigo ?? "—"}
               </TableCell>
-              <TableCell className="hidden font-mono text-xs text-muted-foreground md:table-cell">
-                {valor.codigo_habilitacion ?? "—"}
+              <TableCell className="hidden text-xs text-muted-foreground md:table-cell">
+                {valor.clinica_servicios_habilitados ? (
+                  <>
+                    <span className="font-mono">
+                      {valor.clinica_servicios_habilitados.codigo_habilitacion ?? "Sin código"}
+                    </span>
+                    <span className="block">{valor.clinica_servicios_habilitados.practicas_medicas?.nombre}</span>
+                  </>
+                ) : (
+                  "—"
+                )}
               </TableCell>
               <TableCell className="hidden text-muted-foreground md:table-cell">
                 {valor.cups ? `${valor.cups.codigo} — ${valor.cups.descripcion}` : "—"}
@@ -88,6 +104,7 @@ export function TiposTratamientoTable({
                   <>
                     <TipoTratamientoDialog
                       cups={cups}
+                      servicios={servicios}
                       editando={valor}
                       trigger={
                         <Button variant="outline" size="sm">

@@ -23,16 +23,18 @@ type TipoTratamiento = {
   id: string;
   nombre: string;
   codigo: string | null;
-  codigo_habilitacion: string | null;
+  servicio_habilitado_id: string | null;
   cups_id: string | null;
 };
 
 export function TipoTratamientoDialog({
   cups,
+  servicios,
   editando,
   trigger,
 }: {
   cups: CupsOpcion[];
+  servicios: Opcion[];
   editando?: TipoTratamiento;
   trigger: React.ReactElement;
 }) {
@@ -40,6 +42,7 @@ export function TipoTratamientoDialog({
   const [state, formAction, pending] = useActionState(accion, null);
   const opcionesCups: Opcion[] = cups.map((c) => ({ id: c.id, nombre: `${c.codigo} — ${c.descripcion}` }));
   const itemsCups = toItemsOpcional(opcionesCups, SIN_SELECCION, "Sin especificar");
+  const itemsServicios = toItemsOpcional(servicios, SIN_SELECCION, "Sin especificar");
 
   return (
     <Dialog>
@@ -67,14 +70,18 @@ export function TipoTratamientoDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="codigoHabilitacion">Código de habilitación (opcional)</Label>
-            <Input
-              id="codigoHabilitacion"
-              name="codigoHabilitacion"
-              defaultValue={editando?.codigo_habilitacion ?? ""}
+            <Label htmlFor="servicioHabilitadoId">Código de habilitación (opcional)</Label>
+            <Combobox
+              id="servicioHabilitadoId"
+              name="servicioHabilitadoId"
+              items={itemsServicios}
+              defaultValue={editando?.servicio_habilitado_id ?? SIN_SELECCION}
+              placeholder="Buscar..."
             />
             <p className="text-xs text-muted-foreground">
-              Código del servicio habilitado (REPS) con el que tu clínica presta este tratamiento.
+              {servicios.length === 0
+                ? "Tu clínica todavía no tiene servicios habilitados. Agrégalos en Datos básicos de la clínica (botón arriba a la derecha) y aparecerán aquí."
+                : "Servicio habilitado (REPS) con el que tu clínica presta este tratamiento. Los códigos se administran en Datos básicos de la clínica."}
             </p>
           </div>
 

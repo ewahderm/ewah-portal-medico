@@ -104,20 +104,27 @@ const CONFIG: Record<
   },
   tipos_tratamiento: {
     nombre: "Tipos de tratamiento",
-    select: "codigo, nombre, codigo_habilitacion, activo, cups(codigo, descripcion)",
+    select:
+      "codigo, nombre, activo, cups(codigo, descripcion), clinica_servicios_habilitados(codigo_habilitacion, practicas_medicas(nombre))",
     columnas: [
       { header: "Nombre", key: "nombre" },
       { header: "Código", key: "codigo" },
       { header: "Código de habilitación", key: "codigo_habilitacion" },
+      { header: "Servicio habilitado", key: "servicio" },
       { header: "CUPS", key: "cups" },
       { header: "Activo", key: "activo" },
     ],
     mapear: (f) => {
       const cups = f.cups as { codigo: string; descripcion: string } | null;
+      const servicio = f.clinica_servicios_habilitados as {
+        codigo_habilitacion: string | null;
+        practicas_medicas: { nombre: string } | null;
+      } | null;
       return {
         nombre: f.nombre,
         codigo: f.codigo ?? "",
-        codigo_habilitacion: f.codigo_habilitacion ?? "",
+        codigo_habilitacion: servicio?.codigo_habilitacion ?? "",
+        servicio: servicio?.practicas_medicas?.nombre ?? "",
         cups: cups ? `${cups.codigo} — ${cups.descripcion}` : "",
         activo: f.activo ? "Sí" : "No",
       };
