@@ -37,6 +37,8 @@ import { CargoDialog } from "./cargo-dialog";
 import { TiposTratamientoTable, type TipoTratamientoRow } from "./tipos-tratamiento-table";
 import { TipoTratamientoDialog } from "./tipo-tratamiento-dialog";
 import { DatosBasicosClinicaDialog } from "./datos-basicos-clinica-dialog";
+import { CupsTab } from "./cups-tab";
+import { buscarCups } from "@/lib/parametros/cups";
 import {
   getSedesActivas,
   getTiposIdentificacionActivos,
@@ -49,7 +51,7 @@ import {
   getTiposTransaccionInvimaActivos,
   getDepartamentosActivos,
   getCiudadesActivas,
-  getCupsActivos,
+  getCupsActivadosClinica,
 } from "@/lib/catalogos";
 
 // Mismo nombre/ícono que ya usa el launcher del dashboard
@@ -189,8 +191,10 @@ export default async function ParametrosPage() {
     getTiposTransaccionInvimaActivos(supabase),
     getDepartamentosActivos(supabase),
     getCiudadesActivas(supabase),
-    getCupsActivos(supabase),
+    getCupsActivadosClinica(supabase),
   ]);
+
+  const cupsTabInicial = await buscarCups("");
 
   // "INVIMA" hoy — vive en clinicas.agencia_regulatoria para que una
   // clínica en otro país (FDA, COFEPRIS...) vea su propia agencia sin
@@ -319,6 +323,14 @@ export default async function ParametrosPage() {
           editable
         />
       ),
+    },
+    {
+      tabla: "cups",
+      nombre: "CUPS",
+      descripcion: "Clasificación Única de Procedimientos en Salud (~10.000 códigos) — activa los que tu clínica usa para poder asociarlos a un tipo de tratamiento.",
+      modulo: "tratamientos" as ModuloCatalogo,
+      accion: null,
+      tabla_ui: <CupsTab inicial={cupsTabInicial} />,
     },
     {
       tabla: "tipos_tratamiento",

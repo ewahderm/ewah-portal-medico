@@ -334,18 +334,20 @@ export async function getCiudadesActivas(supabase: Supabase) {
   return data ?? [];
 }
 
-// CUPS puede crecer a miles de filas una vez se cargue el listado oficial
-// — ya queda devolviendo todo por ahora (tabla vacía hasta que se importe),
-// pero el combobox que lo consuma debe anticipar una búsqueda server-side
-// en vez de cargarlo completo en el cliente cuando eso pase.
-export async function getCupsActivos(supabase: Supabase) {
+// CUPS tiene ~10,000 códigos (importado 2026-10-06) — el combobox de
+// Tipos de tratamiento NUNCA debe ofrecer el catálogo completo, solo los
+// que la propia clínica activó en la pestaña CUPS de Parámetros (tabla
+// `clinica_cups`, ver lib/parametros/cups.ts). Sin esto, el desplegable
+// sería un listado interminable, exactamente lo que el usuario pidió
+// evitar.
+export async function getCupsActivadosClinica(supabase: Supabase) {
   const { data } = await supabase
-    .from("cups")
-    .select("id, codigo, descripcion")
-    .eq("activo", true)
-    .order("codigo")
-    .limit(500);
-  return data ?? [];
+    .from("clinica_cups")
+    .select("cups(id, codigo, descripcion)")
+    .order("created_at", { ascending: false });
+  return ((data ?? []) as unknown as { cups: { id: string; codigo: string; descripcion: string } | null }[])
+    .map((f) => f.cups)
+    .filter((c): c is NonNullable<typeof c> => !!c);
 }
 
 export async function getValoresLegalesAnio(supabase: Supabase, paisId: string, anio: number) {

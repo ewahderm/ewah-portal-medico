@@ -1,7 +1,7 @@
 import { requireUsuario, esAdministrador } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { normalizarBusqueda } from "@/lib/pacientes/normalizar";
+import { normalizarBusqueda } from "@/lib/texto";
 import { nombreCompleto } from "@/lib/pacientes/nombre";
 import { tieneInfoPendiente, camposFaltantes } from "@/lib/pacientes/completitud";
 import {

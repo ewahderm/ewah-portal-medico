@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { normalizarBusqueda } from "@/lib/pacientes/normalizar";
+import { normalizarBusqueda } from "@/lib/texto";
 import type { ColumnaXlsx } from "@/lib/exportar/xlsx";
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;

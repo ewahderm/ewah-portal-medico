@@ -88,6 +88,20 @@ const CONFIG: Record<
       activo: f.activo ? "Sí" : "No",
     }),
   },
+  cups: {
+    nombre: "CUPS (catálogo oficial completo)",
+    select: "codigo, descripcion, capitulo",
+    columnas: [
+      { header: "Código", key: "codigo" },
+      { header: "Descripción", key: "descripcion" },
+      { header: "Capítulo", key: "capitulo" },
+    ],
+    mapear: (f) => ({
+      codigo: f.codigo,
+      descripcion: f.descripcion,
+      capitulo: f.capitulo ?? "",
+    }),
+  },
   tipos_tratamiento: {
     nombre: "Tipos de tratamiento",
     select: "codigo, nombre, codigo_habilitacion, activo, cups(codigo, descripcion)",

@@ -202,13 +202,6 @@ export const CATALOGOS: CatalogoConfig[] = [
     esGlobal: true,
     modulo: "general",
   },
-  {
-    tabla: "cups",
-    nombre: "CUPS",
-    descripcion: "Clasificación Única de Procedimientos en Salud — pendiente de cargar el listado oficial vigente.",
-    esGlobal: true,
-    modulo: "tratamientos",
-  },
 ];
 
 // Consultorios, Insumos, Proveedores, Neveras, Cargos y Tipos de
@@ -222,6 +215,11 @@ export const CATALOGOS: CatalogoConfig[] = [
 // app/(protected)/parametros/page.tsx, agrupadas igual que las de arriba.
 // Tipos de tratamiento vivió en esta lista hasta 2026-10-06, cuando ganó
 // `codigo_habilitacion`/`cups_id` y tuvo que graduarse al mismo patrón.
+// CUPS nunca vivió aquí en la práctica — se agregó y se quitó el mismo
+// día (2026-10-06): con ~10,000 filas, listarlo plano en un <table> sin
+// paginación ni búsqueda es inviable. Tiene su propia pestaña con buscador
+// server-side (`cups-tab.tsx`) y activación por clínica (`clinica_cups`),
+// ver lib/parametros/cups.ts.
 
 export function getCatalogo(tabla: string): CatalogoConfig | undefined {
   return CATALOGOS.find((c) => c.tabla === tabla);
