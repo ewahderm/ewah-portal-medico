@@ -7,7 +7,7 @@ import {
   LeafIcon,
   SlidersHorizontalIcon,
   BriefcaseIcon,
-  GlobeIcon,
+  Building2Icon,
   type LucideIcon,
 } from "lucide-react";
 import { requireUsuario, esAdministrador } from "@/lib/auth/session";
@@ -34,13 +34,22 @@ import { MotivosMovimientoTable, type MotivoMovimientoRow } from "./motivos-movi
 import { MotivoMovimientoDialog } from "./motivo-movimiento-dialog";
 import { CargosTable, type CargoRow } from "./cargos-table";
 import { CargoDialog } from "./cargo-dialog";
-import { PaisOperacionDialog } from "./pais-operacion-dialog";
+import { TiposTratamientoTable, type TipoTratamientoRow } from "./tipos-tratamiento-table";
+import { TipoTratamientoDialog } from "./tipo-tratamiento-dialog";
+import { DatosBasicosClinicaDialog } from "./datos-basicos-clinica-dialog";
 import {
   getSedesActivas,
   getTiposIdentificacionActivos,
   getProveedoresActivos,
   getClasesRiesgoActivas,
   getPaisesActivos,
+  getTiposPersonaActivos,
+  getTiposDocumentoPrestadorActivos,
+  getRolesActorActivos,
+  getTiposTransaccionInvimaActivos,
+  getDepartamentosActivos,
+  getCiudadesActivas,
+  getCupsActivos,
 } from "@/lib/catalogos";
 
 // Mismo nombre/ícono que ya usa el launcher del dashboard
@@ -101,7 +110,15 @@ export default async function ParametrosPage() {
     clinicaData,
     modulosActivosData,
     cargosData,
+    tiposTratamientoData,
     paises,
+    tiposPersona,
+    tiposDocumentoPrestador,
+    rolesActor,
+    tiposTransaccionInvima,
+    departamentos,
+    ciudades,
+    cupsActivos,
   ] = await Promise.all([
     Promise.all(
       CATALOGOS.map(async (catalogo) => {
@@ -134,7 +151,9 @@ export default async function ParametrosPage() {
       .order("orden"),
     supabase
       .from("proveedores")
-      .select("id, nombre, tipo_identificacion_id, numero_identificacion, observaciones, activo, tipos_identificacion(nombre)")
+      .select(
+        "id, nombre, tipo_identificacion_id, numero_identificacion, tipo_persona_id, observaciones, activo, tipos_identificacion(nombre), tipos_persona(nombre)",
+      )
       .order("orden"),
     supabase
       .from("motivos_movimiento_inventario")
@@ -143,7 +162,11 @@ export default async function ParametrosPage() {
       .order("orden"),
     supabase
       .from("clinicas")
-      .select("agencia_regulatoria, pais_operacion_id, exoneracion_aportes_salud_parafiscales")
+      .select(
+        `agencia_regulatoria, pais_operacion_id, exoneracion_aportes_salud_parafiscales,
+         direccion, telefono, email, tipo_persona_id, tipo_documento_id, rol_actor_id,
+         tipo_transaccion_invima_id, codigo_habilitacion, clase_riesgo_id, departamento_id, ciudad_id`,
+      )
       .eq("id", usuario.clinica_id)
       .single(),
     supabase
@@ -155,7 +178,18 @@ export default async function ParametrosPage() {
       .from("cargos")
       .select("id, nombre, codigo, activo, clase_riesgo_id, clases_riesgo(nombre)")
       .order("orden"),
+    supabase
+      .from("tipos_tratamiento")
+      .select("id, nombre, codigo, codigo_habilitacion, cups_id, activo, cups(codigo, descripcion)")
+      .order("orden"),
     getPaisesActivos(supabase),
+    getTiposPersonaActivos(supabase),
+    getTiposDocumentoPrestadorActivos(supabase),
+    getRolesActorActivos(supabase),
+    getTiposTransaccionInvimaActivos(supabase),
+    getDepartamentosActivos(supabase),
+    getCiudadesActivas(supabase),
+    getCupsActivos(supabase),
   ]);
 
   // "INVIMA" hoy — vive en clinicas.agencia_regulatoria para que una
@@ -165,6 +199,22 @@ export default async function ParametrosPage() {
   const paisOperacionId = clinicaData.data?.pais_operacion_id ?? "";
   const exoneracionAportes = clinicaData.data?.exoneracion_aportes_salud_parafiscales ?? false;
   const clasesRiesgo = await getClasesRiesgoActivas(supabase, paisOperacionId);
+  const claseRiesgoDefaultId = clinicaData.data?.clase_riesgo_id ?? null;
+  const datosBasicosClinica = {
+    paisOperacionId,
+    exoneracionAportes,
+    direccion: clinicaData.data?.direccion ?? null,
+    telefono: clinicaData.data?.telefono ?? null,
+    email: clinicaData.data?.email ?? null,
+    tipoPersonaId: clinicaData.data?.tipo_persona_id ?? null,
+    tipoDocumentoId: clinicaData.data?.tipo_documento_id ?? null,
+    rolActorId: clinicaData.data?.rol_actor_id ?? null,
+    tipoTransaccionInvimaId: clinicaData.data?.tipo_transaccion_invima_id ?? null,
+    codigoHabilitacion: clinicaData.data?.codigo_habilitacion ?? null,
+    claseRiesgoId: claseRiesgoDefaultId,
+    departamentoId: clinicaData.data?.departamento_id ?? null,
+    ciudadId: clinicaData.data?.ciudad_id ?? null,
+  };
 
   const codigosModulosActivos = new Set(
     (modulosActivosData.data ?? [])
@@ -237,6 +287,7 @@ export default async function ParametrosPage() {
       accion: (
         <ProveedorDialog
           tiposIdentificacion={tiposIdentificacion}
+          tiposPersona={tiposPersona}
           trigger={<Button size="sm">Agregar proveedor</Button>}
         />
       ),
@@ -244,6 +295,7 @@ export default async function ParametrosPage() {
         <ProveedoresTable
           valores={(proveedoresData.data ?? []) as unknown as ProveedorRow[]}
           tiposIdentificacion={tiposIdentificacion}
+          tiposPersona={tiposPersona}
           editable
         />
       ),
@@ -254,12 +306,32 @@ export default async function ParametrosPage() {
       descripcion: "Cargos de tu clínica, cada uno con su clase de riesgo para el cálculo de ARL en Nómina.",
       modulo: "rrhh" as ModuloCatalogo,
       accion: (
-        <CargoDialog clasesRiesgo={clasesRiesgo} trigger={<Button size="sm">Agregar cargo</Button>} />
+        <CargoDialog
+          clasesRiesgo={clasesRiesgo}
+          claseRiesgoDefaultId={claseRiesgoDefaultId}
+          trigger={<Button size="sm">Agregar cargo</Button>}
+        />
       ),
       tabla_ui: (
         <CargosTable
           valores={(cargosData.data ?? []) as unknown as CargoRow[]}
           clasesRiesgo={clasesRiesgo}
+          editable
+        />
+      ),
+    },
+    {
+      tabla: "tipos_tratamiento",
+      nombre: "Tipos de tratamiento",
+      descripcion: "Menú de tratamientos que ofrece tu clínica, con su código de habilitación y CUPS asociado.",
+      modulo: "tratamientos" as ModuloCatalogo,
+      accion: (
+        <TipoTratamientoDialog cups={cupsActivos} trigger={<Button size="sm">Agregar tipo de tratamiento</Button>} />
+      ),
+      tabla_ui: (
+        <TiposTratamientoTable
+          valores={(tiposTratamientoData.data ?? []) as unknown as TipoTratamientoRow[]}
+          cups={cupsActivos}
           editable
         />
       ),
@@ -302,13 +374,19 @@ export default async function ParametrosPage() {
           </p>
         </div>
         {esAdministrador(usuario) && paisOperacionId ? (
-          <PaisOperacionDialog
+          <DatosBasicosClinicaDialog
+            clinica={datosBasicosClinica}
             paises={paises}
-            paisOperacionId={paisOperacionId}
-            exoneracionAportes={exoneracionAportes}
+            departamentos={departamentos}
+            ciudades={ciudades}
+            clasesRiesgo={clasesRiesgo}
+            tiposPersona={tiposPersona}
+            tiposDocumento={tiposDocumentoPrestador}
+            rolesActor={rolesActor}
+            tiposTransaccionInvima={tiposTransaccionInvima}
             trigger={
               <Button variant="outline" size="sm">
-                <GlobeIcon /> País de operación
+                <Building2Icon /> Datos básicos de la clínica
               </Button>
             }
           />

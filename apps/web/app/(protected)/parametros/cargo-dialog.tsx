@@ -30,10 +30,12 @@ type Cargo = {
 
 export function CargoDialog({
   clasesRiesgo,
+  claseRiesgoDefaultId,
   editando,
   trigger,
 }: {
   clasesRiesgo: Opcion[];
+  claseRiesgoDefaultId?: string | null;
   editando?: Cargo;
   trigger: React.ReactElement;
 }) {
@@ -42,6 +44,12 @@ export function CargoDialog({
   const accion = editando ? editarCargo : crearCargo;
   const [state, formAction, pending] = useActionState(accion, null);
   const itemsClasesRiesgo = toItemsOpcional(clasesRiesgo, SIN_SELECCION, "Sin especificar");
+  // Al crear un cargo nuevo, se sugiere el nivel de riesgo por defecto de
+  // la clínica (Datos básicos) — nunca pisa el riesgo ya asignado a un
+  // cargo existente, por eso solo aplica cuando !editando.
+  const claseRiesgoInicial = editando
+    ? (editando.clase_riesgo_id ?? SIN_SELECCION)
+    : (claseRiesgoDefaultId ?? SIN_SELECCION);
 
   useCerrarAlExito(pending, !state?.error, () => {
     setOpen(false);
@@ -81,7 +89,7 @@ export function CargoDialog({
               id="claseRiesgoId"
               name="claseRiesgoId"
               items={itemsClasesRiesgo}
-              defaultValue={editando?.clase_riesgo_id ?? SIN_SELECCION}
+              defaultValue={claseRiesgoInicial}
             />
             <p className="text-xs text-muted-foreground">
               Determina el aporte de ARL al generar la nómina — solo aplica en Colombia.

@@ -70,11 +70,12 @@ const CONFIG: Record<
   },
   proveedores: {
     nombre: "Proveedores",
-    select: "nombre, numero_identificacion, observaciones, activo, tipos_identificacion(nombre)",
+    select: "nombre, numero_identificacion, observaciones, activo, tipos_identificacion(nombre), tipos_persona(nombre)",
     columnas: [
       { header: "Nombre", key: "nombre" },
       { header: "Tipo de identificación", key: "tipo_identificacion" },
       { header: "Número de identificación", key: "numero_identificacion" },
+      { header: "Tipo de persona", key: "tipo_persona" },
       { header: "Observaciones", key: "observaciones" },
       { header: "Activo", key: "activo" },
     ],
@@ -82,9 +83,31 @@ const CONFIG: Record<
       nombre: f.nombre,
       tipo_identificacion: (f.tipos_identificacion as { nombre: string } | null)?.nombre ?? "",
       numero_identificacion: f.numero_identificacion ?? "",
+      tipo_persona: (f.tipos_persona as { nombre: string } | null)?.nombre ?? "",
       observaciones: f.observaciones ?? "",
       activo: f.activo ? "Sí" : "No",
     }),
+  },
+  tipos_tratamiento: {
+    nombre: "Tipos de tratamiento",
+    select: "codigo, nombre, codigo_habilitacion, activo, cups(codigo, descripcion)",
+    columnas: [
+      { header: "Nombre", key: "nombre" },
+      { header: "Código", key: "codigo" },
+      { header: "Código de habilitación", key: "codigo_habilitacion" },
+      { header: "CUPS", key: "cups" },
+      { header: "Activo", key: "activo" },
+    ],
+    mapear: (f) => {
+      const cups = f.cups as { codigo: string; descripcion: string } | null;
+      return {
+        nombre: f.nombre,
+        codigo: f.codigo ?? "",
+        codigo_habilitacion: f.codigo_habilitacion ?? "",
+        cups: cups ? `${cups.codigo} — ${cups.descripcion}` : "",
+        activo: f.activo ? "Sí" : "No",
+      };
+    },
   },
   motivos_movimiento_inventario: {
     nombre: "Motivos de movimiento",

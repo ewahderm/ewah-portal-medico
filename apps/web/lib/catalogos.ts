@@ -274,6 +274,80 @@ export async function getTiposDocumentoNormativoActivos(supabase: Supabase) {
   return data ?? [];
 }
 
+export async function getTiposPersonaActivos(supabase: Supabase) {
+  const { data } = await supabase
+    .from("tipos_persona")
+    .select("id, nombre")
+    .eq("activo", true)
+    .order("orden");
+  return data ?? [];
+}
+
+export async function getTiposDocumentoPrestadorActivos(supabase: Supabase) {
+  const { data } = await supabase
+    .from("tipos_documento_prestador")
+    .select("id, nombre")
+    .eq("activo", true)
+    .order("orden");
+  return data ?? [];
+}
+
+export async function getRolesActorActivos(supabase: Supabase) {
+  const { data } = await supabase
+    .from("roles_actor_reps")
+    .select("id, nombre")
+    .eq("activo", true)
+    .order("orden");
+  return data ?? [];
+}
+
+export async function getTiposTransaccionInvimaActivos(supabase: Supabase) {
+  const { data } = await supabase
+    .from("tipos_transaccion_invima")
+    .select("id, nombre")
+    .eq("activo", true)
+    .order("orden");
+  return data ?? [];
+}
+
+// Devuelve TODOS los departamentos/ciudades activos (no solo los de un
+// país/departamento) — son pocas filas (33 y 33 hoy) y el cascade
+// país→departamento→ciudad se filtra en el cliente contra `paisId`/
+// `departamentoId`, igual que no hay filtro server-side para un combobox
+// normal. Si algún día esto crece a miles de filas (todos los municipios),
+// esto debe pasar a un endpoint de búsqueda, mismo caso que CUPS.
+export async function getDepartamentosActivos(supabase: Supabase) {
+  const { data } = await supabase
+    .from("departamentos")
+    .select("id, nombre, pais_id")
+    .eq("activo", true)
+    .order("orden");
+  return data ?? [];
+}
+
+export async function getCiudadesActivas(supabase: Supabase) {
+  const { data } = await supabase
+    .from("ciudades")
+    .select("id, nombre, departamento_id")
+    .eq("activo", true)
+    .order("orden");
+  return data ?? [];
+}
+
+// CUPS puede crecer a miles de filas una vez se cargue el listado oficial
+// — ya queda devolviendo todo por ahora (tabla vacía hasta que se importe),
+// pero el combobox que lo consuma debe anticipar una búsqueda server-side
+// en vez de cargarlo completo en el cliente cuando eso pase.
+export async function getCupsActivos(supabase: Supabase) {
+  const { data } = await supabase
+    .from("cups")
+    .select("id, codigo, descripcion")
+    .eq("activo", true)
+    .order("codigo")
+    .limit(500);
+  return data ?? [];
+}
+
 export async function getValoresLegalesAnio(supabase: Supabase, paisId: string, anio: number) {
   const { data } = await supabase
     .from("valores_legales_pais")

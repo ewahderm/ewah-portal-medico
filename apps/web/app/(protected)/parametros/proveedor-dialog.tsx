@@ -23,15 +23,18 @@ type Proveedor = {
   nombre: string;
   tipo_identificacion_id: string | null;
   numero_identificacion: string | null;
+  tipo_persona_id: string | null;
   observaciones: string | null;
 };
 
 export function ProveedorDialog({
   tiposIdentificacion,
+  tiposPersona,
   editando,
   trigger,
 }: {
   tiposIdentificacion: Opcion[];
+  tiposPersona: Opcion[];
   editando?: Proveedor;
   trigger: React.ReactElement;
 }) {
@@ -42,6 +45,7 @@ export function ProveedorDialog({
     SIN_SELECCION,
     "Sin especificar",
   );
+  const itemsTipoPersona = toItemsOpcional(tiposPersona, SIN_SELECCION, "Sin especificar");
 
   return (
     <Dialog>
@@ -81,6 +85,16 @@ export function ProveedorDialog({
                 defaultValue={editando?.numero_identificacion ?? ""}
               />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="tipoPersonaId">Tipo de persona</Label>
+            <Combobox
+              id="tipoPersonaId"
+              name="tipoPersonaId"
+              items={itemsTipoPersona}
+              defaultValue={editando?.tipo_persona_id ?? SIN_SELECCION}
+            />
           </div>
 
           <div className="space-y-2">

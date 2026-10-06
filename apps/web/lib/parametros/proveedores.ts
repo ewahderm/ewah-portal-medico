@@ -15,6 +15,7 @@ function datosProveedorDesdeForm(formData: FormData) {
     nombre: String(formData.get("nombre") ?? "").trim(),
     tipoIdentificacionId: valorOpcionalSelect(formData, "tipoIdentificacionId"),
     numeroIdentificacion: campoOpcional(formData, "numeroIdentificacion"),
+    tipoPersonaId: valorOpcionalSelect(formData, "tipoPersonaId"),
     observaciones: campoOpcional(formData, "observaciones"),
   };
 }
@@ -35,6 +36,7 @@ export async function crearProveedor(
     nombre: datos.nombre,
     tipo_identificacion_id: datos.tipoIdentificacionId,
     numero_identificacion: datos.numeroIdentificacion,
+    tipo_persona_id: datos.tipoPersonaId,
     observaciones: datos.observaciones,
     created_by: check.usuario.id,
   });
@@ -64,6 +66,7 @@ export async function editarProveedor(
       nombre: datos.nombre,
       tipo_identificacion_id: datos.tipoIdentificacionId,
       numero_identificacion: datos.numeroIdentificacion,
+      tipo_persona_id: datos.tipoPersonaId,
       observaciones: datos.observaciones,
     })
     .eq("id", id);

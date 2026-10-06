@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUsuario, esAdministrador } from "@/lib/auth/session";
-import { campoOpcional } from "@/lib/forms/opcional";
+import { campoOpcional, valorOpcionalSelect } from "@/lib/forms/opcional";
 
 const TIPOS_LOGO_PERMITIDOS = ["image/png", "image/jpeg", "image/webp", "image/svg+xml"];
 const TAMANO_MAXIMO_LOGO = 2 * 1024 * 1024;
@@ -57,10 +57,13 @@ export async function actualizarMarcaClinica(formData: FormData) {
   revalidatePath("/suscripcion");
 }
 
-// Determina qué campos/cálculos de RRHH-Nómina son exclusivamente
-// colombianos (ver lib/rrhh/calculo.ts) — por eso vive en /parametros y no
-// en /suscripcion, es configuración operativa de RRHH, no de marca.
-export async function actualizarPaisOperacionClinica(formData: FormData) {
+// Datos básicos de la clínica como prestador de salud (RIPS/REPS/INVIMA) +
+// generalidades (dirección/teléfono/email/geografía) + el país de
+// operación y la exoneración de aportes que ya vivían aquí (0048) — mismo
+// motivo para seguir en /parametros y no en /suscripcion: es configuración
+// operativa/regulatoria, no de marca. Reemplaza a
+// actualizarPaisOperacionClinica, que queda sin uso pero no se borra.
+export async function actualizarDatosBasicosClinica(formData: FormData) {
   const usuario = await getCurrentUsuario();
   if (!usuario) throw new Error("Sesión inválida.");
   if (!esAdministrador(usuario)) {
@@ -72,9 +75,20 @@ export async function actualizarPaisOperacionClinica(formData: FormData) {
   const exoneracionAportes = formData.get("exoneracionAportes") === "on";
 
   const supabase = await createClient();
-  const { error } = await supabase.rpc("fn_actualizar_pais_y_exoneracion_clinica", {
+  const { error } = await supabase.rpc("fn_actualizar_datos_basicos_clinica", {
     p_pais_operacion_id: paisOperacionId,
     p_exoneracion_aportes: exoneracionAportes,
+    p_direccion: campoOpcional(formData, "direccion"),
+    p_telefono: campoOpcional(formData, "telefono"),
+    p_email: campoOpcional(formData, "email"),
+    p_tipo_persona_id: valorOpcionalSelect(formData, "tipoPersonaId"),
+    p_tipo_documento_id: valorOpcionalSelect(formData, "tipoDocumentoId"),
+    p_rol_actor_id: valorOpcionalSelect(formData, "rolActorId"),
+    p_tipo_transaccion_invima_id: valorOpcionalSelect(formData, "tipoTransaccionInvimaId"),
+    p_codigo_habilitacion: campoOpcional(formData, "codigoHabilitacion"),
+    p_clase_riesgo_id: valorOpcionalSelect(formData, "claseRiesgoId"),
+    p_departamento_id: valorOpcionalSelect(formData, "departamentoId"),
+    p_ciudad_id: valorOpcionalSelect(formData, "ciudadId"),
   });
   if (error) throw new Error("No se pudo actualizar la configuración.");
 
