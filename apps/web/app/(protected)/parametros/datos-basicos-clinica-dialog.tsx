@@ -1,8 +1,15 @@
 "use client";
 
-import { useState, useTransition, type ReactElement } from "react";
+import { useMemo, useState, useTransition, type ReactElement } from "react";
 import { useRouter } from "next/navigation";
+import { XIcon } from "lucide-react";
 import { actualizarDatosBasicosClinica } from "@/lib/clinicas/actions";
+import {
+  agregarServicioHabilitado,
+  actualizarCodigoServicioHabilitado,
+  eliminarServicioHabilitado,
+  type ServicioHabilitado,
+} from "@/lib/clinicas/servicios-habilitados";
 import { toast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +29,7 @@ import { SIN_SELECCION } from "@/lib/forms/opcional";
 
 type Departamento = { id: string; nombre: string; pais_id: string };
 type Ciudad = { id: string; nombre: string; departamento_id: string };
+type PracticaMedica = { id: string; codigo: string | null; nombre: string };
 
 type ClinicaDatosBasicos = {
   paisOperacionId: string;
@@ -50,6 +58,8 @@ export function DatosBasicosClinicaDialog({
   tiposDocumento,
   rolesActor,
   tiposTransaccionInvima,
+  practicasMedicas,
+  serviciosHabilitados,
 }: {
   trigger: ReactElement;
   clinica: ClinicaDatosBasicos;
@@ -61,6 +71,8 @@ export function DatosBasicosClinicaDialog({
   tiposDocumento: Opcion[];
   rolesActor: Opcion[];
   tiposTransaccionInvima: Opcion[];
+  practicasMedicas: PracticaMedica[];
+  serviciosHabilitados: ServicioHabilitado[];
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -222,9 +234,26 @@ export function DatosBasicosClinicaDialog({
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="codigoHabilitacion" className="font-semibold">Código de habilitación</Label>
+              <Label htmlFor="codigoHabilitacion" className="font-semibold">Código de habilitación del prestador (REPS)</Label>
               <Input id="codigoHabilitacion" name="codigoHabilitacion" defaultValue={clinica.codigoHabilitacion ?? ""} />
+              <p className="text-xs text-muted-foreground">
+                El código único de 12 dígitos que REPS asigna a tu clínica como prestador — no
+                confundir con los códigos de cada servicio habilitado, que se registran abajo.
+              </p>
             </div>
+          </div>
+
+          <div className="space-y-3 border-t pt-4">
+            <p className="text-sm font-semibold">Servicios habilitados ante REPS</p>
+            <p className="text-xs text-muted-foreground">
+              Tu clínica puede estar habilitada para más de un servicio de salud — agrega cada
+              uno con el código de habilitación que REPS te asignó para ese servicio. Los cambios
+              aquí se guardan de inmediato, no esperan al botón &quot;Guardar&quot; de abajo.
+            </p>
+            <ServiciosHabilitadosSection
+              practicasMedicas={practicasMedicas}
+              inicial={serviciosHabilitados}
+            />
           </div>
 
           <div className="space-y-3 border-t pt-4">
@@ -259,5 +288,135 @@ export function DatosBasicosClinicaDialog({
         </form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// Persiste cada fila de inmediato (agregar/editar código/eliminar), igual
+// que activarCups/desactivarCups — vive fuera del <form> grande de arriba
+// porque no depende de su botón "Guardar" ni de fn_actualizar_datos_
+// basicos_clinica.
+function ServiciosHabilitadosSection({
+  practicasMedicas,
+  inicial,
+}: {
+  practicasMedicas: PracticaMedica[];
+  inicial: ServicioHabilitado[];
+}) {
+  const [servicios, setServicios] = useState(inicial);
+  const [practicaNuevaId, setPracticaNuevaId] = useState(SIN_SELECCION);
+  const [codigoNuevo, setCodigoNuevo] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  const practicasDisponibles = useMemo(() => {
+    const yaAgregadas = new Set(servicios.map((s) => s.practicas_medicas?.id));
+    return practicasMedicas.filter((p) => !yaAgregadas.has(p.id));
+  }, [practicasMedicas, servicios]);
+
+  const itemsPracticas = toItemsOpcional(
+    practicasDisponibles.map((p) => ({ id: p.id, nombre: p.codigo ? `${p.codigo} — ${p.nombre}` : p.nombre })),
+    SIN_SELECCION,
+    "Selecciona una práctica médica",
+  );
+
+  function handleAgregar() {
+    if (practicaNuevaId === SIN_SELECCION) {
+      setError("Selecciona una práctica médica.");
+      return;
+    }
+    setError(null);
+    startTransition(async () => {
+      try {
+        const creado = await agregarServicioHabilitado(practicaNuevaId, codigoNuevo || null);
+        setServicios((actual) => [...actual, creado]);
+        setPracticaNuevaId(SIN_SELECCION);
+        setCodigoNuevo("");
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "No se pudo agregar.");
+      }
+    });
+  }
+
+  function handleActualizarCodigo(id: string, codigo: string) {
+    setServicios((actual) => actual.map((s) => (s.id === id ? { ...s, codigo_habilitacion: codigo } : s)));
+    startTransition(async () => {
+      try {
+        await actualizarCodigoServicioHabilitado(id, codigo || null);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "No se pudo actualizar el código.");
+      }
+    });
+  }
+
+  function handleEliminar(id: string) {
+    setError(null);
+    startTransition(async () => {
+      try {
+        await eliminarServicioHabilitado(id);
+        setServicios((actual) => actual.filter((s) => s.id !== id));
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "No se pudo eliminar.");
+      }
+    });
+  }
+
+  return (
+    <div className="space-y-3">
+      {error ? (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      ) : null}
+
+      {servicios.length > 0 ? (
+        <div className="space-y-2">
+          {servicios.map((s) => (
+            <div key={s.id} className="flex items-center gap-2 rounded-lg border border-input p-2">
+              <div className="flex-1 text-sm">
+                <p className="font-medium">{s.practicas_medicas?.nombre ?? "—"}</p>
+                <p className="text-xs text-muted-foreground">{s.practicas_medicas?.codigo}</p>
+              </div>
+              <Input
+                className="w-40"
+                placeholder="Código de habilitación"
+                defaultValue={s.codigo_habilitacion ?? ""}
+                onBlur={(e) => handleActualizarCodigo(s.id, e.target.value)}
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                disabled={pending}
+                onClick={() => handleEliminar(s.id)}
+              >
+                <XIcon />
+              </Button>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      <div className="flex items-end gap-2">
+        <div className="flex-1 space-y-2">
+          <Label htmlFor="practicaMedicaNueva">Agregar servicio</Label>
+          <Combobox
+            id="practicaMedicaNueva"
+            items={itemsPracticas}
+            value={practicaNuevaId}
+            onValueChange={(v) => setPracticaNuevaId(String(v ?? SIN_SELECCION))}
+            disabled={practicasDisponibles.length === 0}
+          />
+        </div>
+        <Input
+          className="w-40"
+          placeholder="Código"
+          value={codigoNuevo}
+          onChange={(e) => setCodigoNuevo(e.target.value)}
+        />
+        <Button type="button" variant="outline" disabled={pending} onClick={handleAgregar}>
+          Agregar
+        </Button>
+      </div>
+    </div>
   );
 }

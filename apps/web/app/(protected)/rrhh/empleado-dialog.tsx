@@ -126,7 +126,7 @@ export function EmpleadoDialog({
         <DialogHeader>
           <DialogTitle>{editando ? "Editar empleado" : "Nuevo empleado"}</DialogTitle>
         </DialogHeader>
-        <form action={formAction} className="max-h-[70vh] space-y-6 overflow-y-auto pr-1">
+        <form action={formAction} className="space-y-6">
           {editando ? <input type="hidden" name="id" value={editando.id} /> : null}
           {state?.error ? (
             <Alert variant="destructive">

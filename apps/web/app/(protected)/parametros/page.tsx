@@ -52,6 +52,8 @@ import {
   getDepartamentosActivos,
   getCiudadesActivas,
   getCupsActivadosClinica,
+  getPracticasMedicasActivas,
+  getServiciosHabilitadosClinica,
 } from "@/lib/catalogos";
 
 // Mismo nombre/ícono que ya usa el launcher del dashboard
@@ -121,6 +123,8 @@ export default async function ParametrosPage() {
     departamentos,
     ciudades,
     cupsActivos,
+    practicasMedicas,
+    serviciosHabilitados,
   ] = await Promise.all([
     Promise.all(
       CATALOGOS.map(async (catalogo) => {
@@ -192,6 +196,8 @@ export default async function ParametrosPage() {
     getDepartamentosActivos(supabase),
     getCiudadesActivas(supabase),
     getCupsActivadosClinica(supabase),
+    getPracticasMedicasActivas(supabase),
+    getServiciosHabilitadosClinica(supabase),
   ]);
 
   const cupsTabInicial = await buscarCups("");
@@ -396,6 +402,8 @@ export default async function ParametrosPage() {
             tiposDocumento={tiposDocumentoPrestador}
             rolesActor={rolesActor}
             tiposTransaccionInvima={tiposTransaccionInvima}
+            practicasMedicas={practicasMedicas}
+            serviciosHabilitados={serviciosHabilitados}
             trigger={
               <Button variant="outline" size="sm">
                 <Building2Icon /> Datos básicos de la clínica

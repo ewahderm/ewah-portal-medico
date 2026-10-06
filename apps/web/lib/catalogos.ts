@@ -292,6 +292,29 @@ export async function getTiposDocumentoPrestadorActivos(supabase: Supabase) {
   return data ?? [];
 }
 
+// `codigo` guarda el nombre del GRUPO REPS (Consulta Externa, Quirúrgico...),
+// no un código numérico — ver comentario de cabecera en la migración 0055.
+export async function getPracticasMedicasActivas(supabase: Supabase) {
+  const { data } = await supabase
+    .from("practicas_medicas")
+    .select("id, codigo, nombre")
+    .eq("activo", true)
+    .order("orden");
+  return data ?? [];
+}
+
+export async function getServiciosHabilitadosClinica(supabase: Supabase) {
+  const { data } = await supabase
+    .from("clinica_servicios_habilitados")
+    .select("id, codigo_habilitacion, practicas_medicas(id, codigo, nombre)")
+    .order("created_at");
+  return (data ?? []) as unknown as {
+    id: string;
+    codigo_habilitacion: string | null;
+    practicas_medicas: { id: string; codigo: string | null; nombre: string } | null;
+  }[];
+}
+
 export async function getRolesActorActivos(supabase: Supabase) {
   const { data } = await supabase
     .from("roles_actor_reps")

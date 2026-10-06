@@ -44,9 +44,9 @@ export const CATALOGOS: CatalogoConfig[] = [
   {
     tabla: "paises",
     nombre: "Países",
-    descripcion: "Nacionalidad y país de residencia de pacientes.",
+    descripcion: "Nacionalidad/residencia de pacientes, país de operación de la clínica y el país que filtra bancos/EPS/fondos/ARL en RRHH.",
     esGlobal: true,
-    modulo: "pacientes",
+    modulo: "general",
   },
   {
     tabla: "eps",
@@ -80,13 +80,6 @@ export const CATALOGOS: CatalogoConfig[] = [
     tabla: "tipos_extintor",
     nombre: "Tipos de extintor",
     descripcion: "Catálogo de tipos de extintor (PQS, CO2, agua, espuma...) usado en Medio Ambiente.",
-    esGlobal: false,
-    modulo: "medio_ambiente",
-  },
-  {
-    tabla: "empleados",
-    nombre: "Empleados",
-    descripcion: "Personal operativo sin acceso al sistema (limpieza, pesaje de residuos) que se puede seleccionar al registrar una bitácora.",
     esGlobal: false,
     modulo: "medio_ambiente",
   },
@@ -189,6 +182,13 @@ export const CATALOGOS: CatalogoConfig[] = [
     modulo: "general",
   },
   {
+    tabla: "practicas_medicas",
+    nombre: "Prácticas médicas (REPS)",
+    descripcion: "Grupos y servicios de salud habilitables ante REPS (Resolución 3100 de 2019) — se seleccionan en Datos básicos de la clínica al registrar los servicios habilitados.",
+    esGlobal: true,
+    modulo: "general",
+  },
+  {
     tabla: "departamentos",
     nombre: "Departamentos",
     descripcion: "Divisiones geográficas de un país — hoy solo Colombia está sembrado.",
@@ -220,6 +220,18 @@ export const CATALOGOS: CatalogoConfig[] = [
 // paginación ni búsqueda es inviable. Tiene su propia pestaña con buscador
 // server-side (`cups-tab.tsx`) y activación por clínica (`clinica_cups`),
 // ver lib/parametros/cups.ts.
+// Empleados también salió de esta lista el mismo día: nació aquí en 0037
+// (solo nombre+código, para el selector de Medio Ambiente) pero 0048 lo
+// amplió al maestro completo de RRHH (identificación, contrato, EPS,
+// banco...) y le cambió el RLS a exigir has_permission('rrhh', ...) en vez
+// de 'parametros' — dejar la pestaña genérica aquí habría insertado solo
+// nombre+código y, peor, el propio motor genérico (requirePermiso
+// "parametros") ya ni pasaba el RLS. Ahora RRHH es el único dueño
+// (empleado-dialog.tsx); Medio Ambiente solo lo consume de solo-lectura
+// vía fn_empleados_picker() (lib/catalogos.ts) para elegir "quién
+// limpió/pesó", sin poder crear uno nuevo desde ahí — si una clínica
+// activa Medio Ambiente sin haber creado ningún empleado en RRHH, ese
+// selector simplemente aparece vacío.
 
 export function getCatalogo(tabla: string): CatalogoConfig | undefined {
   return CATALOGOS.find((c) => c.tabla === tabla);
