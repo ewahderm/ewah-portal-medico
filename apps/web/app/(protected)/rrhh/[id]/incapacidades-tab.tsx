@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { FileInput } from "@/components/ui/file-input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -99,8 +100,8 @@ function NuevaIncapacidadDialog({ empleadoId, onCreado }: { empleadoId: string; 
             <Input id="fechaPago" name="fechaPago" type="date" />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="soporte">Soporte (opcional)</Label>
-            <input id="soporte" name="soporte" type="file" accept="application/pdf,image/jpeg,image/png" className="text-sm" />
+            <Label htmlFor="soporte" className="font-semibold">Soporte (opcional)</Label>
+            <FileInput id="soporte" name="soporte" accept="application/pdf,image/jpeg,image/png" />
           </div>
           <Button type="submit" className="w-full" disabled={pending}>{pending ? "Guardando..." : "Guardar"}</Button>
         </form>

@@ -6,18 +6,34 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { Button } from "@/components/ui/button";
 import { EwahLogo } from "@/components/ewah-logo";
 import { MobileNav } from "./_components/mobile-nav";
+import { NavGroup } from "./_components/nav-group";
 
-const NAV_ITEMS = [
-  { href: "/pacientes", label: "Pacientes" },
-  { href: "/tratamientos", label: "Tratamientos" },
-  { href: "/citas", label: "Agenda" },
-  { href: "/inventario", label: "Inventario" },
-  { href: "/campanas", label: "Campañas" },
-  { href: "/medio-ambiente", label: "Medio Ambiente" },
-  { href: "/rrhh", label: "Recursos Humanos" },
-  { href: "/usuarios", label: "Usuarios" },
-  { href: "/parametros", label: "Parámetros" },
-  { href: "/suscripcion", label: "Suscripción" },
+const NAV_GROUPS = [
+  {
+    label: "Clínico",
+    items: [
+      { href: "/pacientes", label: "Pacientes" },
+      { href: "/tratamientos", label: "Tratamientos" },
+      { href: "/citas", label: "Agenda" },
+    ],
+  },
+  {
+    label: "Operación",
+    items: [
+      { href: "/inventario", label: "Inventario" },
+      { href: "/campanas", label: "Campañas" },
+      { href: "/medio-ambiente", label: "Medio Ambiente" },
+      { href: "/rrhh", label: "Recursos Humanos" },
+    ],
+  },
+  {
+    label: "Administración",
+    items: [
+      { href: "/usuarios", label: "Usuarios" },
+      { href: "/parametros", label: "Parámetros" },
+      { href: "/suscripcion", label: "Suscripción" },
+    ],
+  },
 ];
 
 export default async function ProtectedLayout({
@@ -32,11 +48,18 @@ export default async function ProtectedLayout({
   // Tech, nunca asignable desde ninguna pantalla de la app.
   const supabaseSesion = await createClient();
   const { data: esSuperAdmin } = await supabaseSesion.rpc("es_super_admin");
-  const navItems = [
-    ...NAV_ITEMS,
-    ...(esAdministrador(usuario) ? [{ href: "/exportar", label: "Exportar datos" }] : []),
-    ...(esSuperAdmin ? [{ href: "/plataforma", label: "Plataforma" }] : []),
-  ];
+  const navGroups = NAV_GROUPS.map((grupo) =>
+    grupo.label === "Administración"
+      ? {
+          ...grupo,
+          items: [
+            ...grupo.items,
+            ...(esAdministrador(usuario) ? [{ href: "/exportar", label: "Exportar datos" }] : []),
+            ...(esSuperAdmin ? [{ href: "/plataforma", label: "Plataforma" }] : []),
+          ],
+        }
+      : grupo,
+  );
 
   // Cliente admin a propósito, no el de sesión: clinica_actual() (y por lo
   // tanto la policy de select normal) ahora exige clinicas.activo = true —
@@ -95,14 +118,8 @@ export default async function ProtectedLayout({
               )}
             </Link>
             <div className="hidden items-center gap-6 md:flex">
-              {navItems.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="text-muted-foreground hover:text-foreground"
-                >
-                  {item.label}
-                </Link>
+              {navGroups.map((grupo) => (
+                <NavGroup key={grupo.label} label={grupo.label} items={grupo.items} />
               ))}
             </div>
           </nav>
@@ -117,7 +134,7 @@ export default async function ProtectedLayout({
             </form>
           </div>
           <MobileNav
-            items={navItems}
+            groups={navGroups}
             nombreUsuario={usuario.nombre}
             rolUsuario={usuario.roles?.nombre}
             logoutAction={logout}

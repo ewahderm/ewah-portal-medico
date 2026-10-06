@@ -10,18 +10,19 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogPortal, DialogOverlay, DialogClose, DialogTrigger } from "@/components/ui/dialog";
 
 type NavItem = { href: string; label: string };
+type NavGroup = { label: string; items: NavItem[] };
 
 // Mismo <Dialog> que el resto de la app (overlay + cierre solo por X, nunca
 // click-afuera/Escape — ver components/ui/dialog.tsx), pero con un Popup
 // propio posicionado como panel lateral en vez del modal centrado de
 // DialogContent. Reutiliza el enforcement de cierre sin duplicarlo.
 export function MobileNav({
-  items,
+  groups,
   nombreUsuario,
   rolUsuario,
   logoutAction,
 }: {
-  items: NavItem[];
+  groups: NavGroup[];
   nombreUsuario: string;
   rolUsuario?: string;
   logoutAction: (formData: FormData) => void | Promise<void>;
@@ -59,19 +60,26 @@ export function MobileNav({
             </DialogClose>
           </div>
 
-          <nav className="flex flex-1 flex-col gap-1 overflow-y-auto">
-            {items.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setOpen(false)}
-                className={cn(
-                  "rounded-lg px-3 py-2.5 font-medium text-muted-foreground hover:bg-muted hover:text-foreground",
-                  pathname.startsWith(item.href) && "bg-muted text-foreground",
-                )}
-              >
-                {item.label}
-              </Link>
+          <nav className="flex flex-1 flex-col gap-4 overflow-y-auto">
+            {groups.map((grupo) => (
+              <div key={grupo.label} className="flex flex-col gap-1">
+                <p className="px-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                  {grupo.label}
+                </p>
+                {grupo.items.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setOpen(false)}
+                    className={cn(
+                      "rounded-lg px-3 py-2.5 font-medium text-muted-foreground hover:bg-muted hover:text-foreground",
+                      pathname.startsWith(item.href) && "bg-muted text-foreground",
+                    )}
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+              </div>
             ))}
           </nav>
 

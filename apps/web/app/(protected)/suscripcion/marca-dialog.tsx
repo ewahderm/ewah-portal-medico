@@ -8,6 +8,7 @@ import { toast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { FileInput } from "@/components/ui/file-input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Dialog,
@@ -93,7 +94,7 @@ export function MarcaDialog({
         ) : null}
 
         <div className="space-y-3 border-b pb-4">
-          <Label>Logo de la clínica</Label>
+          <Label htmlFor="logo" className="font-semibold">Logo de la clínica</Label>
           <div className="flex items-center gap-4">
             <div className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-lg border bg-muted">
               {previewLogo || logoUrl ? (
@@ -108,13 +109,13 @@ export function MarcaDialog({
               )}
             </div>
             <form action={handleSubirLogo} className="flex flex-1 items-center gap-2">
-              <input
+              <FileInput
                 ref={inputLogoRef}
-                type="file"
+                id="logo"
                 name="logo"
                 accept="image/png,image/jpeg,image/webp,image/svg+xml"
                 onChange={handleSeleccionarLogo}
-                className="flex-1 text-xs"
+                className="flex-1"
                 required
               />
               <Button type="submit" size="sm" variant="outline" disabled={pendingLogo}>

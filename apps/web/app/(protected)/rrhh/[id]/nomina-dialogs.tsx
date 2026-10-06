@@ -20,6 +20,7 @@ import { toast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { FileInput } from "@/components/ui/file-input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -367,8 +368,8 @@ function CamposDesgloseHonorarios({ desglose }: { desglose: DesgloseHonorarios }
           <Input id="netoPagarHonorarios" name="netoPagar" type="number" step="1" defaultValue={desglose.netoPagar} className="font-semibold" />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="soporteSeguridadSocial" className="text-xs">Soporte de pago de seguridad social (recomendado)</Label>
-          <input id="soporteSeguridadSocial" name="soporteSeguridadSocial" type="file" accept="application/pdf,image/jpeg,image/png" className="text-sm" />
+          <Label htmlFor="soporteSeguridadSocial" className="text-sm font-semibold">Soporte de pago de seguridad social (recomendado)</Label>
+          <FileInput id="soporteSeguridadSocial" name="soporteSeguridadSocial" accept="application/pdf,image/jpeg,image/png" />
         </div>
       </CardContent>
     </Card>

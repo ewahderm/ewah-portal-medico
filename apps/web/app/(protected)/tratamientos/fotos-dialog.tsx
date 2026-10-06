@@ -13,6 +13,7 @@ import { comprimirImagen } from "@/lib/media/comprimirImagen";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { FileInput } from "@/components/ui/file-input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Dialog,
@@ -199,17 +200,20 @@ export function FotosDialog({
                 onValueChange={(v) => setEtiqueta(String(v ?? "antes"))}
               />
             </div>
-            <div className="flex items-center gap-2">
-              <input
-                type="file"
-                name="foto"
-                accept="image/jpeg,image/png,image/webp"
-                className="flex-1 text-xs"
-                required
-              />
-              <Button type="submit" size="sm" variant="outline" disabled={pending}>
-                {pending ? "Subiendo..." : "Crear registro"}
-              </Button>
+            <div className="space-y-2">
+              <Label htmlFor="fotoNuevoRegistro" className="font-semibold">Foto</Label>
+              <div className="flex items-center gap-2">
+                <FileInput
+                  id="fotoNuevoRegistro"
+                  name="foto"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="flex-1"
+                  required
+                />
+                <Button type="submit" size="sm" variant="outline" disabled={pending}>
+                  {pending ? "Subiendo..." : "Crear registro"}
+                </Button>
+              </div>
             </div>
             <Input
               name="observaciones"
@@ -339,7 +343,7 @@ function SlotFoto({
             type="file"
             name="foto"
             accept="image/jpeg,image/png,image/webp"
-            className="w-full text-[10px]"
+            className="w-full truncate text-xs font-medium"
             required
           />
           <Button type="submit" size="xs" variant="outline" disabled={pending}>

@@ -13,6 +13,7 @@ import { comprimirImagen } from "@/lib/media/comprimirImagen";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { FileInput } from "@/components/ui/file-input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -253,17 +254,20 @@ export function AnexosDialog({
                     onValueChange={(v) => setCategoria(String(v ?? CATEGORIAS_ANEXO[0]))}
                   />
                 </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="file"
-                    name="archivo"
-                    accept="image/jpeg,image/png,image/webp,application/pdf"
-                    className="flex-1 text-xs"
-                    required
-                  />
-                  <Button type="submit" size="sm" variant="outline" disabled={pending}>
-                    {pending ? "Subiendo..." : "Subir"}
-                  </Button>
+                <div className="space-y-2">
+                  <Label htmlFor="archivoAnexo" className="font-semibold">Archivo</Label>
+                  <div className="flex items-center gap-2">
+                    <FileInput
+                      id="archivoAnexo"
+                      name="archivo"
+                      accept="image/jpeg,image/png,image/webp,application/pdf"
+                      className="flex-1"
+                      required
+                    />
+                    <Button type="submit" size="sm" variant="outline" disabled={pending}>
+                      {pending ? "Subiendo..." : "Subir"}
+                    </Button>
+                  </div>
                 </div>
                 <Input
                   name="observaciones"

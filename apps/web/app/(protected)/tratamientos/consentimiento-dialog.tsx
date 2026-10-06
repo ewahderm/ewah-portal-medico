@@ -5,6 +5,7 @@ import { PDFDocument } from "pdf-lib";
 import {
   FileSignatureIcon,
   CameraIcon,
+  UploadIcon,
   XIcon,
   DownloadIcon,
   CheckIcon,
@@ -68,6 +69,7 @@ export function ConsentimientoDialog({
   const streamRef = useRef<MediaStream | null>(null);
   const imagenContainerRef = useRef<HTMLDivElement>(null);
   const arrastreRef = useRef<Esquina | null>(null);
+  const archivoInputRef = useRef<HTMLInputElement>(null);
 
   function cargar() {
     startTransition(async () => {
@@ -237,6 +239,48 @@ export function ConsentimientoDialog({
     });
   }
 
+  async function construirPdfDesdeImagen(archivo: File): Promise<Blob> {
+    const pdf = await PDFDocument.create();
+    const bytes = new Uint8Array(await archivo.arrayBuffer());
+    const imagen = archivo.type === "image/png" ? await pdf.embedPng(bytes) : await pdf.embedJpg(bytes);
+    const pagina = pdf.addPage([imagen.width, imagen.height]);
+    pagina.drawImage(imagen, { x: 0, y: 0, width: imagen.width, height: imagen.height });
+    const bytesFinal = await pdf.save();
+    return new Blob([new Uint8Array(bytesFinal)], { type: "application/pdf" });
+  }
+
+  function subirArchivoSeleccionado(archivo: File) {
+    setError(null);
+    startTransition(async () => {
+      try {
+        let pdfBlob: Blob;
+        let nombreArchivo = archivo.name;
+        let totalPaginas: number;
+        if (archivo.type === "application/pdf") {
+          pdfBlob = archivo;
+          const bytes = new Uint8Array(await archivo.arrayBuffer());
+          const pdf = await PDFDocument.load(bytes);
+          totalPaginas = pdf.getPageCount();
+        } else if (archivo.type === "image/jpeg" || archivo.type === "image/png") {
+          pdfBlob = await construirPdfDesdeImagen(archivo);
+          nombreArchivo = "consentimiento.pdf";
+          totalPaginas = 1;
+        } else {
+          throw new Error("Formato no soportado — sube un PDF, JPG o PNG.");
+        }
+        const formData = new FormData();
+        formData.set("archivo", new File([pdfBlob], nombreArchivo, { type: "application/pdf" }));
+        formData.set("paginas", String(totalPaginas));
+        await subirConsentimientoTratamiento(tratamientoId, formData);
+        cargar();
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "No se pudo subir el archivo.");
+      } finally {
+        if (archivoInputRef.current) archivoInputRef.current.value = "";
+      }
+    });
+  }
+
   function eliminar(id: string, storagePath: string) {
     setError(null);
     startTransition(async () => {
@@ -348,9 +392,18 @@ export function ConsentimientoDialog({
               )}
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row">
               <Button type="button" variant="outline" className="flex-1" onClick={iniciarCamara}>
-                <CameraIcon /> {paginas.length > 0 ? "Agregar otra página" : "Agregar consentimiento"}
+                <CameraIcon /> {paginas.length > 0 ? "Agregar otra página" : "Tomar foto"}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1"
+                disabled={pending}
+                onClick={() => archivoInputRef.current?.click()}
+              >
+                <UploadIcon /> Subir archivo
               </Button>
               {paginas.length > 0 ? (
                 <Button type="button" className="flex-1" disabled={pending} onClick={guardarConsentimiento}>
@@ -358,6 +411,16 @@ export function ConsentimientoDialog({
                 </Button>
               ) : null}
             </div>
+            <input
+              ref={archivoInputRef}
+              type="file"
+              accept="application/pdf,image/jpeg,image/png"
+              className="hidden"
+              onChange={(e) => {
+                const archivo = e.target.files?.[0];
+                if (archivo) subirArchivoSeleccionado(archivo);
+              }}
+            />
           </div>
         ) : null}
 

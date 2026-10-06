@@ -9,6 +9,7 @@ import { toast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { FileInput } from "@/components/ui/file-input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -64,8 +65,8 @@ function CambioCargoDialog({ empleadoId, cargos, onCreado }: { empleadoId: strin
             <Input id="fechaInicio" name="fechaInicio" type="date" required />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="acta">Acta (opcional)</Label>
-            <input id="acta" name="acta" type="file" accept="application/pdf,image/jpeg,image/png" className="text-sm" />
+            <Label htmlFor="acta" className="font-semibold">Acta (opcional)</Label>
+            <FileInput id="acta" name="acta" accept="application/pdf,image/jpeg,image/png" />
           </div>
           <Button type="submit" className="w-full" disabled={pending}>{pending ? "Guardando..." : "Guardar"}</Button>
         </form>
@@ -109,8 +110,8 @@ function CambioSalarioDialog({ empleadoId, onCreado }: { empleadoId: string; onC
             <Input id="fechaInicio" name="fechaInicio" type="date" required />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="acta">Acta (opcional)</Label>
-            <input id="acta" name="acta" type="file" accept="application/pdf,image/jpeg,image/png" className="text-sm" />
+            <Label htmlFor="acta" className="font-semibold">Acta (opcional)</Label>
+            <FileInput id="acta" name="acta" accept="application/pdf,image/jpeg,image/png" />
           </div>
           <Button type="submit" className="w-full" disabled={pending}>{pending ? "Guardando..." : "Guardar"}</Button>
         </form>

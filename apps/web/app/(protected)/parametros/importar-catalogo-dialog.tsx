@@ -4,6 +4,8 @@ import { useState, useTransition } from "react";
 import { UploadIcon, DownloadIcon } from "lucide-react";
 import { importarCatalogo, type ImportarCatalogoResultado } from "@/lib/parametros/actions";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { FileInput } from "@/components/ui/file-input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Dialog,
@@ -88,7 +90,10 @@ export function ImportarCatalogoDialog({ tabla, nombre }: { tabla: string; nombr
         ) : null}
 
         <form action={handleImportar} className="space-y-3 border-t pt-4">
-          <input type="file" name="archivo" accept=".xlsx" required className="w-full text-sm" />
+          <div className="space-y-2">
+            <Label htmlFor="archivoCatalogo" className="font-semibold">Archivo Excel (.xlsx)</Label>
+            <FileInput id="archivoCatalogo" name="archivo" accept=".xlsx" required />
+          </div>
           <Button type="submit" className="w-full" disabled={pending}>
             {pending ? "Importando..." : "Importar"}
           </Button>
