@@ -1,28 +1,33 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { PlusIcon, BanIcon } from "lucide-react";
-import { generarComprobanteNomina, anularComprobanteNomina, listarComprobantesNomina } from "@/lib/rrhh/nomina";
-import { generarComprobanteHonorarios, anularComprobanteHonorarios, listarComprobantesHonorarios } from "@/lib/rrhh/honorarios";
+import { CheckIcon, DownloadIcon, Trash2Icon } from "lucide-react";
+import {
+  listarComprobantesNomina,
+  eliminarComprobanteNomina,
+  aprobarComprobanteNomina,
+  obtenerComprobanteNomina,
+} from "@/lib/rrhh/nomina";
+import {
+  listarComprobantesHonorarios,
+  eliminarComprobanteHonorarios,
+  aprobarComprobanteHonorarios,
+  obtenerComprobanteHonorarios,
+} from "@/lib/rrhh/honorarios";
+import { obtenerClinicaParaPdf } from "@/lib/clinicas/actions";
+import { generarPdfComprobanteNomina, generarPdfComprobanteHonorarios } from "@/lib/rrhh/pdf";
 import { formatoMoneda } from "@/lib/format";
 import { toast } from "@/components/ui/toast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Textarea } from "@/components/ui/textarea";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Combobox } from "@/components/ui/combobox";
-import { TIPO_PERIODO_NOMINA } from "@/lib/rrhh/constantes";
+  GenerarNominaDialog,
+  EditarNominaDialog,
+  GenerarHonorariosDialog,
+  EditarHonorariosDialog,
+  AnularComprobanteDialog,
+} from "./nomina-dialogs";
 import {
   Table,
   TableBody,
@@ -32,191 +37,21 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-function GenerarNominaDialog({ empleadoId, onCreado }: { empleadoId: string; onCreado: () => void }) {
-  const [open, setOpen] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
-  const [tipoPeriodo, setTipoPeriodo] = useState("mensual");
-
-  function handleGuardar(formData: FormData) {
-    setError(null);
-    startTransition(async () => {
-      try {
-        await generarComprobanteNomina(empleadoId, formData);
-        onCreado();
-        toast.add({ title: "Comprobante generado", type: "success" });
-        setOpen(false);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "No se pudo generar el comprobante.");
-      }
-    });
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button><PlusIcon /> Generar comprobante de nómina</Button>} />
-      <DialogContent>
-        <DialogHeader><DialogTitle>Generar comprobante de nómina</DialogTitle></DialogHeader>
-        <form action={handleGuardar} className="space-y-4">
-          {error ? <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert> : null}
-          <div className="space-y-2">
-            <Label htmlFor="tipoPeriodo">Tipo de período</Label>
-            <Combobox id="tipoPeriodo" name="tipoPeriodo" items={[...TIPO_PERIODO_NOMINA]} value={tipoPeriodo} onValueChange={(v) => setTipoPeriodo(String(v))} />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="fechaInicio">Fecha de inicio</Label>
-              <Input id="fechaInicio" name="fechaInicio" type="date" required />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="fechaFin">Fecha de fin</Label>
-              <Input id="fechaFin" name="fechaFin" type="date" required />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="comisiones">Comisiones (opcional)</Label>
-              <Input id="comisiones" name="comisiones" type="number" min="0" step="1000" defaultValue={0} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="otrasDeducciones">Otras deducciones (opcional)</Label>
-              <Input id="otrasDeducciones" name="otrasDeducciones" type="number" min="0" step="1000" defaultValue={0} />
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Checkbox id="comisionesIncluidasIbc" name="comisionesIncluidasIbc" />
-            <Label htmlFor="comisionesIncluidasIbc" className="font-normal">Las comisiones hacen parte del salario base (IBC)</Label>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="retencionFuente">Retención en la fuente (manual, opcional)</Label>
-            <Input id="retencionFuente" name="retencionFuente" type="number" min="0" step="1000" defaultValue={0} />
-            <p className="text-xs text-muted-foreground">Ajústala con tu contador — no se calcula automáticamente.</p>
-          </div>
-          <Button type="submit" className="w-full" disabled={pending}>{pending ? "Generando..." : "Generar y calcular"}</Button>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function GenerarHonorariosDialog({ empleadoId, onCreado }: { empleadoId: string; onCreado: () => void }) {
-  const [open, setOpen] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
-
-  function handleGuardar(formData: FormData) {
-    setError(null);
-    startTransition(async () => {
-      try {
-        await generarComprobanteHonorarios(empleadoId, formData);
-        onCreado();
-        toast.add({ title: "Comprobante generado", type: "success" });
-        setOpen(false);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "No se pudo generar el comprobante.");
-      }
-    });
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button><PlusIcon /> Generar comprobante de honorarios</Button>} />
-      <DialogContent>
-        <DialogHeader><DialogTitle>Generar comprobante de honorarios</DialogTitle></DialogHeader>
-        <form action={handleGuardar} className="space-y-4">
-          {error ? <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert> : null}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="fechaInicio">Fecha de inicio</Label>
-              <Input id="fechaInicio" name="fechaInicio" type="date" required />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="fechaFin">Fecha de fin</Label>
-              <Input id="fechaFin" name="fechaFin" type="date" required />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="valorBruto">Valor bruto pactado</Label>
-            <Input id="valorBruto" name="valorBruto" type="number" min="0" step="1000" required />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="soporteSeguridadSocial">Soporte de pago de seguridad social (recomendado)</Label>
-            <input id="soporteSeguridadSocial" name="soporteSeguridadSocial" type="file" accept="application/pdf,image/jpeg,image/png" className="text-sm" />
-            <p className="text-xs text-muted-foreground">
-              Buena práctica frente a una auditoría de la UGPP — no bloquea el pago si falta.
-            </p>
-          </div>
-          <Button type="submit" className="w-full" disabled={pending}>{pending ? "Generando..." : "Generar y calcular"}</Button>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function AnularComprobanteDialog({
-  esLaboral,
-  id,
-  empleadoId,
-  onAnulado,
-}: {
-  esLaboral: boolean;
-  id: string;
-  empleadoId: string;
-  onAnulado: () => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
-
-  function handleAnular(formData: FormData) {
-    setError(null);
-    startTransition(async () => {
-      try {
-        if (esLaboral) await anularComprobanteNomina(id, empleadoId, formData);
-        else await anularComprobanteHonorarios(id, empleadoId, formData);
-        onAnulado();
-        toast.add({ title: "Comprobante anulado", type: "success" });
-        setOpen(false);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "No se pudo anular.");
-      }
-    });
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button variant="outline" size="sm"><BanIcon /> Anular</Button>} />
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Anular comprobante</DialogTitle>
-        </DialogHeader>
-        <form action={handleAnular} className="space-y-4">
-          {error ? <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert> : null}
-          <div className="space-y-2">
-            <Label htmlFor="motivo">Motivo de anulación</Label>
-            <Textarea id="motivo" name="motivo" rows={2} required />
-          </div>
-          <Button type="submit" variant="destructive" className="w-full" disabled={pending}>
-            {pending ? "Anulando..." : "Anular comprobante"}
-          </Button>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
 export function NominaEmpleadoTab({
   empleadoId,
   esLaboral,
   puedeCrear,
+  puedeEditar,
   puedeAnular,
 }: {
   empleadoId: string;
   esLaboral: boolean;
   puedeCrear: boolean;
+  puedeEditar: boolean;
   puedeAnular: boolean;
 }) {
   const [registros, setRegistros] = useState<Record<string, unknown>[]>([]);
+  const [confirmandoId, setConfirmandoId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
   function cargar() {
@@ -235,6 +70,78 @@ export function NominaEmpleadoTab({
     cargar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  async function aprobar(id: string) {
+    try {
+      if (esLaboral) await aprobarComprobanteNomina(id, empleadoId);
+      else await aprobarComprobanteHonorarios(id, empleadoId);
+      cargar();
+      toast.add({ title: "Comprobante aprobado — ya no se puede editar", type: "success" });
+    } catch (e) {
+      toast.add({ title: e instanceof Error ? e.message : "No se pudo aprobar.", type: "error" });
+    }
+  }
+
+  async function eliminar(id: string) {
+    if (confirmandoId !== id) {
+      setConfirmandoId(id);
+      return;
+    }
+    setConfirmandoId(null);
+    try {
+      if (esLaboral) await eliminarComprobanteNomina(id, empleadoId);
+      else await eliminarComprobanteHonorarios(id, empleadoId);
+      cargar();
+      toast.add({ title: "Borrador eliminado", type: "success" });
+    } catch (e) {
+      toast.add({ title: e instanceof Error ? e.message : "No se pudo eliminar.", type: "error" });
+    }
+  }
+
+  async function descargarPdf(id: string) {
+    try {
+      const clinica = await obtenerClinicaParaPdf();
+      if (esLaboral) {
+        const comprobante = await obtenerComprobanteNomina(id);
+        if (!comprobante) throw new Error("No se encontró el comprobante.");
+        const empleado = comprobante.empleados as unknown as {
+          nombre: string;
+          numero_identificacion: string | null;
+          tipos_identificacion: { nombre: string } | null;
+        } | null;
+        await generarPdfComprobanteNomina({
+          clinica,
+          empleado: {
+            nombre: empleado?.nombre ?? "—",
+            identificacion: empleado?.numero_identificacion
+              ? `${empleado.tipos_identificacion?.nombre ?? ""} ${empleado.numero_identificacion}`.trim()
+              : null,
+          },
+          comprobante,
+        });
+      } else {
+        const comprobante = await obtenerComprobanteHonorarios(id);
+        if (!comprobante) throw new Error("No se encontró el comprobante.");
+        const empleado = comprobante.empleados as unknown as {
+          nombre: string;
+          numero_identificacion: string | null;
+          tipos_identificacion: { nombre: string } | null;
+        } | null;
+        await generarPdfComprobanteHonorarios({
+          clinica,
+          empleado: {
+            nombre: empleado?.nombre ?? "—",
+            identificacion: empleado?.numero_identificacion
+              ? `${empleado.tipos_identificacion?.nombre ?? ""} ${empleado.numero_identificacion}`.trim()
+              : null,
+          },
+          comprobante,
+        });
+      }
+    } catch (e) {
+      toast.add({ title: e instanceof Error ? e.message : "No se pudo generar el PDF.", type: "error" });
+    }
+  }
 
   return (
     <Card>
@@ -259,31 +166,70 @@ export function NominaEmpleadoTab({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {registros.map((r) => (
-              <TableRow key={r.id as string}>
-                <TableCell className="text-muted-foreground">
-                  {r.fecha_inicio as string} — {r.fecha_fin as string}
-                </TableCell>
-                <TableCell className="font-medium">{formatoMoneda(r.neto_pagar as number)}</TableCell>
-                <TableCell>
-                  {r.anulado ? (
-                    <Badge variant="destructive">Anulado: {r.anulado_motivo as string}</Badge>
-                  ) : (
-                    <Badge variant="outline">Vigente</Badge>
-                  )}
-                </TableCell>
-                <TableCell className="text-right">
-                  {puedeAnular && !r.anulado ? (
-                    <AnularComprobanteDialog
-                      esLaboral={esLaboral}
-                      id={r.id as string}
-                      empleadoId={empleadoId}
-                      onAnulado={cargar}
-                    />
-                  ) : null}
-                </TableCell>
-              </TableRow>
-            ))}
+            {registros.map((r) => {
+              const esBorrador = !r.aprobado && !r.anulado;
+              return (
+                <TableRow key={r.id as string}>
+                  <TableCell className="text-muted-foreground">
+                    {r.fecha_inicio as string} — {r.fecha_fin as string}
+                  </TableCell>
+                  <TableCell className="font-medium">{formatoMoneda(r.neto_pagar as number)}</TableCell>
+                  <TableCell>
+                    {r.anulado ? (
+                      <Badge variant="destructive">Anulado: {r.anulado_motivo as string}</Badge>
+                    ) : r.aprobado ? (
+                      <Badge variant="outline">Aprobado</Badge>
+                    ) : (
+                      <Badge>Borrador</Badge>
+                    )}
+                  </TableCell>
+                  <TableCell className="flex flex-wrap justify-end gap-2 text-right">
+                    <Button variant="outline" size="sm" onClick={() => descargarPdf(r.id as string)}>
+                      <DownloadIcon />
+                      <span className="hidden md:inline">PDF</span>
+                    </Button>
+                    {esBorrador && puedeEditar ? (
+                      <>
+                        {esLaboral ? (
+                          <EditarNominaDialog
+                            comprobante={r as never}
+                            empleadoId={empleadoId}
+                            onGuardado={cargar}
+                          />
+                        ) : (
+                          <EditarHonorariosDialog
+                            comprobante={r as never}
+                            empleadoId={empleadoId}
+                            onGuardado={cargar}
+                          />
+                        )}
+                        <Button variant="outline" size="sm" onClick={() => aprobar(r.id as string)}>
+                          <CheckIcon />
+                          <span className="hidden md:inline">Aprobar</span>
+                        </Button>
+                        <Button
+                          variant={confirmandoId === r.id ? "destructive" : "outline"}
+                          size="sm"
+                          onClick={() => eliminar(r.id as string)}
+                          onBlur={() => setConfirmandoId((prev) => (prev === r.id ? null : prev))}
+                        >
+                          <Trash2Icon />
+                          {confirmandoId === r.id ? <span className="hidden md:inline">¿Eliminar?</span> : null}
+                        </Button>
+                      </>
+                    ) : null}
+                    {r.aprobado && !r.anulado && puedeAnular ? (
+                      <AnularComprobanteDialog
+                        esLaboral={esLaboral}
+                        id={r.id as string}
+                        empleadoId={empleadoId}
+                        onAnulado={cargar}
+                      />
+                    ) : null}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
             {registros.length === 0 ? (
               <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">Todavía no hay comprobantes.</TableCell></TableRow>
             ) : null}

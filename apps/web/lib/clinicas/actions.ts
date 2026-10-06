@@ -8,6 +8,33 @@ import { campoOpcional } from "@/lib/forms/opcional";
 const TIPOS_LOGO_PERMITIDOS = ["image/png", "image/jpeg", "image/webp", "image/svg+xml"];
 const TAMANO_MAXIMO_LOGO = 2 * 1024 * 1024;
 
+// Datos de marca para imprimir en un PDF (comprobantes de nómina/honorarios,
+// etc.) — mismo bucket público ya usado para el logo en el navbar/correos.
+export async function obtenerClinicaParaPdf() {
+  const usuario = await getCurrentUsuario();
+  if (!usuario) throw new Error("Sesión inválida.");
+
+  const supabase = await createClient();
+  const { data: clinica } = await supabase
+    .from("clinicas")
+    .select("nombre, nombre_comercial, nit, telefono_contacto, logo_storage_path")
+    .eq("id", usuario.clinica_id)
+    .single();
+  if (!clinica) throw new Error("No se pudo cargar la información de la clínica.");
+
+  const logoUrl = clinica.logo_storage_path
+    ? supabase.storage.from("clinica-logos").getPublicUrl(clinica.logo_storage_path).data.publicUrl
+    : null;
+
+  return {
+    nombre: clinica.nombre,
+    nombreComercial: clinica.nombre_comercial,
+    nit: clinica.nit,
+    telefonoContacto: clinica.telefono_contacto,
+    logoUrl,
+  };
+}
+
 export async function actualizarMarcaClinica(formData: FormData) {
   const usuario = await getCurrentUsuario();
   if (!usuario) throw new Error("Sesión inválida.");

@@ -10,16 +10,29 @@ import { calcularRetencionHonorarios, requiereFacturaElectronica } from "./calcu
 function requirePermisoCrear() {
   return requirePermisoBase("nomina", "CREATE");
 }
+function requirePermisoEditar() {
+  return requirePermisoBase("nomina", "EDIT");
+}
 function requirePermisoAnular() {
   return requirePermisoBase("nomina", "VOID");
 }
 
-export async function generarComprobanteHonorarios(empleadoId: string, formData: FormData) {
+export type DesgloseHonorarios = {
+  valorBruto: number;
+  declaranteRenta: boolean;
+  tarifaRetencion: number;
+  retencionFuente: number;
+  netoPagar: number;
+  requiereFacturaElectronica: boolean;
+};
+
+export async function calcularComprobanteHonorariosPreview(
+  empleadoId: string,
+  formData: FormData,
+): Promise<DesgloseHonorarios> {
   const fechaInicio = String(formData.get("fechaInicio") ?? "");
-  const fechaFin = String(formData.get("fechaFin") ?? "");
   const valorBruto = Number(formData.get("valorBruto"));
-  if (!fechaInicio || !fechaFin) throw new Error("Las fechas del período son obligatorias.");
-  if (fechaFin < fechaInicio) throw new Error("La fecha de fin no puede ser anterior a la de inicio.");
+  if (!fechaInicio) throw new Error("La fecha de inicio es obligatoria.");
   if (!Number.isFinite(valorBruto) || valorBruto <= 0) throw new Error("El valor bruto debe ser mayor a cero.");
 
   const check = await requirePermisoCrear();
@@ -40,11 +53,6 @@ export async function generarComprobanteHonorarios(empleadoId: string, formData:
   const { tarifa, retencion } = calcularRetencionHonorarios(valorBruto, declaranteRenta);
   const netoPagar = Math.round((valorBruto - retencion) * 100) / 100;
 
-  // Umbral de facturación electrónica (DIAN): se evalúa sobre el
-  // acumulado del AÑO del empleado, no solo este pago — un contratista
-  // puede cruzar el umbral a mitad de año.
-  // Ver el comentario equivalente en lib/rrhh/nomina.ts — nunca pasar un
-  // string "yyyy-MM-dd" por `new Date().getFullYear()`.
   const anio = Number(fechaInicio.slice(0, 4));
   const { data: clinica } = await supabase
     .from("clinicas")
@@ -69,34 +77,132 @@ export async function generarComprobanteHonorarios(empleadoId: string, formData:
     ? requiereFacturaElectronica(acumuladoAnual, valoresLegales.uvt)
     : false;
 
-  let soporteStoragePath: string | null = null;
+  return {
+    valorBruto,
+    declaranteRenta,
+    tarifaRetencion: tarifa,
+    retencionFuente: retencion,
+    netoPagar,
+    requiereFacturaElectronica: requiereFactura,
+  };
+}
+
+function numeroFormulario(formData: FormData, campo: string): number {
+  const valor = Number(formData.get(campo));
+  return Number.isFinite(valor) ? valor : 0;
+}
+
+async function subirSoporteSiHay(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  clinicaId: string,
+  empleadoId: string,
+  formData: FormData,
+): Promise<string | null> {
   const soporte = formData.get("soporteSeguridadSocial");
-  if (soporte instanceof File && soporte.size > 0) {
-    if (soporte.size > 10 * 1024 * 1024) throw new Error("El soporte no puede pesar más de 10 MB.");
-    const extension = soporte.name.split(".").pop() ?? "pdf";
-    const path = `${check.usuario.clinica_id}/empleados/${empleadoId}/honorarios-pila-${Date.now()}.${extension}`;
-    const { error: uploadError } = await supabase.storage
-      .from("documentos-rrhh")
-      .upload(path, soporte, { contentType: soporte.type });
-    if (uploadError) throw new Error("No se pudo subir el soporte.");
-    soporteStoragePath = path;
-  }
+  if (!(soporte instanceof File) || soporte.size === 0) return null;
+  if (soporte.size > 10 * 1024 * 1024) throw new Error("El soporte no puede pesar más de 10 MB.");
+  const extension = soporte.name.split(".").pop() ?? "pdf";
+  const path = `${clinicaId}/empleados/${empleadoId}/honorarios-pila-${Date.now()}.${extension}`;
+  const { error } = await supabase.storage.from("documentos-rrhh").upload(path, soporte, { contentType: soporte.type });
+  if (error) throw new Error("No se pudo subir el soporte.");
+  return path;
+}
+
+export async function generarComprobanteHonorarios(empleadoId: string, formData: FormData) {
+  const fechaInicio = String(formData.get("fechaInicio") ?? "");
+  const fechaFin = String(formData.get("fechaFin") ?? "");
+  if (!fechaInicio || !fechaFin) throw new Error("Las fechas del período son obligatorias.");
+  if (fechaFin < fechaInicio) throw new Error("La fecha de fin no puede ser anterior a la de inicio.");
+
+  const check = await requirePermisoCrear();
+  if (!check.ok) throw new Error(check.error);
+
+  const supabase = await createClient();
+  const soporteStoragePath = await subirSoporteSiHay(supabase, check.usuario.clinica_id, empleadoId, formData);
 
   const { error } = await supabase.from("comprobantes_honorarios").insert({
     clinica_id: check.usuario.clinica_id,
     empleado_id: empleadoId,
     fecha_inicio: fechaInicio,
     fecha_fin: fechaFin,
-    valor_bruto: valorBruto,
-    declarante_renta: declaranteRenta,
-    tarifa_retencion: tarifa,
-    retencion_fuente: retencion,
-    neto_pagar: netoPagar,
-    requiere_factura_electronica: requiereFactura,
+    valor_bruto: numeroFormulario(formData, "valorBruto"),
+    declarante_renta: formData.get("declaranteRenta") === "on",
+    tarifa_retencion: numeroFormulario(formData, "tarifaRetencion"),
+    retencion_fuente: numeroFormulario(formData, "retencionFuente"),
+    neto_pagar: numeroFormulario(formData, "netoPagar"),
+    requiere_factura_electronica: formData.get("requiereFacturaElectronica") === "on",
     soporte_seguridad_social_storage_path: soporteStoragePath,
     created_by: check.usuario.id,
   });
   if (error) throw new Error("No se pudo generar el comprobante de honorarios.");
+
+  revalidatePath(`/rrhh/${empleadoId}`);
+}
+
+export async function editarComprobanteHonorarios(id: string, empleadoId: string, formData: FormData) {
+  const fechaInicio = String(formData.get("fechaInicio") ?? "");
+  const fechaFin = String(formData.get("fechaFin") ?? "");
+  if (!fechaInicio || !fechaFin) throw new Error("Las fechas del período son obligatorias.");
+  if (fechaFin < fechaInicio) throw new Error("La fecha de fin no puede ser anterior a la de inicio.");
+
+  const check = await requirePermisoEditar();
+  if (!check.ok) throw new Error(check.error);
+
+  const supabase = await createClient();
+  const nuevoSoporte = await subirSoporteSiHay(supabase, check.usuario.clinica_id, empleadoId, formData);
+
+  const updates: Record<string, unknown> = {
+    fecha_inicio: fechaInicio,
+    fecha_fin: fechaFin,
+    valor_bruto: numeroFormulario(formData, "valorBruto"),
+    declarante_renta: formData.get("declaranteRenta") === "on",
+    tarifa_retencion: numeroFormulario(formData, "tarifaRetencion"),
+    retencion_fuente: numeroFormulario(formData, "retencionFuente"),
+    neto_pagar: numeroFormulario(formData, "netoPagar"),
+    requiere_factura_electronica: formData.get("requiereFacturaElectronica") === "on",
+  };
+  if (nuevoSoporte) updates.soporte_seguridad_social_storage_path = nuevoSoporte;
+
+  const { data, error } = await supabase
+    .from("comprobantes_honorarios")
+    .update(updates)
+    .eq("id", id)
+    .select("id");
+  if (error) throw new Error("No se pudo actualizar el comprobante.");
+  if (!data || data.length === 0) {
+    throw new Error("Este comprobante ya fue aprobado y no se puede editar.");
+  }
+
+  revalidatePath(`/rrhh/${empleadoId}`);
+}
+
+export async function aprobarComprobanteHonorarios(id: string, empleadoId: string) {
+  const check = await requirePermisoEditar();
+  if (!check.ok) throw new Error(check.error);
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("comprobantes_honorarios")
+    .update({ aprobado: true, aprobado_en: new Date().toISOString(), aprobado_por: check.usuario.id })
+    .eq("id", id)
+    .select("id");
+  if (error) throw new Error("No se pudo aprobar el comprobante.");
+  if (!data || data.length === 0) throw new Error("Este comprobante ya estaba aprobado.");
+
+  revalidatePath(`/rrhh/${empleadoId}`);
+}
+
+export async function eliminarComprobanteHonorarios(id: string, empleadoId: string) {
+  const check = await requirePermisoEditar();
+  if (!check.ok) throw new Error(check.error);
+
+  const supabase = await createClient();
+  const { error, count } = await supabase
+    .from("comprobantes_honorarios")
+    .delete({ count: "exact" })
+    .eq("id", id);
+  if (error) throw new Error("No se pudo eliminar el comprobante.");
+  if (!count) throw new Error("Este comprobante ya fue aprobado y no se puede eliminar — solo anular.");
 
   revalidatePath(`/rrhh/${empleadoId}`);
 }
@@ -109,11 +215,15 @@ export async function anularComprobanteHonorarios(id: string, empleadoId: string
   if (!check.ok) throw new Error(check.error);
 
   const supabase = await createClient();
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("comprobantes_honorarios")
     .update({ anulado: true, anulado_motivo: motivo })
-    .eq("id", id);
+    .eq("id", id)
+    .select("id");
   if (error) throw new Error("No se pudo anular el comprobante.");
+  if (!data || data.length === 0) {
+    throw new Error("Solo se puede anular un comprobante ya aprobado.");
+  }
 
   revalidatePath(`/rrhh/${empleadoId}`);
 }
@@ -135,4 +245,16 @@ export async function listarComprobantesHonorarios(filtros: { empleadoId?: strin
   }
 
   return { registros: data ?? [], total: count ?? 0, pagina: paginaPedida };
+}
+
+export async function obtenerComprobanteHonorarios(id: string) {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("comprobantes_honorarios")
+    .select(
+      "*, empleados(nombre, numero_identificacion, tipo_identificacion_id, tipos_identificacion(nombre))",
+    )
+    .eq("id", id)
+    .maybeSingle();
+  return data;
 }

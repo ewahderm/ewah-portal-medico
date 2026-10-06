@@ -47,6 +47,7 @@ export default async function EmpleadoDetallePage({ params }: { params: Promise<
     { data: puedeEditar },
     { data: puedeVerNomina },
     { data: puedeCrearNomina },
+    { data: puedeEditarNomina },
     { data: puedeAnularNomina },
     tiposIdentificacion,
     tiposContrato,
@@ -64,6 +65,7 @@ export default async function EmpleadoDetallePage({ params }: { params: Promise<
     supabase.rpc("has_permission", { modulo_code: "rrhh", permiso_code: "EDIT" }),
     supabase.rpc("has_permission", { modulo_code: "nomina", permiso_code: "VIEW" }),
     supabase.rpc("has_permission", { modulo_code: "nomina", permiso_code: "CREATE" }),
+    supabase.rpc("has_permission", { modulo_code: "nomina", permiso_code: "EDIT" }),
     supabase.rpc("has_permission", { modulo_code: "nomina", permiso_code: "VOID" }),
     getTiposIdentificacionTodos(supabase),
     getTiposContratoActivos(supabase),
@@ -119,6 +121,7 @@ export default async function EmpleadoDetallePage({ params }: { params: Promise<
         puedeCrear={!!puedeCrear}
         puedeVerNomina={!!puedeVerNomina}
         puedeCrearNomina={!!puedeCrearNomina}
+        puedeEditarNomina={!!puedeEditarNomina}
         puedeAnularNomina={!!puedeAnularNomina}
       />
     </div>

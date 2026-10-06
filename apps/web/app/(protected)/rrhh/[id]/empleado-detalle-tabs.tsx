@@ -19,6 +19,7 @@ export function EmpleadoDetalleTabs({
   puedeCrear,
   puedeVerNomina,
   puedeCrearNomina,
+  puedeEditarNomina,
   puedeAnularNomina,
 }: {
   empleado: Empleado;
@@ -28,6 +29,7 @@ export function EmpleadoDetalleTabs({
   puedeCrear: boolean;
   puedeVerNomina: boolean;
   puedeCrearNomina: boolean;
+  puedeEditarNomina: boolean;
   puedeAnularNomina: boolean;
 }) {
   const esLaboral = empleado.categoria_contrato === "laboral";
@@ -80,6 +82,7 @@ export function EmpleadoDetalleTabs({
             empleadoId={empleado.id}
             esLaboral={esLaboral}
             puedeCrear={puedeCrearNomina}
+            puedeEditar={puedeEditarNomina}
             puedeAnular={puedeAnularNomina}
           />
         </TabsContent>
