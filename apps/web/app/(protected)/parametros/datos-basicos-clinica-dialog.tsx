@@ -134,11 +134,6 @@ export function DatosBasicosClinicaDialog({
         <DialogHeader>
           <DialogTitle>Datos básicos de la clínica</DialogTitle>
         </DialogHeader>
-        {error ? (
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        ) : null}
         <form action={handleGuardar} className="space-y-5">
           <div className="space-y-3">
             <p className="text-sm font-semibold">Identificación y contacto</p>
@@ -283,6 +278,14 @@ export function DatosBasicosClinicaDialog({
             </div>
           </div>
 
+          {/* Junto al botón, no arriba: el diálogo es largo y quien guarda está
+              abajo — arriba el error quedaba fuera de vista y parecía que
+              "Guardar no hace nada". */}
+          {error ? (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          ) : null}
           <Button type="submit" className="w-full" disabled={pending}>
             {pending ? "Guardando..." : "Guardar"}
           </Button>
