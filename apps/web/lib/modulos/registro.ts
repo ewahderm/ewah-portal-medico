@@ -5,14 +5,21 @@ import {
   PackageIcon,
   MegaphoneIcon,
   LeafIcon,
+  BriefcaseIcon,
   type LucideIcon,
 } from "lucide-react";
 
 /**
  * Registro central de los módulos "de negocio" que aparecen en el launcher
- * del dashboard. NO incluye usuarios/parametros: son administrativos, ya
- * tienen su propio punto de acceso y no compiten por espacio en un launcher
- * pensado para el día a día clínico.
+ * del dashboard. NO incluye usuarios/parametros/suscripción: son
+ * administrativos, ya tienen su propio punto de acceso y no compiten por
+ * espacio en un launcher pensado para el día a día clínico/operativo.
+ *
+ * Todo módulo nuevo que no sea puramente administrativo (clínico u
+ * operativo, como RRHH o un futuro SG-SST/Habilitación) debe agregarse
+ * aquí al construirse — es el único lugar que alimenta tanto el launcher
+ * del dashboard como el filtro por permiso/entitlement, así que un módulo
+ * ausente de este arreglo simplemente no aparece en la pantalla principal.
  *
  * `requiereFeature` queda disponible para el día en que una tarjeta del
  * launcher necesite reflejar el estado de una sub-feature específica (hoy
@@ -75,5 +82,12 @@ export const REGISTRO_MODULOS: ModuloRegistro[] = [
     descripcion: "Temperatura, cadena de frío, residuos, extintores y limpieza.",
     href: "/medio-ambiente",
     icono: LeafIcon,
+  },
+  {
+    codigo: "rrhh",
+    nombre: "Recursos Humanos",
+    descripcion: "Empleados, documentación, nómina y honorarios.",
+    href: "/rrhh",
+    icono: BriefcaseIcon,
   },
 ];

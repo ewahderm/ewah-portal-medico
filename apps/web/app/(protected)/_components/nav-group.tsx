@@ -28,12 +28,15 @@ export function NavGroup({ label, items }: { label: string; items: NavItem[] }) 
         {label}
         <ChevronDownIcon className="size-3.5" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent>
+      <DropdownMenuContent className="w-auto min-w-48">
         {items.map((item) => (
           <DropdownMenuItem
             key={item.href}
             render={<Link href={item.href} />}
-            className={cn(pathname.startsWith(item.href) && "bg-accent text-accent-foreground")}
+            className={cn(
+              "whitespace-nowrap",
+              pathname.startsWith(item.href) && "bg-accent text-accent-foreground",
+            )}
           >
             {item.label}
           </DropdownMenuItem>
