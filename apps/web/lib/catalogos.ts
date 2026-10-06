@@ -1,4 +1,8 @@
 import type { createClient } from "@/lib/supabase/server";
+import {
+  SERVICIO_HABILITADO_SELECT,
+  type ServicioHabilitado,
+} from "@/lib/clinicas/servicios-habilitados-tipos";
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 
@@ -303,16 +307,21 @@ export async function getPracticasMedicasActivas(supabase: Supabase) {
   return data ?? [];
 }
 
+export async function getPracticasServicioActivas(supabase: Supabase) {
+  const { data } = await supabase
+    .from("practicas_servicio")
+    .select("id, practica_medica_id, nombre, complejidad, requisitos")
+    .eq("activo", true)
+    .order("orden");
+  return data ?? [];
+}
+
 export async function getServiciosHabilitadosClinica(supabase: Supabase) {
   const { data } = await supabase
     .from("clinica_servicios_habilitados")
-    .select("id, codigo_habilitacion, practicas_medicas(id, codigo, nombre)")
+    .select(SERVICIO_HABILITADO_SELECT)
     .order("created_at");
-  return (data ?? []) as unknown as {
-    id: string;
-    codigo_habilitacion: string | null;
-    practicas_medicas: { id: string; codigo: string | null; nombre: string } | null;
-  }[];
+  return (data ?? []) as unknown as ServicioHabilitado[];
 }
 
 export async function getRolesActorActivos(supabase: Supabase) {

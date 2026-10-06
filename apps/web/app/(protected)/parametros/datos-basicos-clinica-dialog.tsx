@@ -8,6 +8,8 @@ import {
   agregarServicioHabilitado,
   actualizarCodigoServicioHabilitado,
   eliminarServicioHabilitado,
+  agregarPracticaServicio,
+  eliminarPracticaServicio,
   type ServicioHabilitado,
 } from "@/lib/clinicas/servicios-habilitados";
 import { toast } from "@/components/ui/toast";
@@ -30,6 +32,7 @@ import { SIN_SELECCION } from "@/lib/forms/opcional";
 type Departamento = { id: string; nombre: string; pais_id: string };
 type Ciudad = { id: string; nombre: string; departamento_id: string };
 type PracticaMedica = { id: string; codigo: string | null; nombre: string };
+type PracticaServicioCatalogo = { id: string; practica_medica_id: string; nombre: string };
 
 type ClinicaDatosBasicos = {
   paisOperacionId: string;
@@ -59,6 +62,7 @@ export function DatosBasicosClinicaDialog({
   rolesActor,
   tiposTransaccionInvima,
   practicasMedicas,
+  practicasServicio,
   serviciosHabilitados,
 }: {
   trigger: ReactElement;
@@ -72,6 +76,7 @@ export function DatosBasicosClinicaDialog({
   rolesActor: Opcion[];
   tiposTransaccionInvima: Opcion[];
   practicasMedicas: PracticaMedica[];
+  practicasServicio: PracticaServicioCatalogo[];
   serviciosHabilitados: ServicioHabilitado[];
 }) {
   const router = useRouter();
@@ -247,11 +252,13 @@ export function DatosBasicosClinicaDialog({
             <p className="text-sm font-semibold">Servicios habilitados ante REPS</p>
             <p className="text-xs text-muted-foreground">
               Tu clínica puede estar habilitada para más de un servicio de salud — agrega cada
-              uno con el código de habilitación que REPS te asignó para ese servicio. Los cambios
+              uno (o las prácticas concretas que ofreces dentro de él) con el código de
+              habilitación que REPS te asignó para ese servicio. Los cambios
               aquí se guardan de inmediato, no esperan al botón &quot;Guardar&quot; de abajo.
             </p>
             <ServiciosHabilitadosSection
               practicasMedicas={practicasMedicas}
+              practicasServicio={practicasServicio}
               inicial={serviciosHabilitados}
             />
           </div>
@@ -294,42 +301,75 @@ export function DatosBasicosClinicaDialog({
 // Persiste cada fila de inmediato (agregar/editar código/eliminar), igual
 // que activarCups/desactivarCups — vive fuera del <form> grande de arriba
 // porque no depende de su botón "Guardar" ni de fn_actualizar_datos_
-// basicos_clinica.
+// basicos_clinica. Un solo buscador ofrece servicios REPS (prefijo "s:") y
+// prácticas concretas (prefijo "p:", 0056): elegir una práctica agrega su
+// servicio padre si hacía falta, y el código de habilitación sigue siendo
+// uno por servicio.
 function ServiciosHabilitadosSection({
   practicasMedicas,
+  practicasServicio,
   inicial,
 }: {
   practicasMedicas: PracticaMedica[];
+  practicasServicio: PracticaServicioCatalogo[];
   inicial: ServicioHabilitado[];
 }) {
   const [servicios, setServicios] = useState(inicial);
-  const [practicaNuevaId, setPracticaNuevaId] = useState(SIN_SELECCION);
+  const [seleccion, setSeleccion] = useState(SIN_SELECCION);
   const [codigoNuevo, setCodigoNuevo] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  const practicasDisponibles = useMemo(() => {
-    const yaAgregadas = new Set(servicios.map((s) => s.practicas_medicas?.id));
-    return practicasMedicas.filter((p) => !yaAgregadas.has(p.id));
-  }, [practicasMedicas, servicios]);
+  const opciones = useMemo(() => {
+    const serviciosAgregados = new Set(servicios.map((s) => s.practicas_medicas?.id));
+    const practicasAgregadas = new Set(
+      servicios.flatMap((s) => s.clinica_practicas_servicio.map((p) => p.practicas_servicio?.id)),
+    );
+    const resultado: Opcion[] = [];
+    for (const pm of practicasMedicas) {
+      if (!serviciosAgregados.has(pm.id)) {
+        resultado.push({ id: `s:${pm.id}`, nombre: pm.codigo ? `${pm.codigo} — ${pm.nombre}` : pm.nombre });
+      }
+      for (const ps of practicasServicio) {
+        if (ps.practica_medica_id === pm.id && !practicasAgregadas.has(ps.id)) {
+          resultado.push({ id: `p:${ps.id}`, nombre: `${ps.nombre} (${pm.nombre})` });
+        }
+      }
+    }
+    return resultado;
+  }, [practicasMedicas, practicasServicio, servicios]);
 
-  const itemsPracticas = toItemsOpcional(
-    practicasDisponibles.map((p) => ({ id: p.id, nombre: p.codigo ? `${p.codigo} — ${p.nombre}` : p.nombre })),
-    SIN_SELECCION,
-    "Selecciona una práctica médica",
-  );
+  const items = toItemsOpcional(opciones, SIN_SELECCION, "Selecciona un servicio o práctica");
+
+  function reemplazarOAgregar(fila: ServicioHabilitado) {
+    setServicios((actual) =>
+      actual.some((s) => s.id === fila.id)
+        ? actual.map((s) => (s.id === fila.id ? fila : s))
+        : [...actual, fila],
+    );
+  }
 
   function handleAgregar() {
-    if (practicaNuevaId === SIN_SELECCION) {
-      setError("Selecciona una práctica médica.");
+    if (seleccion === SIN_SELECCION) {
+      setError("Selecciona un servicio o una práctica.");
       return;
     }
     setError(null);
+    const [tipo, id] = seleccion.split(":");
     startTransition(async () => {
       try {
-        const creado = await agregarServicioHabilitado(practicaNuevaId, codigoNuevo || null);
-        setServicios((actual) => [...actual, creado]);
-        setPracticaNuevaId(SIN_SELECCION);
+        if (tipo === "s") {
+          reemplazarOAgregar(await agregarServicioHabilitado(id, codigoNuevo || null));
+        } else {
+          let fila = await agregarPracticaServicio(id);
+          // El código escrito aplica al servicio padre solo si aún no tenía uno.
+          if (codigoNuevo && !fila.codigo_habilitacion) {
+            await actualizarCodigoServicioHabilitado(fila.id, codigoNuevo);
+            fila = { ...fila, codigo_habilitacion: codigoNuevo };
+          }
+          reemplazarOAgregar(fila);
+        }
+        setSeleccion(SIN_SELECCION);
         setCodigoNuevo("");
       } catch (e) {
         setError(e instanceof Error ? e.message : "No se pudo agregar.");
@@ -360,6 +400,24 @@ function ServiciosHabilitadosSection({
     });
   }
 
+  function handleQuitarPractica(servicioId: string, filaPracticaId: string) {
+    setError(null);
+    startTransition(async () => {
+      try {
+        await eliminarPracticaServicio(filaPracticaId);
+        setServicios((actual) =>
+          actual.map((s) =>
+            s.id === servicioId
+              ? { ...s, clinica_practicas_servicio: s.clinica_practicas_servicio.filter((p) => p.id !== filaPracticaId) }
+              : s,
+          ),
+        );
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "No se pudo quitar la práctica.");
+      }
+    });
+  }
+
   return (
     <div className="space-y-3">
       {error ? (
@@ -370,53 +428,107 @@ function ServiciosHabilitadosSection({
 
       {servicios.length > 0 ? (
         <div className="space-y-2">
-          {servicios.map((s) => (
-            <div key={s.id} className="flex items-center gap-2 rounded-lg border border-input p-2">
-              <div className="flex-1 text-sm">
-                <p className="font-medium">{s.practicas_medicas?.nombre ?? "—"}</p>
-                <p className="text-xs text-muted-foreground">{s.practicas_medicas?.codigo}</p>
+          {servicios.map((s) => {
+            const practicas = s.clinica_practicas_servicio.filter((p) => p.practicas_servicio);
+            return (
+              <div key={s.id} className="space-y-2 rounded-lg border border-input p-2">
+                <div className="flex items-center gap-2">
+                  <div className="min-w-0 flex-1 text-sm">
+                    <p className="font-medium">{s.practicas_medicas?.nombre ?? "—"}</p>
+                    <p className="text-xs text-muted-foreground">{s.practicas_medicas?.codigo}</p>
+                  </div>
+                  <Input
+                    // Remonta si el código cambia desde el servidor (ej. al agregar
+                    // una práctica con código) — defaultValue no se re-lee solo.
+                    key={s.codigo_habilitacion ?? ""}
+                    className="w-32 sm:w-40"
+                    placeholder="Código de habilitación"
+                    aria-label={`Código de habilitación de ${s.practicas_medicas?.nombre ?? "el servicio"}`}
+                    defaultValue={s.codigo_habilitacion ?? ""}
+                    onBlur={(e) => handleActualizarCodigo(s.id, e.target.value)}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label="Quitar servicio y sus prácticas"
+                    disabled={pending}
+                    onClick={() => handleEliminar(s.id)}
+                  >
+                    <XIcon />
+                  </Button>
+                </div>
+
+                {practicas.length > 0 ? (
+                  <ul className="space-y-1 border-t pt-2">
+                    {practicas.map((p) => (
+                      <li key={p.id} className="rounded-md bg-muted/50 px-2 py-1.5 text-sm">
+                        <details>
+                          <summary className="flex cursor-pointer list-none items-center gap-2">
+                            <span className="flex-1">
+                              <span className="font-medium">{p.practicas_servicio!.nombre}</span>
+                              {p.practicas_servicio!.complejidad ? (
+                                <span className="ml-2 text-xs text-muted-foreground">
+                                  Complejidad {p.practicas_servicio!.complejidad}
+                                </span>
+                              ) : null}
+                            </span>
+                            <span className="text-xs text-primary">Requisitos</span>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon-sm"
+                              aria-label={`Quitar ${p.practicas_servicio!.nombre}`}
+                              disabled={pending}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                handleQuitarPractica(s.id, p.id);
+                              }}
+                            >
+                              <XIcon />
+                            </Button>
+                          </summary>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {p.practicas_servicio!.requisitos ?? "Sin requisitos de referencia."}
+                          </p>
+                        </details>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
               </div>
-              <Input
-                className="w-40"
-                placeholder="Código de habilitación"
-                defaultValue={s.codigo_habilitacion ?? ""}
-                onBlur={(e) => handleActualizarCodigo(s.id, e.target.value)}
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                disabled={pending}
-                onClick={() => handleEliminar(s.id)}
-              >
-                <XIcon />
-              </Button>
-            </div>
-          ))}
+            );
+          })}
         </div>
       ) : null}
 
-      <div className="flex items-end gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
         <div className="flex-1 space-y-2">
-          <Label htmlFor="practicaMedicaNueva">Agregar servicio</Label>
+          <Label htmlFor="practicaMedicaNueva">Agregar servicio o práctica</Label>
           <Combobox
             id="practicaMedicaNueva"
-            items={itemsPracticas}
-            value={practicaNuevaId}
-            onValueChange={(v) => setPracticaNuevaId(String(v ?? SIN_SELECCION))}
-            disabled={practicasDisponibles.length === 0}
+            items={items}
+            value={seleccion}
+            onValueChange={(v) => setSeleccion(String(v ?? SIN_SELECCION))}
+            disabled={opciones.length === 0}
           />
         </div>
-        <Input
-          className="w-40"
-          placeholder="Código"
-          value={codigoNuevo}
-          onChange={(e) => setCodigoNuevo(e.target.value)}
-        />
-        <Button type="button" variant="outline" disabled={pending} onClick={handleAgregar}>
-          Agregar
-        </Button>
+        <div className="flex gap-2">
+          <Input
+            className="flex-1 sm:w-40"
+            placeholder="Código"
+            value={codigoNuevo}
+            onChange={(e) => setCodigoNuevo(e.target.value)}
+          />
+          <Button type="button" variant="outline" disabled={pending} onClick={handleAgregar}>
+            Agregar
+          </Button>
+        </div>
       </div>
+      <p className="text-xs text-muted-foreground">
+        Busca la práctica concreta (ej. &quot;Pediatría&quot;) y su servicio REPS se agrega solo. Los
+        requisitos son material de referencia, no reemplazan el texto de la Resolución 3100.
+      </p>
     </div>
   );
 }

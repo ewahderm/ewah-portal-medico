@@ -189,6 +189,13 @@ export const CATALOGOS: CatalogoConfig[] = [
     modulo: "general",
   },
   {
+    tabla: "practicas_servicio",
+    nombre: "Prácticas por servicio REPS",
+    descripcion: "Prácticas concretas (Medicina General, Pediatría, Fisioterapia...) agrupadas bajo el servicio REPS al que pertenecen — se eligen en Datos básicos de la clínica.",
+    esGlobal: true,
+    modulo: "general",
+  },
+  {
     tabla: "departamentos",
     nombre: "Departamentos",
     descripcion: "Divisiones geográficas de un país — hoy solo Colombia está sembrado.",
