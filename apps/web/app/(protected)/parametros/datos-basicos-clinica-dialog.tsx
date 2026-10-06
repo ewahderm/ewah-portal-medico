@@ -301,10 +301,11 @@ export function DatosBasicosClinicaDialog({
 // Persiste cada fila de inmediato (agregar/editar código/eliminar), igual
 // que activarCups/desactivarCups — vive fuera del <form> grande de arriba
 // porque no depende de su botón "Guardar" ni de fn_actualizar_datos_
-// basicos_clinica. Un solo buscador ofrece servicios REPS (prefijo "s:") y
-// prácticas concretas (prefijo "p:", 0056): elegir una práctica agrega su
-// servicio padre si hacía falta, y el código de habilitación sigue siendo
-// uno por servicio.
+// basicos_clinica. Dos niveles en cascada (mismo patrón que País →
+// Departamento → Ciudad): primero el servicio REPS, luego — opcional — la
+// práctica concreta de ese servicio (0056). Si el servicio ya está en la
+// lista, elegir una práctica la agrega dentro de él; el código de
+// habilitación sigue siendo uno por servicio.
 function ServiciosHabilitadosSection({
   practicasMedicas,
   practicasServicio,
@@ -315,31 +316,32 @@ function ServiciosHabilitadosSection({
   inicial: ServicioHabilitado[];
 }) {
   const [servicios, setServicios] = useState(inicial);
-  const [seleccion, setSeleccion] = useState(SIN_SELECCION);
+  const [servicioId, setServicioId] = useState(SIN_SELECCION);
+  const [practicaId, setPracticaId] = useState(SIN_SELECCION);
   const [codigoNuevo, setCodigoNuevo] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  const opciones = useMemo(() => {
-    const serviciosAgregados = new Set(servicios.map((s) => s.practicas_medicas?.id));
-    const practicasAgregadas = new Set(
+  const itemsServicios = toItemsOpcional(
+    practicasMedicas.map((pm) => ({ id: pm.id, nombre: pm.codigo ? `${pm.codigo} — ${pm.nombre}` : pm.nombre })),
+    SIN_SELECCION,
+    "Selecciona un servicio REPS",
+  );
+
+  const servicioYaAgregado = servicios.find((s) => s.practicas_medicas?.id === servicioId);
+
+  const practicasDelServicio = useMemo(() => {
+    const yaAgregadas = new Set(
       servicios.flatMap((s) => s.clinica_practicas_servicio.map((p) => p.practicas_servicio?.id)),
     );
-    const resultado: Opcion[] = [];
-    for (const pm of practicasMedicas) {
-      if (!serviciosAgregados.has(pm.id)) {
-        resultado.push({ id: `s:${pm.id}`, nombre: pm.codigo ? `${pm.codigo} — ${pm.nombre}` : pm.nombre });
-      }
-      for (const ps of practicasServicio) {
-        if (ps.practica_medica_id === pm.id && !practicasAgregadas.has(ps.id)) {
-          resultado.push({ id: `p:${ps.id}`, nombre: `${ps.nombre} (${pm.nombre})` });
-        }
-      }
-    }
-    return resultado;
-  }, [practicasMedicas, practicasServicio, servicios]);
+    return practicasServicio.filter((ps) => ps.practica_medica_id === servicioId && !yaAgregadas.has(ps.id));
+  }, [practicasServicio, servicioId, servicios]);
 
-  const items = toItemsOpcional(opciones, SIN_SELECCION, "Selecciona un servicio o práctica");
+  const itemsPracticas = toItemsOpcional(
+    practicasDelServicio.map((ps): Opcion => ({ id: ps.id, nombre: ps.nombre })),
+    SIN_SELECCION,
+    "Solo el servicio (sin práctica específica)",
+  );
 
   function reemplazarOAgregar(fila: ServicioHabilitado) {
     setServicios((actual) =>
@@ -350,18 +352,21 @@ function ServiciosHabilitadosSection({
   }
 
   function handleAgregar() {
-    if (seleccion === SIN_SELECCION) {
-      setError("Selecciona un servicio o una práctica.");
+    if (servicioId === SIN_SELECCION) {
+      setError("Selecciona un servicio REPS.");
+      return;
+    }
+    if (practicaId === SIN_SELECCION && servicioYaAgregado) {
+      setError("Ese servicio ya está en la lista — elige una práctica para agregarla dentro de él.");
       return;
     }
     setError(null);
-    const [tipo, id] = seleccion.split(":");
     startTransition(async () => {
       try {
-        if (tipo === "s") {
-          reemplazarOAgregar(await agregarServicioHabilitado(id, codigoNuevo || null));
+        if (practicaId === SIN_SELECCION) {
+          reemplazarOAgregar(await agregarServicioHabilitado(servicioId, codigoNuevo || null));
         } else {
-          let fila = await agregarPracticaServicio(id);
+          let fila = await agregarPracticaServicio(practicaId);
           // El código escrito aplica al servicio padre solo si aún no tenía uno.
           if (codigoNuevo && !fila.codigo_habilitacion) {
             await actualizarCodigoServicioHabilitado(fila.id, codigoNuevo);
@@ -369,7 +374,9 @@ function ServiciosHabilitadosSection({
           }
           reemplazarOAgregar(fila);
         }
-        setSeleccion(SIN_SELECCION);
+        // Se conserva el servicio elegido para poder seguir agregando
+        // prácticas dentro de él sin volver a buscarlo.
+        setPracticaId(SIN_SELECCION);
         setCodigoNuevo("");
       } catch (e) {
         setError(e instanceof Error ? e.message : "No se pudo agregar.");
@@ -502,32 +509,66 @@ function ServiciosHabilitadosSection({
         </div>
       ) : null}
 
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-        <div className="flex-1 space-y-2">
-          <Label htmlFor="practicaMedicaNueva">Agregar servicio o práctica</Label>
+      <div className="space-y-3 rounded-lg border border-dashed border-input p-3">
+        <div className="space-y-2">
+          <Label htmlFor="servicioRepsNuevo">1. Servicio REPS</Label>
           <Combobox
-            id="practicaMedicaNueva"
-            items={items}
-            value={seleccion}
-            onValueChange={(v) => setSeleccion(String(v ?? SIN_SELECCION))}
-            disabled={opciones.length === 0}
+            id="servicioRepsNuevo"
+            items={itemsServicios}
+            value={servicioId}
+            onValueChange={(v) => {
+              setServicioId(String(v ?? SIN_SELECCION));
+              setPracticaId(SIN_SELECCION);
+              setError(null);
+            }}
           />
+          {servicioYaAgregado ? (
+            <p className="text-xs text-muted-foreground">
+              Ya está en tu lista — lo que elijas abajo se agrega dentro de él.
+            </p>
+          ) : null}
         </div>
-        <div className="flex gap-2">
-          <Input
-            className="flex-1 sm:w-40"
-            placeholder="Código"
-            value={codigoNuevo}
-            onChange={(e) => setCodigoNuevo(e.target.value)}
+
+        <div className="space-y-2 border-l-2 border-primary/30 pl-3">
+          <Label htmlFor="practicaServicioNueva">2. Práctica (opcional)</Label>
+          <Combobox
+            id="practicaServicioNueva"
+            items={itemsPracticas}
+            value={practicaId}
+            onValueChange={(v) => setPracticaId(String(v ?? SIN_SELECCION))}
+            disabled={servicioId === SIN_SELECCION || practicasDelServicio.length === 0}
           />
-          <Button type="button" variant="outline" disabled={pending} onClick={handleAgregar}>
+          {servicioId !== SIN_SELECCION && practicasDelServicio.length === 0 ? (
+            <p className="text-xs text-muted-foreground">
+              Este servicio no tiene prácticas registradas (o ya agregaste todas).
+            </p>
+          ) : null}
+        </div>
+
+        <div className="flex gap-2">
+          {servicioYaAgregado ? null : (
+            <Input
+              className="flex-1"
+              placeholder="Código de habilitación del servicio"
+              aria-label="Código de habilitación del servicio"
+              value={codigoNuevo}
+              onChange={(e) => setCodigoNuevo(e.target.value)}
+            />
+          )}
+          <Button
+            type="button"
+            variant="outline"
+            className={servicioYaAgregado ? "w-full" : undefined}
+            disabled={pending}
+            onClick={handleAgregar}
+          >
             Agregar
           </Button>
         </div>
       </div>
       <p className="text-xs text-muted-foreground">
-        Busca la práctica concreta (ej. &quot;Pediatría&quot;) y su servicio REPS se agrega solo. Los
-        requisitos son material de referencia, no reemplazan el texto de la Resolución 3100.
+        Los requisitos de cada práctica son material de referencia, no reemplazan el texto de la
+        Resolución 3100.
       </p>
     </div>
   );
