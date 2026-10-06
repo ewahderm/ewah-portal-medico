@@ -14,6 +14,7 @@ const NAV_ITEMS = [
   { href: "/inventario", label: "Inventario" },
   { href: "/campanas", label: "Campañas" },
   { href: "/medio-ambiente", label: "Medio Ambiente" },
+  { href: "/rrhh", label: "Recursos Humanos" },
   { href: "/usuarios", label: "Usuarios" },
   { href: "/parametros", label: "Parámetros" },
   { href: "/suscripcion", label: "Suscripción" },

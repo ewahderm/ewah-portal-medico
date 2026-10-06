@@ -6,6 +6,8 @@ import {
   MegaphoneIcon,
   LeafIcon,
   SlidersHorizontalIcon,
+  BriefcaseIcon,
+  GlobeIcon,
   type LucideIcon,
 } from "lucide-react";
 import { requireUsuario, esAdministrador } from "@/lib/auth/session";
@@ -30,7 +32,16 @@ import { ProveedoresTable, type ProveedorRow } from "./proveedores-table";
 import { ProveedorDialog } from "./proveedor-dialog";
 import { MotivosMovimientoTable, type MotivoMovimientoRow } from "./motivos-movimiento-table";
 import { MotivoMovimientoDialog } from "./motivo-movimiento-dialog";
-import { getSedesActivas, getTiposIdentificacionActivos, getProveedoresActivos } from "@/lib/catalogos";
+import { CargosTable, type CargoRow } from "./cargos-table";
+import { CargoDialog } from "./cargo-dialog";
+import { PaisOperacionDialog } from "./pais-operacion-dialog";
+import {
+  getSedesActivas,
+  getTiposIdentificacionActivos,
+  getProveedoresActivos,
+  getClasesRiesgoActivas,
+  getPaisesActivos,
+} from "@/lib/catalogos";
 
 // Mismo nombre/ícono que ya usa el launcher del dashboard
 // (lib/modulos/registro.ts) para que "Medio Ambiente" se vea igual en los
@@ -44,6 +55,7 @@ const GRUPOS: Record<ModuloCatalogo, { nombre: string; icono: LucideIcon }> = {
   inventario: { nombre: "Inventario", icono: PackageIcon },
   campanas: { nombre: "Campañas", icono: MegaphoneIcon },
   medio_ambiente: { nombre: "Medio Ambiente", icono: LeafIcon },
+  rrhh: { nombre: "Recursos Humanos", icono: BriefcaseIcon },
 };
 
 // Orden fijo de los grupos — "general" siempre primero, el resto en el
@@ -56,6 +68,7 @@ const ORDEN_GRUPOS: ModuloCatalogo[] = [
   "inventario",
   "campanas",
   "medio_ambiente",
+  "rrhh",
 ];
 
 export default async function ParametrosPage() {
@@ -87,6 +100,8 @@ export default async function ParametrosPage() {
     motivosMovimientoData,
     clinicaData,
     modulosActivosData,
+    cargosData,
+    paises,
   ] = await Promise.all([
     Promise.all(
       CATALOGOS.map(async (catalogo) => {
@@ -126,18 +141,30 @@ export default async function ParametrosPage() {
       .select("id, nombre, categoria, codigo, activo")
       .order("categoria")
       .order("orden"),
-    supabase.from("clinicas").select("agencia_regulatoria").eq("id", usuario.clinica_id).single(),
+    supabase
+      .from("clinicas")
+      .select("agencia_regulatoria, pais_operacion_id, exoneracion_aportes_salud_parafiscales")
+      .eq("id", usuario.clinica_id)
+      .single(),
     supabase
       .from("clinica_modulos")
       .select("modulos(codigo)")
       .eq("clinica_id", usuario.clinica_id)
       .eq("activo", true),
+    supabase
+      .from("cargos")
+      .select("id, nombre, codigo, activo, clase_riesgo_id, clases_riesgo(nombre)")
+      .order("orden"),
+    getPaisesActivos(supabase),
   ]);
 
   // "INVIMA" hoy — vive en clinicas.agencia_regulatoria para que una
   // clínica en otro país (FDA, COFEPRIS...) vea su propia agencia sin
   // tocar código.
   const agenciaRegulatoria = clinicaData.data?.agencia_regulatoria ?? "INVIMA";
+  const paisOperacionId = clinicaData.data?.pais_operacion_id ?? "";
+  const exoneracionAportes = clinicaData.data?.exoneracion_aportes_salud_parafiscales ?? false;
+  const clasesRiesgo = await getClasesRiesgoActivas(supabase, paisOperacionId);
 
   const codigosModulosActivos = new Set(
     (modulosActivosData.data ?? [])
@@ -222,6 +249,22 @@ export default async function ParametrosPage() {
       ),
     },
     {
+      tabla: "cargos",
+      nombre: "Cargos",
+      descripcion: "Cargos de tu clínica, cada uno con su clase de riesgo para el cálculo de ARL en Nómina.",
+      modulo: "rrhh" as ModuloCatalogo,
+      accion: (
+        <CargoDialog clasesRiesgo={clasesRiesgo} trigger={<Button size="sm">Agregar cargo</Button>} />
+      ),
+      tabla_ui: (
+        <CargosTable
+          valores={(cargosData.data ?? []) as unknown as CargoRow[]}
+          clasesRiesgo={clasesRiesgo}
+          editable
+        />
+      ),
+    },
+    {
       tabla: "motivos_movimiento_inventario",
       nombre: "Motivos de movimiento",
       descripcion: "Razones de entrada/salida de inventario que aparecen al registrar un movimiento (compra, desecho, obsequio...).",
@@ -250,12 +293,26 @@ export default async function ParametrosPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Parámetros</h1>
-        <p className="text-sm text-muted-foreground">
-          Catálogos de referencia que alimentan los menús desplegables de toda la
-          plataforma, agrupados por el módulo que los usa.
-        </p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold">Parámetros</h1>
+          <p className="text-sm text-muted-foreground">
+            Catálogos de referencia que alimentan los menús desplegables de toda la
+            plataforma, agrupados por el módulo que los usa.
+          </p>
+        </div>
+        {esAdministrador(usuario) && paisOperacionId ? (
+          <PaisOperacionDialog
+            paises={paises}
+            paisOperacionId={paisOperacionId}
+            exoneracionAportes={exoneracionAportes}
+            trigger={
+              <Button variant="outline" size="sm">
+                <GlobeIcon /> País de operación
+              </Button>
+            }
+          />
+        ) : null}
       </div>
 
       <Tabs defaultValue={grupos[0]?.modulo}>

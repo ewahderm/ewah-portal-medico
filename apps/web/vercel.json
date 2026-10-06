@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/recordatorio-citas",
       "schedule": "0 23 * * 0-5"
+    },
+    {
+      "path": "/api/cron/alertas-rrhh",
+      "schedule": "0 12 * * *"
     }
   ]
 }

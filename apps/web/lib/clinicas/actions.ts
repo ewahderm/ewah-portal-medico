@@ -30,6 +30,30 @@ export async function actualizarMarcaClinica(formData: FormData) {
   revalidatePath("/suscripcion");
 }
 
+// Determina qué campos/cálculos de RRHH-Nómina son exclusivamente
+// colombianos (ver lib/rrhh/calculo.ts) — por eso vive en /parametros y no
+// en /suscripcion, es configuración operativa de RRHH, no de marca.
+export async function actualizarPaisOperacionClinica(formData: FormData) {
+  const usuario = await getCurrentUsuario();
+  if (!usuario) throw new Error("Sesión inválida.");
+  if (!esAdministrador(usuario)) {
+    throw new Error("Solo un administrador puede cambiar esta configuración.");
+  }
+
+  const paisOperacionId = String(formData.get("paisOperacionId") ?? "");
+  if (!paisOperacionId) throw new Error("Selecciona un país.");
+  const exoneracionAportes = formData.get("exoneracionAportes") === "on";
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("fn_actualizar_pais_y_exoneracion_clinica", {
+    p_pais_operacion_id: paisOperacionId,
+    p_exoneracion_aportes: exoneracionAportes,
+  });
+  if (error) throw new Error("No se pudo actualizar la configuración.");
+
+  revalidatePath("/parametros");
+}
+
 // No pasa por comprimirImagen.ts a propósito: ese util re-codifica todo a
 // JPEG, lo que le quitaría la transparencia a un logo PNG/SVG. Aquí solo se
 // valida tipo y tamaño — el navegador sube el archivo tal cual.

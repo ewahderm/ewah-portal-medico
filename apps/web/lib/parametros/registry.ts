@@ -15,7 +15,8 @@ export type ModuloCatalogo =
   | "citas"
   | "inventario"
   | "campanas"
-  | "medio_ambiente";
+  | "medio_ambiente"
+  | "rrhh";
 
 export type CatalogoConfig = {
   tabla: string;
@@ -95,6 +96,76 @@ export const CATALOGOS: CatalogoConfig[] = [
     descripcion: "Personal operativo sin acceso al sistema (limpieza, pesaje de residuos) que se puede seleccionar al registrar una bitácora.",
     esGlobal: false,
     modulo: "medio_ambiente",
+  },
+  {
+    tabla: "tipos_vacuna",
+    nombre: "Tipos de vacuna",
+    descripcion: "Catálogo de vacunas que se pueden registrar en la documentación de un empleado.",
+    esGlobal: false,
+    modulo: "rrhh",
+  },
+  {
+    tabla: "tipos_contrato",
+    nombre: "Tipos de contrato",
+    descripcion: "Mantenido por EWAH Tech — define si un tipo de contrato genera nómina laboral (vacaciones, cesantías) u honorarios.",
+    esGlobal: true,
+    modulo: "rrhh",
+  },
+  {
+    tabla: "tipos_examen_ocupacional",
+    nombre: "Tipos de examen ocupacional",
+    descripcion: "Ingreso, periódico, retiro.",
+    esGlobal: true,
+    modulo: "rrhh",
+  },
+  {
+    tabla: "tipos_cuenta_bancaria",
+    nombre: "Tipos de cuenta bancaria",
+    descripcion: "Ahorros, corriente.",
+    esGlobal: true,
+    modulo: "rrhh",
+  },
+  {
+    tabla: "tipos_documento_normativo",
+    nombre: "Tipos de documento normativo",
+    descripcion: "Protocolos y manuales de RRHH/SG-SST/Habilitación que una clínica puede cargar.",
+    esGlobal: true,
+    modulo: "rrhh",
+  },
+  {
+    tabla: "fondos_pension",
+    nombre: "Fondos de pensión",
+    descripcion: "Entidades administradoras de pensión, por país.",
+    esGlobal: true,
+    modulo: "rrhh",
+  },
+  {
+    tabla: "fondos_cesantias",
+    nombre: "Fondos de cesantías",
+    descripcion: "Entidades administradoras de cesantías, por país.",
+    esGlobal: true,
+    modulo: "rrhh",
+  },
+  {
+    tabla: "arls",
+    nombre: "ARL",
+    descripcion: "Administradoras de riesgos laborales, por país.",
+    esGlobal: true,
+    modulo: "rrhh",
+  },
+  {
+    tabla: "bancos",
+    nombre: "Bancos",
+    descripcion: "Entidades bancarias, por país.",
+    esGlobal: true,
+    modulo: "rrhh",
+  },
+  {
+    tabla: "clases_riesgo",
+    nombre: "Clases de riesgo",
+    descripcion: "Nivel de riesgo laboral de un cargo — la tarifa de ARL asociada solo aplica en Colombia.",
+    esGlobal: true,
+    modulo: "rrhh",
   },
 ];
 
