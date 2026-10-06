@@ -130,9 +130,7 @@ export default async function ParametrosPage() {
   ] = await Promise.all([
     Promise.all(
       CATALOGOS.map(async (catalogo) => {
-        const columnas = catalogo.columnaExtra
-          ? `id, codigo, nombre, activo, ${catalogo.columnaExtra.campo}`
-          : "id, codigo, nombre, activo";
+        const columnas = ["id, codigo, nombre, activo", ...(catalogo.columnasExtra ?? []).map((c) => c.campo)].join(", ");
         const { data } = await supabase.from(catalogo.tabla).select(columnas).order("orden");
         const filas = (data ?? []) as unknown as Record<string, unknown>[];
         return {
@@ -142,7 +140,9 @@ export default async function ParametrosPage() {
             codigo: (f.codigo as string | null) ?? null,
             nombre: f.nombre as string,
             activo: f.activo as boolean,
-            extra: catalogo.columnaExtra ? ((f[catalogo.columnaExtra.campo] as number | null) ?? null) : null,
+            extras: Object.fromEntries(
+              (catalogo.columnasExtra ?? []).map((c) => [c.campo, (f[c.campo] as string | number | null) ?? null]),
+            ),
           })),
         };
       }),
@@ -510,7 +510,7 @@ export default async function ParametrosPage() {
                         <CatalogoTable
                           tabla={catalogo.tabla}
                           valores={catalogo.valores}
-                          columnaExtra={catalogo.columnaExtra}
+                          columnasExtra={catalogo.columnasExtra}
                           editable={!catalogo.esGlobal}
                         />
                       </CardContent>

@@ -113,10 +113,15 @@ export async function getNeverasActivas(supabase: Supabase) {
 export async function getTiposExtintorActivos(supabase: Supabase) {
   const { data } = await supabase
     .from("tipos_extintor")
-    .select("id, nombre")
+    .select("id, nombre, clases_fuego")
     .eq("activo", true)
     .order("orden");
-  return data ?? [];
+  // Las clases de fuego (0060) van en la etiqueta para que al registrar un
+  // extintor se vea de una vez para qué sirve cada tipo.
+  return (data ?? []).map((t) => ({
+    id: t.id,
+    nombre: t.clases_fuego ? `${t.nombre} · clases ${t.clases_fuego}` : t.nombre,
+  }));
 }
 
 // id = codigo (no el uuid de la fila) a propósito: es lo que viaja en el

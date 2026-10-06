@@ -4,6 +4,8 @@ import { useState, useTransition } from "react";
 import { toggleValorCatalogo } from "@/lib/parametros/actions";
 import { Badge } from "@/components/ui/badge";
 import { formatoPorcentaje } from "@/lib/format";
+import { cn } from "@/lib/utils";
+import type { ColumnaExtra } from "@/lib/parametros/registry";
 import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -20,18 +22,18 @@ type ValorCatalogo = {
   codigo: string | null;
   nombre: string;
   activo: boolean;
-  extra?: number | null;
+  extras?: Record<string, string | number | null>;
 };
 
 export function CatalogoTable({
   tabla,
   valores,
-  columnaExtra,
+  columnasExtra = [],
   editable,
 }: {
   tabla: string;
   valores: ValorCatalogo[];
-  columnaExtra?: { etiqueta: string; formato: "porcentaje" };
+  columnasExtra?: ColumnaExtra[];
   editable: boolean;
 }) {
   const [error, setError] = useState<string | null>(null);
@@ -65,7 +67,11 @@ export function CatalogoTable({
           <TableRow>
             <TableHead className="hidden md:table-cell">Código</TableHead>
             <TableHead>Nombre</TableHead>
-            {columnaExtra ? <TableHead>{columnaExtra.etiqueta}</TableHead> : null}
+            {columnasExtra.map((c) => (
+              <TableHead key={c.campo} className={c.ocultarEnMovil ? "hidden lg:table-cell" : undefined}>
+                {c.etiqueta}
+              </TableHead>
+            ))}
             <TableHead className="text-right">Activo</TableHead>
           </TableRow>
         </TableHeader>
@@ -76,9 +82,20 @@ export function CatalogoTable({
                 {valor.codigo ?? "—"}
               </TableCell>
               <TableCell>{valor.nombre}</TableCell>
-              {columnaExtra ? (
-                <TableCell className="font-medium tabular-nums">{formatoPorcentaje(valor.extra ?? null)}</TableCell>
-              ) : null}
+              {columnasExtra.map((c) => {
+                const v = valor.extras?.[c.campo] ?? null;
+                return (
+                  <TableCell
+                    key={c.campo}
+                    className={cn(
+                      c.formato === "porcentaje" ? "font-medium tabular-nums" : "max-w-xs text-xs whitespace-normal",
+                      c.ocultarEnMovil && "hidden lg:table-cell",
+                    )}
+                  >
+                    {c.formato === "porcentaje" ? formatoPorcentaje(v === null ? null : Number(v)) : (v ?? "—")}
+                  </TableCell>
+                );
+              })}
               <TableCell className="text-right">
                 {editable ? (
                   <Switch
@@ -95,7 +112,7 @@ export function CatalogoTable({
           ))}
           {valores.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={columnaExtra ? 4 : 3} className="text-center text-muted-foreground">
+              <TableCell colSpan={3 + columnasExtra.length} className="text-center text-muted-foreground">
                 Todavía no hay valores registrados en este catálogo.
               </TableCell>
             </TableRow>

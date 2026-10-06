@@ -18,15 +18,24 @@ export type ModuloCatalogo =
   | "medio_ambiente"
   | "rrhh";
 
+export type ColumnaExtra = {
+  campo: string;
+  etiqueta: string;
+  formato: "porcentaje" | "texto";
+  // En pantallas angostas se oculta (texto largo).
+  ocultarEnMovil?: boolean;
+};
+
 export type CatalogoConfig = {
   tabla: string;
   nombre: string;
   descripcion: string;
   esGlobal: boolean;
   modulo: ModuloCatalogo;
-  // Columna adicional de SOLO LECTURA (ej. la tarifa ARL de una clase de
-  // riesgo). `campo` es una columna real de `tabla`, nunca viene del cliente.
-  columnaExtra?: { campo: string; etiqueta: string; formato: "porcentaje" };
+  // Columnas adicionales de SOLO LECTURA (ej. la tarifa ARL de una clase de
+  // riesgo, la información de un tipo de extintor). `campo` es una columna
+  // real de `tabla`, nunca viene del cliente.
+  columnasExtra?: ColumnaExtra[];
 };
 
 export const CATALOGOS: CatalogoConfig[] = [
@@ -82,9 +91,15 @@ export const CATALOGOS: CatalogoConfig[] = [
   {
     tabla: "tipos_extintor",
     nombre: "Tipos de extintor",
-    descripcion: "Catálogo de tipos de extintor (PQS, CO2, agua, espuma...) usado en Medio Ambiente.",
+    descripcion: "Tipos de extintor que aplican a consultorios y clínicas en Colombia, con las clases de fuego que apagan y dónde usar cada uno (NTC 2885 / NFPA 10). Clase A: sólidos · B: líquidos inflamables · C: equipos eléctricos energizados · K: aceites de cocina.",
     esGlobal: false,
     modulo: "medio_ambiente",
+    columnasExtra: [
+      { campo: "clases_fuego", etiqueta: "Clases de fuego", formato: "texto" },
+      { campo: "color", etiqueta: "Color", formato: "texto", ocultarEnMovil: true },
+      { campo: "uso_recomendado", etiqueta: "Uso recomendado", formato: "texto", ocultarEnMovil: true },
+      { campo: "advertencia", etiqueta: "Precauciones", formato: "texto", ocultarEnMovil: true },
+    ],
   },
   {
     tabla: "tipos_vacuna",
@@ -155,7 +170,7 @@ export const CATALOGOS: CatalogoConfig[] = [
     descripcion: "Nivel de riesgo laboral de un cargo y su aporte a ARL, 100% a cargo del empleador (Decreto 1772 de 1994, art. 13 — valor inicial). Solo aplica en Colombia.",
     esGlobal: true,
     modulo: "rrhh",
-    columnaExtra: { campo: "tarifa_arl", etiqueta: "Aporte empleador (ARL)", formato: "porcentaje" },
+    columnasExtra: [{ campo: "tarifa_arl", etiqueta: "Aporte empleador (ARL)", formato: "porcentaje" }],
   },
   {
     tabla: "tipos_persona",
