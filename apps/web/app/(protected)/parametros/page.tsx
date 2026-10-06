@@ -53,7 +53,6 @@ import {
   getCiudadesActivas,
   getCupsActivadosClinica,
   getPracticasMedicasActivas,
-  getPracticasServicioActivas,
   getServiciosHabilitadosClinica,
 } from "@/lib/catalogos";
 
@@ -125,7 +124,6 @@ export default async function ParametrosPage() {
     ciudades,
     cupsActivos,
     practicasMedicas,
-    practicasServicio,
     serviciosHabilitados,
   ] = await Promise.all([
     Promise.all(
@@ -201,7 +199,6 @@ export default async function ParametrosPage() {
     getCiudadesActivas(supabase),
     getCupsActivadosClinica(supabase),
     getPracticasMedicasActivas(supabase),
-    getPracticasServicioActivas(supabase),
     getServiciosHabilitadosClinica(supabase),
   ]);
 
@@ -416,7 +413,6 @@ export default async function ParametrosPage() {
             rolesActor={rolesActor}
             tiposTransaccionInvima={tiposTransaccionInvima}
             practicasMedicas={practicasMedicas}
-            practicasServicio={practicasServicio}
             serviciosHabilitados={serviciosHabilitados}
             trigger={
               <Button variant="outline" size="sm">

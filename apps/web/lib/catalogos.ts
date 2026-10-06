@@ -307,15 +307,6 @@ export async function getPracticasMedicasActivas(supabase: Supabase) {
   return data ?? [];
 }
 
-export async function getPracticasServicioActivas(supabase: Supabase) {
-  const { data } = await supabase
-    .from("practicas_servicio")
-    .select("id, practica_medica_id, nombre, complejidad, requisitos")
-    .eq("activo", true)
-    .order("orden");
-  return data ?? [];
-}
-
 export async function getServiciosHabilitadosClinica(supabase: Supabase) {
   const { data } = await supabase
     .from("clinica_servicios_habilitados")

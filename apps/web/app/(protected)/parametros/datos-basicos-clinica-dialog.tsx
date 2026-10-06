@@ -8,8 +8,6 @@ import {
   agregarServicioHabilitado,
   actualizarCodigoServicioHabilitado,
   eliminarServicioHabilitado,
-  agregarPracticaServicio,
-  eliminarPracticaServicio,
   type ServicioHabilitado,
 } from "@/lib/clinicas/servicios-habilitados";
 import { toast } from "@/components/ui/toast";
@@ -32,7 +30,6 @@ import { SIN_SELECCION } from "@/lib/forms/opcional";
 type Departamento = { id: string; nombre: string; pais_id: string };
 type Ciudad = { id: string; nombre: string; departamento_id: string };
 type PracticaMedica = { id: string; codigo: string | null; nombre: string };
-type PracticaServicioCatalogo = { id: string; practica_medica_id: string; nombre: string };
 
 type ClinicaDatosBasicos = {
   paisOperacionId: string;
@@ -62,7 +59,6 @@ export function DatosBasicosClinicaDialog({
   rolesActor,
   tiposTransaccionInvima,
   practicasMedicas,
-  practicasServicio,
   serviciosHabilitados,
 }: {
   trigger: ReactElement;
@@ -76,7 +72,6 @@ export function DatosBasicosClinicaDialog({
   rolesActor: Opcion[];
   tiposTransaccionInvima: Opcion[];
   practicasMedicas: PracticaMedica[];
-  practicasServicio: PracticaServicioCatalogo[];
   serviciosHabilitados: ServicioHabilitado[];
 }) {
   const router = useRouter();
@@ -252,13 +247,12 @@ export function DatosBasicosClinicaDialog({
             <p className="text-sm font-semibold">Servicios habilitados ante REPS</p>
             <p className="text-xs text-muted-foreground">
               Tu clínica puede estar habilitada para más de un servicio de salud — agrega cada
-              uno (o las prácticas concretas que ofreces dentro de él) con el código de
+              uno con el código de
               habilitación que REPS te asignó para ese servicio. Los cambios
               aquí se guardan de inmediato, no esperan al botón &quot;Guardar&quot; de abajo.
             </p>
             <ServiciosHabilitadosSection
               practicasMedicas={practicasMedicas}
-              practicasServicio={practicasServicio}
               inicial={serviciosHabilitados}
             />
           </div>
@@ -302,81 +296,56 @@ export function DatosBasicosClinicaDialog({
 // que activarCups/desactivarCups — vive fuera del <form> grande de arriba
 // porque no depende de su botón "Guardar" ni de fn_actualizar_datos_
 // basicos_clinica. Dos niveles en cascada (mismo patrón que País →
-// Departamento → Ciudad): primero el servicio REPS, luego — opcional — la
-// práctica concreta de ese servicio (0056). Si el servicio ya está en la
-// lista, elegir una práctica la agrega dentro de él; el código de
-// habilitación sigue siendo uno por servicio.
+// Departamento → Ciudad): primero el grupo (practicas_medicas.codigo, 0058),
+// luego el servicio de ese grupo. Un código de habilitación por servicio.
 function ServiciosHabilitadosSection({
   practicasMedicas,
-  practicasServicio,
   inicial,
 }: {
   practicasMedicas: PracticaMedica[];
-  practicasServicio: PracticaServicioCatalogo[];
   inicial: ServicioHabilitado[];
 }) {
   const [servicios, setServicios] = useState(inicial);
+  const [grupo, setGrupo] = useState(SIN_SELECCION);
   const [servicioId, setServicioId] = useState(SIN_SELECCION);
-  const [practicaId, setPracticaId] = useState(SIN_SELECCION);
   const [codigoNuevo, setCodigoNuevo] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
+  // Grupos en el orden en que aparecen en el catálogo (ya viene por `orden`).
+  const grupos = useMemo(
+    () => [...new Set(practicasMedicas.map((pm) => pm.codigo).filter((g): g is string => !!g))],
+    [practicasMedicas],
+  );
+  const itemsGrupos = toItemsOpcional(
+    grupos.map((g) => ({ id: g, nombre: g })),
+    SIN_SELECCION,
+    "Selecciona un grupo",
+  );
+
+  const serviciosDelGrupo = useMemo(() => {
+    const yaAgregados = new Set(servicios.map((s) => s.practicas_medicas?.id));
+    return practicasMedicas.filter((pm) => pm.codigo === grupo && !yaAgregados.has(pm.id));
+  }, [practicasMedicas, grupo, servicios]);
+
   const itemsServicios = toItemsOpcional(
-    practicasMedicas.map((pm) => ({ id: pm.id, nombre: pm.codigo ? `${pm.codigo} — ${pm.nombre}` : pm.nombre })),
+    serviciosDelGrupo.map((pm): Opcion => ({ id: pm.id, nombre: pm.nombre })),
     SIN_SELECCION,
-    "Selecciona un servicio REPS",
+    "Selecciona un servicio",
   );
-
-  const servicioYaAgregado = servicios.find((s) => s.practicas_medicas?.id === servicioId);
-
-  const practicasDelServicio = useMemo(() => {
-    const yaAgregadas = new Set(
-      servicios.flatMap((s) => s.clinica_practicas_servicio.map((p) => p.practicas_servicio?.id)),
-    );
-    return practicasServicio.filter((ps) => ps.practica_medica_id === servicioId && !yaAgregadas.has(ps.id));
-  }, [practicasServicio, servicioId, servicios]);
-
-  const itemsPracticas = toItemsOpcional(
-    practicasDelServicio.map((ps): Opcion => ({ id: ps.id, nombre: ps.nombre })),
-    SIN_SELECCION,
-    "Solo el servicio (sin práctica específica)",
-  );
-
-  function reemplazarOAgregar(fila: ServicioHabilitado) {
-    setServicios((actual) =>
-      actual.some((s) => s.id === fila.id)
-        ? actual.map((s) => (s.id === fila.id ? fila : s))
-        : [...actual, fila],
-    );
-  }
 
   function handleAgregar() {
     if (servicioId === SIN_SELECCION) {
-      setError("Selecciona un servicio REPS.");
-      return;
-    }
-    if (practicaId === SIN_SELECCION && servicioYaAgregado) {
-      setError("Ese servicio ya está en la lista — elige una práctica para agregarla dentro de él.");
+      setError("Selecciona un grupo y un servicio.");
       return;
     }
     setError(null);
     startTransition(async () => {
       try {
-        if (practicaId === SIN_SELECCION) {
-          reemplazarOAgregar(await agregarServicioHabilitado(servicioId, codigoNuevo || null));
-        } else {
-          let fila = await agregarPracticaServicio(practicaId);
-          // El código escrito aplica al servicio padre solo si aún no tenía uno.
-          if (codigoNuevo && !fila.codigo_habilitacion) {
-            await actualizarCodigoServicioHabilitado(fila.id, codigoNuevo);
-            fila = { ...fila, codigo_habilitacion: codigoNuevo };
-          }
-          reemplazarOAgregar(fila);
-        }
-        // Se conserva el servicio elegido para poder seguir agregando
-        // prácticas dentro de él sin volver a buscarlo.
-        setPracticaId(SIN_SELECCION);
+        const creado = await agregarServicioHabilitado(servicioId, codigoNuevo || null);
+        setServicios((actual) => [...actual, creado]);
+        // Se conserva el grupo para seguir agregando servicios del mismo.
+        setServicioId(SIN_SELECCION);
         setCodigoNuevo("");
       } catch (e) {
         setError(e instanceof Error ? e.message : "No se pudo agregar.");
@@ -407,24 +376,6 @@ function ServiciosHabilitadosSection({
     });
   }
 
-  function handleQuitarPractica(servicioId: string, filaPracticaId: string) {
-    setError(null);
-    startTransition(async () => {
-      try {
-        await eliminarPracticaServicio(filaPracticaId);
-        setServicios((actual) =>
-          actual.map((s) =>
-            s.id === servicioId
-              ? { ...s, clinica_practicas_servicio: s.clinica_practicas_servicio.filter((p) => p.id !== filaPracticaId) }
-              : s,
-          ),
-        );
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "No se pudo quitar la práctica.");
-      }
-    });
-  }
-
   return (
     <div className="space-y-3">
       {error ? (
@@ -435,139 +386,91 @@ function ServiciosHabilitadosSection({
 
       {servicios.length > 0 ? (
         <div className="space-y-2">
-          {servicios.map((s) => {
-            const practicas = s.clinica_practicas_servicio.filter((p) => p.practicas_servicio);
-            return (
-              <div key={s.id} className="space-y-2 rounded-lg border border-input p-2">
-                <div className="flex items-center gap-2">
-                  <div className="min-w-0 flex-1 text-sm">
-                    <p className="font-medium">{s.practicas_medicas?.nombre ?? "—"}</p>
-                    <p className="text-xs text-muted-foreground">{s.practicas_medicas?.codigo}</p>
-                  </div>
-                  <Input
-                    // Remonta si el código cambia desde el servidor (ej. al agregar
-                    // una práctica con código) — defaultValue no se re-lee solo.
-                    key={s.codigo_habilitacion ?? ""}
-                    className="w-32 sm:w-40"
-                    placeholder="Código de habilitación"
-                    aria-label={`Código de habilitación de ${s.practicas_medicas?.nombre ?? "el servicio"}`}
-                    defaultValue={s.codigo_habilitacion ?? ""}
-                    onBlur={(e) => handleActualizarCodigo(s.id, e.target.value)}
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label="Quitar servicio y sus prácticas"
-                    disabled={pending}
-                    onClick={() => handleEliminar(s.id)}
-                  >
-                    <XIcon />
-                  </Button>
+          {servicios.map((s) => (
+            <div key={s.id} className="rounded-lg border border-input p-2">
+              <div className="flex items-center gap-2">
+                <div className="min-w-0 flex-1 text-sm">
+                  <p className="font-medium">{s.practicas_medicas?.nombre ?? "—"}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {s.practicas_medicas?.codigo}
+                    {s.practicas_medicas?.complejidad
+                      ? ` · Complejidad ${s.practicas_medicas.complejidad}`
+                      : null}
+                  </p>
                 </div>
-
-                {practicas.length > 0 ? (
-                  <ul className="space-y-1 border-t pt-2">
-                    {practicas.map((p) => (
-                      <li key={p.id} className="rounded-md bg-muted/50 px-2 py-1.5 text-sm">
-                        <details>
-                          <summary className="flex cursor-pointer list-none items-center gap-2">
-                            <span className="flex-1">
-                              <span className="font-medium">{p.practicas_servicio!.nombre}</span>
-                              {p.practicas_servicio!.complejidad ? (
-                                <span className="ml-2 text-xs text-muted-foreground">
-                                  Complejidad {p.practicas_servicio!.complejidad}
-                                </span>
-                              ) : null}
-                            </span>
-                            <span className="text-xs text-primary">Requisitos</span>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon-sm"
-                              aria-label={`Quitar ${p.practicas_servicio!.nombre}`}
-                              disabled={pending}
-                              onClick={(e) => {
-                                e.preventDefault();
-                                handleQuitarPractica(s.id, p.id);
-                              }}
-                            >
-                              <XIcon />
-                            </Button>
-                          </summary>
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            {p.practicas_servicio!.requisitos ?? "Sin requisitos de referencia."}
-                          </p>
-                        </details>
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
+                <Input
+                  className="w-32 sm:w-40"
+                  placeholder="Código de habilitación"
+                  aria-label={`Código de habilitación de ${s.practicas_medicas?.nombre ?? "el servicio"}`}
+                  defaultValue={s.codigo_habilitacion ?? ""}
+                  onBlur={(e) => handleActualizarCodigo(s.id, e.target.value)}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={`Quitar ${s.practicas_medicas?.nombre ?? "servicio"}`}
+                  disabled={pending}
+                  onClick={() => handleEliminar(s.id)}
+                >
+                  <XIcon />
+                </Button>
               </div>
-            );
-          })}
+              {s.practicas_medicas?.requisitos ? (
+                <details className="mt-1 text-xs">
+                  <summary className="cursor-pointer text-primary">Requisitos</summary>
+                  <p className="mt-1 text-muted-foreground">{s.practicas_medicas.requisitos}</p>
+                </details>
+              ) : null}
+            </div>
+          ))}
         </div>
       ) : null}
 
       <div className="space-y-3 rounded-lg border border-dashed border-input p-3">
         <div className="space-y-2">
-          <Label htmlFor="servicioRepsNuevo">1. Servicio REPS</Label>
+          <Label htmlFor="grupoServicioNuevo">1. Grupo</Label>
           <Combobox
-            id="servicioRepsNuevo"
-            items={itemsServicios}
-            value={servicioId}
+            id="grupoServicioNuevo"
+            items={itemsGrupos}
+            value={grupo}
             onValueChange={(v) => {
-              setServicioId(String(v ?? SIN_SELECCION));
-              setPracticaId(SIN_SELECCION);
+              setGrupo(String(v ?? SIN_SELECCION));
+              setServicioId(SIN_SELECCION);
               setError(null);
             }}
           />
-          {servicioYaAgregado ? (
-            <p className="text-xs text-muted-foreground">
-              Ya está en tu lista — lo que elijas abajo se agrega dentro de él.
-            </p>
-          ) : null}
         </div>
 
         <div className="space-y-2 border-l-2 border-primary/30 pl-3">
-          <Label htmlFor="practicaServicioNueva">2. Práctica (opcional)</Label>
+          <Label htmlFor="servicioNuevo">2. Servicio</Label>
           <Combobox
-            id="practicaServicioNueva"
-            items={itemsPracticas}
-            value={practicaId}
-            onValueChange={(v) => setPracticaId(String(v ?? SIN_SELECCION))}
-            disabled={servicioId === SIN_SELECCION || practicasDelServicio.length === 0}
+            id="servicioNuevo"
+            items={itemsServicios}
+            value={servicioId}
+            onValueChange={(v) => setServicioId(String(v ?? SIN_SELECCION))}
+            disabled={grupo === SIN_SELECCION || serviciosDelGrupo.length === 0}
           />
-          {servicioId !== SIN_SELECCION && practicasDelServicio.length === 0 ? (
-            <p className="text-xs text-muted-foreground">
-              Este servicio no tiene prácticas registradas (o ya agregaste todas).
-            </p>
+          {grupo !== SIN_SELECCION && serviciosDelGrupo.length === 0 ? (
+            <p className="text-xs text-muted-foreground">Ya agregaste todos los servicios de este grupo.</p>
           ) : null}
         </div>
 
         <div className="flex gap-2">
-          {servicioYaAgregado ? null : (
-            <Input
-              className="flex-1"
-              placeholder="Código de habilitación del servicio"
-              aria-label="Código de habilitación del servicio"
-              value={codigoNuevo}
-              onChange={(e) => setCodigoNuevo(e.target.value)}
-            />
-          )}
-          <Button
-            type="button"
-            variant="outline"
-            className={servicioYaAgregado ? "w-full" : undefined}
-            disabled={pending}
-            onClick={handleAgregar}
-          >
+          <Input
+            className="flex-1"
+            placeholder="Código de habilitación"
+            aria-label="Código de habilitación del servicio"
+            value={codigoNuevo}
+            onChange={(e) => setCodigoNuevo(e.target.value)}
+          />
+          <Button type="button" variant="outline" disabled={pending} onClick={handleAgregar}>
             Agregar
           </Button>
         </div>
       </div>
       <p className="text-xs text-muted-foreground">
-        Los requisitos de cada práctica son material de referencia, no reemplazan el texto de la
+        Los requisitos de cada servicio son material de referencia, no reemplazan el texto de la
         Resolución 3100.
       </p>
     </div>

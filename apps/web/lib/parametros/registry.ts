@@ -183,15 +183,8 @@ export const CATALOGOS: CatalogoConfig[] = [
   },
   {
     tabla: "practicas_medicas",
-    nombre: "Prácticas médicas (REPS)",
-    descripcion: "Grupos y servicios de salud habilitables ante REPS (Resolución 3100 de 2019) — se seleccionan en Datos básicos de la clínica al registrar los servicios habilitados.",
-    esGlobal: true,
-    modulo: "general",
-  },
-  {
-    tabla: "practicas_servicio",
-    nombre: "Prácticas por servicio REPS",
-    descripcion: "Prácticas concretas (Medicina General, Pediatría, Fisioterapia...) agrupadas bajo el servicio REPS al que pertenecen — se eligen en Datos básicos de la clínica.",
+    nombre: "Servicios de salud (Res. 3100)",
+    descripcion: "Servicios habilitables agrupados por grupo (Consulta Externa, Apoyo Diagnóstico, Internación, Quirúrgico, Atención Inmediata) — se seleccionan en Datos básicos de la clínica al registrar los servicios habilitados.",
     esGlobal: true,
     modulo: "general",
   },
