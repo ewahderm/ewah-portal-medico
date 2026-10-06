@@ -85,8 +85,13 @@ export function TipoTratamientoDialog({
               name="cupsId"
               items={itemsCups}
               defaultValue={editando?.cups_id ?? SIN_SELECCION}
-              placeholder={cups.length === 0 ? "Todavía no hay CUPS cargados" : "Buscar..."}
+              placeholder="Buscar..."
             />
+            <p className="text-xs text-muted-foreground">
+              {cups.length === 0
+                ? "Tu clínica todavía no ha activado ningún CUPS. Actívalos en la pestaña CUPS (junto a esta) y aparecerán aquí."
+                : "Solo aparecen los CUPS activados por tu clínica. Para agregar otros, actívalos en la pestaña CUPS."}
+            </p>
           </div>
 
           <Button type="submit" className="w-full" disabled={pending}>
