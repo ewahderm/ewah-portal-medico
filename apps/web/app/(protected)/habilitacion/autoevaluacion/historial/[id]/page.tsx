@@ -138,7 +138,7 @@ export default async function AutoevaluacionCerradaPage({
               <TriangleAlertIcon />
               <AlertDescription>
                 Al cerrar se confirmó que {ae.servicios_no_aptos.length === 1 ? "este servicio no se podía" : "estos servicios no se podían"} declarar:{" "}
-                {ae.servicios_no_aptos.map((s) => `${s.servicio_clave} ${s.servicio} (${s.sede})`).join("; ")}.
+                {ae.servicios_no_aptos.map((s) => `${s.servicio_clave} ${s.servicio} (${s.sede})${s.estado === "sin_evaluar" ? " — sin evaluar" : ""}`).join("; ")}.
               </AlertDescription>
             </Alert>
           ) : null}

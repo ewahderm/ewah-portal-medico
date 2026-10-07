@@ -2,8 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   agruparPorSemaforo,
   asuntoAlertas,
+  CONFLICTO_ALERTAS_ENVIADAS,
   construirHtmlAlertasHabilitacion,
   etiquetaDias,
+  filasAlertasEnviadas,
+  itemsAvisados,
   itemsPorCorreoAdicional,
   semaforoDeDias,
   type ItemAlerta,
@@ -82,5 +85,40 @@ describe("correo de alertas de habilitación (F9)", () => {
     expect(html).toContain("día no hábil");
     const externo = construirHtmlAlertasHabilitacion({ nombreClinica: "X", items: [peligroso], baseUrl: "https://app.ewah.co", externo: true });
     expect(externo).not.toContain("Ver en EWAH");
+  });
+});
+
+describe("registro de lo avisado (0085)", () => {
+  const items = [item({ titulo: "A", correo_adicional: "ctd@x.co" }), item({ titulo: "B" })];
+
+  it("si el correo del equipo falla, no se registra nada aunque el contador externo lo recibiera", () => {
+    const r = itemsAvisados(items, { hayEquipo: true, equipoEnviado: false, externosEnviados: new Set(["ctd@x.co"]) });
+    expect(r).toEqual([]);
+  });
+
+  it("si el equipo lo recibió, se registran todos los ítems", () => {
+    const r = itemsAvisados(items, { hayEquipo: true, equipoEnviado: true, externosEnviados: new Set() });
+    expect(r).toHaveLength(2);
+  });
+
+  it("sin destinatarios internos, solo cuentan los ítems que recibió su contador externo", () => {
+    const r = itemsAvisados(items, { hayEquipo: false, equipoEnviado: false, externosEnviados: new Set(["ctd@x.co"]) });
+    expect(r.map((i) => i.titulo)).toEqual(["A"]);
+    expect(itemsAvisados(items, { hayEquipo: false, equipoEnviado: false, externosEnviados: new Set() })).toEqual([]);
+  });
+
+  it("cada fila lleva la fecha objetivo y la llave de conflicto la incluye", () => {
+    const filas = filasAlertasEnviadas("c1", [item({ umbrales: [30, 7], fecha: "2027-02-01" })], ["a@x.co"]);
+    expect(filas).toHaveLength(2);
+    expect(filas.every((f) => f.fecha_objetivo === "2027-02-01" && f.clinica_id === "c1")).toBe(true);
+    expect(CONFLICTO_ALERTAS_ENVIADAS.split(",")).toContain("fecha_objetivo");
+  });
+
+  it("el mismo extintor con otra fecha genera filas distintas (nuevo ciclo)", () => {
+    const base = { objeto_tipo: "extintor", objeto_id: "e1", umbrales: [30] };
+    const a = filasAlertasEnviadas("c1", [item({ ...base, fecha: "2026-11-01" })], []);
+    const b = filasAlertasEnviadas("c1", [item({ ...base, fecha: "2027-11-01" })], []);
+    const llave = (f: (typeof a)[number]) => [f.objeto_tipo, f.objeto_id, f.umbral_dias, f.fecha_objetivo].join("|");
+    expect(llave(a[0])).not.toBe(llave(b[0]));
   });
 });

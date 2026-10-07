@@ -6,6 +6,13 @@
 //   Prevalencia de EL       = casos de EL (nuevos y antiguos) / promedio de trabajadores × 100.000
 //   Incidencia de EL        = casos nuevos de EL / promedio de trabajadores × 100.000
 //   Ausentismo              = días de ausencia por incapacidad / días programados × 100
+//
+// Bases (0086): el ausentismo usa la MISMA base en numerador y denominador:
+// días HÁBILES (lunes a viernes sin festivos). dias_ausencia cuenta solo los
+// días hábiles cubiertos por cada incapacidad dentro del mes y
+// dias_programados = trabajadores × días hábiles del mes, así que no pasa de
+// 100 %. Los días de incapacidad por AT de la severidad son días de
+// calendario del mes en que ocurren (Art. 30 pide los del mes).
 
 export type InsumoMes = {
   mes: number;
@@ -47,7 +54,14 @@ export function indicadoresAnuales(insumos: InsumoMes[], hastaMes = 12) {
   const mortales = meses.reduce((n, m) => n + m.at_mortales, 0);
   const promedio = meses.length ? meses.reduce((n, m) => n + m.trabajadores, 0) / meses.length : 0;
   const elNuevas = meses.reduce((n, m) => n + m.el_nuevas, 0);
-  const elTotal = meses.length ? Math.max(...meses.map((m) => m.el_total)) : 0;
+  // Prevalencia = casos DISTINTOS del periodo: los que ya existían al
+  // iniciar el año + los nuevos del año. el_total de cada mes cuenta los casos
+  // vigentes en ese mes, así que tomar el máximo mensual subestima cuando un
+  // caso se cierra antes de que otro empiece. Los existentes al inicio salen
+  // del primer mes: vigentes ese mes menos los que nacieron ese mes.
+  const primero = meses.reduce<InsumoMes | null>((p, m) => (!p || m.mes < p.mes ? m : p), null);
+  const existentesAlInicio = primero ? Math.max(0, primero.el_total - primero.el_nuevas) : 0;
+  const elTotal = meses.length ? existentesAlInicio + elNuevas : 0;
   return {
     accidentes: at,
     mortalidad: at > 0 ? r2((mortales / at) * 100) : null,

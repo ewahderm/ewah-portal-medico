@@ -51,6 +51,7 @@ const ESTILO: Record<EstadoDocumento["estado"], { etiqueta: string; icono: Lucid
   por_vencer: { etiqueta: "Revisar", icono: ClockIcon, clase: "border-amber-300 bg-amber-50 text-amber-800" },
   vencido: { etiqueta: "Vencido", icono: XIcon, clase: "border-destructive/30 bg-destructive/10 text-destructive" },
   no_aplica: { etiqueta: "No aplica", icono: BanIcon, clase: "border-border bg-muted text-muted-foreground" },
+  sin_permiso: { etiqueta: "Sin permiso para verlo", icono: LockIcon, clase: "border-border bg-muted text-muted-foreground" },
 };
 
 type Dialogo =

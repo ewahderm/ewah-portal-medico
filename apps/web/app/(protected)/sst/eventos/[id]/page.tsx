@@ -32,7 +32,7 @@ export default async function EventoPage({ params }: { params: Promise<{ id: str
   const { id } = await params;
   if (!UUID.test(id)) notFound();
   const supabase = await createClient();
-  const [evento, investigacion, personas, sedes, usuarios, { data: puedeCrear }] = await Promise.all([
+  const [{ evento, error: errorEvento }, investigacion, personas, sedes, usuarios, { data: puedeCrear }] = await Promise.all([
     getEvento(supabase, id),
     getInvestigacion(supabase, id),
     getPersonas(supabase),
@@ -40,6 +40,13 @@ export default async function EventoPage({ params }: { params: Promise<{ id: str
     getUsuariosClinica(supabase),
     supabase.rpc("has_permission", { modulo_code: "sst", permiso_code: "CREATE" }),
   ]);
+  if (errorEvento) {
+    return (
+      <Alert variant="destructive">
+        <AlertDescription>No pudimos leer este evento. Recarga la página; si sigue igual, avísanos.</AlertDescription>
+      </Alert>
+    );
+  }
   if (!evento) notFound();
   const acciones = investigacion ? await getAcciones(supabase, "investigacion", investigacion.id) : [];
   const hoy = hoyColombia();

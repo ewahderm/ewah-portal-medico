@@ -32,4 +32,30 @@ describe("indicadores Res. 0312 Art. 30", () => {
     expect(a.prevalenciaEl).toBe(10000);
     expect(indicadoresAnuales(insumos).promedioTrabajadores).toBe(40);
   });
+  it("prevalencia: casos distintos (existentes al inicio + nuevos), no el máximo mensual", () => {
+    // 1 caso antiguo vigente en enero; febrero y marzo traen un caso nuevo cada
+    // uno y el antiguo se cierra en febrero: máximo mensual = 2, distintos = 3.
+    const insumos = [
+      mes(1, { el_total: 1, el_nuevas: 0 }),
+      mes(2, { el_total: 2, el_nuevas: 1 }),
+      mes(3, { el_total: 1, el_nuevas: 1 }),
+    ];
+    const a = indicadoresAnuales(insumos);
+    expect(a.incidenciaEl).toBe(10000);
+    expect(a.prevalenciaEl).toBe(15000);
+  });
+  it("prevalencia: un caso nacido en enero no cuenta como antiguo", () => {
+    const a = indicadoresAnuales([mes(1, { el_total: 1, el_nuevas: 1 }), mes(2, { el_total: 1, el_nuevas: 0 })]);
+    expect(a.prevalenciaEl).toBe(5000);
+    expect(a.incidenciaEl).toBe(5000);
+  });
+  it("prevalencia sin meses o sin casos no divide por cero", () => {
+    expect(indicadoresAnuales([], 0).prevalenciaEl).toBeNull();
+    expect(indicadoresAnuales([mes(1)]).prevalenciaEl).toBe(0);
+  });
+  it("ausentismo con base homogénea no supera 100 %", () => {
+    // 20 personas × 20 días hábiles = 400; todas incapacitadas todo el mes = 400 días hábiles.
+    const [m] = indicadoresMensuales([mes(5, { dias_ausencia: 400, dias_programados: 400 })]);
+    expect(m.ausentismo).toBe(100);
+  });
 });

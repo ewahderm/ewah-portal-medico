@@ -97,6 +97,7 @@ export default async function HabilitacionResumenPage() {
           contextoDocumentos(perfil, clinica?.tipo_persona?.codigo ? clinica.tipo_persona.codigo === "JURIDICA" : null, sedes),
           perfil?.fecha_planeada_radicacion ?? null,
           hoy,
+          acceso.puedeEditar,
         )
       : null;
   // Lo urgente (§5.6): vencidas y ≤ 7 días de obligaciones activas y

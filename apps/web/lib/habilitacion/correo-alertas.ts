@@ -165,3 +165,39 @@ export function construirHtmlAlertasHabilitacion({
     </div>
   </div>`;
 }
+
+// Qué ítems se dan por avisados tras los envíos de una clínica. Regla: solo
+// cuenta la entrega al EQUIPO (los usuarios con habilitacion/VIEW). Si el
+// correo del equipo falla (p. ej. Resend 429) pero el del contador externo
+// sale, el ítem NO se registra: mañana el equipo lo recibe. Si la clínica no
+// tiene destinatarios internos, el único aviso posible es el del contador
+// externo y entonces sí cuenta.
+export function itemsAvisados(
+  items: ItemAlerta[],
+  { hayEquipo, equipoEnviado, externosEnviados }: { hayEquipo: boolean; equipoEnviado: boolean; externosEnviados: Set<string> },
+): ItemAlerta[] {
+  if (hayEquipo) return equipoEnviado ? items : [];
+  return items.filter((it) => {
+    const correo = it.correo_adicional?.trim().toLowerCase();
+    return !!correo && externosEnviados.has(correo);
+  });
+}
+
+// Fila de hab_alertas_enviadas: la fecha objetivo forma parte de la llave
+// (0085), así una fecha que se mueve (extintor recargado, plan reprogramado)
+// vuelve a avisar en su nuevo ciclo.
+export const CONFLICTO_ALERTAS_ENVIADAS = "objeto_tipo,objeto_id,umbral_dias,fecha_objetivo";
+
+export function filasAlertasEnviadas(clinicaId: string, items: ItemAlerta[], destinatarios: string[]) {
+  return items.flatMap((it) =>
+    it.umbrales.map((umbral) => ({
+      clinica_id: clinicaId,
+      objeto_tipo: it.objeto_tipo,
+      objeto_id: it.objeto_id,
+      umbral_dias: umbral,
+      fecha_objetivo: it.fecha,
+      destinatarios,
+      proveedor_id: "resend",
+    })),
+  );
+}

@@ -25,13 +25,15 @@ async function getCodigoActividadClinica(supabase: Supabase): Promise<string | n
 
 export async function getDiagnostico(
   supabase: Supabase,
-): Promise<{ perfil: PerfilSst | null; conteo: ConteoTrabajadores | null; d: Diagnostico | null }> {
-  const [perfil, conteo, codigoActividad] = await Promise.all([
+): Promise<{ perfil: PerfilSst | null; conteo: ConteoTrabajadores | null; d: Diagnostico | null; errorPerfil: boolean }> {
+  const [{ perfil, error: errorPerfil }, conteo, codigoActividad] = await Promise.all([
     getPerfilSst(supabase),
     getConteoTrabajadores(supabase),
     getCodigoActividadClinica(supabase),
   ]);
-  const d = conteo
+  // Si el perfil no se pudo leer NO se diagnostica con uno vacío (diría
+  // "empleador sin actividad" y llevaría a un grupo equivocado).
+  const d = conteo && !errorPerfil
     ? diagnosticar({
         modo: perfil?.modo ?? "empleador",
         dependientes: conteo.dependientes,
@@ -44,5 +46,5 @@ export async function getDiagnostico(
         claseCargosMax: conteo.clase_cargos_max,
       })
     : null;
-  return { perfil, conteo, d };
+  return { perfil, conteo, d, errorPerfil };
 }

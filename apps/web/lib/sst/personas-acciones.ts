@@ -51,8 +51,17 @@ export async function guardarCapacitacion(input: {
   if (!check.ok) return { error: check.error };
   const supabase = await createClient();
 
-  const { data: existente } = await supabase.from("sst_capacitaciones").select("id, estado").eq("id", input.id).maybeSingle();
+  const { data: existente, error: errorExistente } = await supabase.from("sst_capacitaciones").select("id, estado").eq("id", input.id).maybeSingle();
+  if (errorExistente) {
+    console.error("[sst] guardarCapacitacion: leer la capacitación existente", errorExistente);
+    return { error: "No se pudo verificar la capacitación. Intenta de nuevo." };
+  }
   if (existente && existente.estado !== "programada") return { error: "Esta capacitación ya está cerrada." };
+  // Marcarla realizada y quitar asistentes se hacen con UPDATE/DELETE: piden EDIT.
+  if (existente || input.realizada) {
+    const editar = await requireGestion("EDIT");
+    if (!editar.ok) return { error: editar.error };
+  }
 
   let soporte: { path: string; nombre: string } | null = null;
   if (input.soportePath) {
@@ -68,26 +77,26 @@ export async function guardarCapacitacion(input: {
     duracion_horas: input.duracionHoras,
     facilitador: textoOpcional(input.facilitador)?.slice(0, 200) ?? null,
     modalidad: input.modalidad,
-    estado: input.realizada ? "realizada" : "programada",
+    // Siempre "programada" aquí: pasa a "realizada" dentro de la misma
+    // transacción que guarda la asistencia (fn_sst_guardar_asistencia, 0086).
+    // Si la asistencia falla queda programada y se puede reintentar.
+    estado: "programada",
     ...(soporte ? { soporte_storage_path: soporte.path, soporte_nombre_archivo: soporte.nombre } : {}),
   };
-  if (existente) {
-    const editar = await requireGestion("EDIT");
-    if (!editar.ok) return { error: editar.error };
-  }
   const r = existente
     ? await supabase.from("sst_capacitaciones").update(datos).eq("id", input.id)
     : await supabase.from("sst_capacitaciones").insert({ ...datos, id: input.id, clinica_id: check.usuario.clinica_id });
   if (r.error) return { error: mensajeError("guardarCapacitacion", r.error, "No se pudo guardar la capacitación.") };
 
-  if (input.asistentes.length > 0) {
-    const { error } = await supabase
-      .from("sst_capacitacion_asistentes")
-      .upsert(
-        input.asistentes.map((empleado_id) => ({ capacitacion_id: input.id, clinica_id: check.usuario.clinica_id, empleado_id })),
-        { onConflict: "capacitacion_id,empleado_id", ignoreDuplicates: true },
-      );
-    if (error) return { error: mensajeError("asistentes", error, "Se guardó la capacitación pero no la asistencia.") };
+  // La lista queda igual a la enviada (agrega y quita) y, si corresponde,
+  // la capacitación pasa a realizada: todo o nada.
+  const { error } = await supabase.rpc("fn_sst_guardar_asistencia", {
+    p_capacitacion_id: input.id,
+    p_asistentes: [...new Set(input.asistentes)],
+    p_realizada: input.realizada,
+  });
+  if (error) {
+    return { error: mensajeError("asistencia", error, "Se guardó la capacitación como programada pero no la asistencia. Vuelve a guardarla para completarla.") };
   }
   revalidar();
   return {};

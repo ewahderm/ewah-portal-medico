@@ -12,7 +12,7 @@ const base = (p: Partial<InsumosTablero> = {}): InsumosTablero => ({
   autoevaluacionAnio: { estado: "cerrada" },
   licenciaVence: null,
   comites: [],
-  registroAnual: null,
+  registroAnual: { fecha: "2027-07-31" },
   ...p,
 });
 
@@ -20,7 +20,11 @@ const evento = {
   id: "e1",
   fecha: "2026-10-06",
   tipo_evento: "accidente" as const,
+  gravedad: "leve" as "leve" | "grave" | "mortal" | null,
   reportado_arl: false,
+  reportado_eps: false,
+  reportado_mintrabajo: false,
+  cerrado: false,
   fecha_limite_reporte: "2026-10-08",
   fecha_limite_investigacion: "2026-10-21",
   investigacion_cerrada: false,
@@ -32,10 +36,26 @@ describe("tablero de pendientes SG-SST", () => {
   });
   it("accidente sin reportar va primero y en rojo; la investigación después", () => {
     const r = pendientesSst(base({ eventos: [evento] }));
-    expect(r.map((p) => p.clave)).toEqual(["reporte-e1", "investigacion-e1"]);
+    expect(r.map((p) => p.clave)).toEqual(["reporte-arl-e1", "reporte-eps-e1", "investigacion-e1"]);
     expect(r[0]).toMatchObject({ tono: "rojo", href: "/sst/eventos/e1" });
     expect(r[0].detalle).toContain("vence en 1 día");
-    expect(r[1].tono).toBe("ambar");
+    expect(r[2].tono).toBe("ambar");
+  });
+  it("cada reporte pendiente aparece por su cuenta: la EPS sigue aunque la ARL ya se hizo", () => {
+    const r = pendientesSst(base({ eventos: [{ ...evento, reportado_arl: true }] }));
+    expect(r.map((p) => p.clave)).toEqual(["reporte-eps-e1", "investigacion-e1"]);
+    expect(r[0].titulo).toBe("Reportar el accidente a la EPS");
+  });
+  it("MinTrabajo solo si el evento es grave o mortal", () => {
+    const leve = pendientesSst(base({ eventos: [{ ...evento, reportado_arl: true, reportado_eps: true }] }));
+    expect(leve.map((p) => p.clave)).toEqual(["investigacion-e1"]);
+    const grave = pendientesSst(base({ eventos: [{ ...evento, gravedad: "grave", reportado_arl: true, reportado_eps: true }] }));
+    expect(grave.map((p) => p.clave)).toEqual(["reporte-mintrabajo-e1", "investigacion-e1"]);
+    const hecho = pendientesSst(base({ eventos: [{ ...evento, gravedad: "mortal", reportado_arl: true, reportado_eps: true, reportado_mintrabajo: true }] }));
+    expect(hecho.map((p) => p.clave)).toEqual(["investigacion-e1"]);
+  });
+  it("un evento cerrado no genera pendientes", () => {
+    expect(pendientesSst(base({ eventos: [{ ...evento, cerrado: true }] }))).toEqual([]);
   });
   it("el incidente no se reporta a la ARL pero sí se investiga", () => {
     const r = pendientesSst(base({ eventos: [{ ...evento, tipo_evento: "incidente" }] }));
@@ -79,6 +99,12 @@ describe("tablero de pendientes SG-SST", () => {
   it("trabajando solo no pide autoevaluación ni registro", () => {
     const r = pendientesSst(base({ modo: "independiente", autoevaluacionAnio: null, registroAnual: { fecha: "2026-10-20" } }));
     expect(r).toEqual([]);
+  });
+  it("avisa a la vista si el año no tiene fecha de registro configurada", () => {
+    const r = pendientesSst(base({ registroAnual: null }));
+    expect(r.map((p) => p.clave)).toEqual(["registro-sin-fecha"]);
+    expect(r[0].tono).toBe("ambar");
+    expect(pendientesSst(base({ registroAnual: null, gestion: false }))).toEqual([]);
   });
   it("registro anual en la ventana de 60 días", () => {
     const r = pendientesSst(base({ registroAnual: { fecha: "2026-10-20" } }));

@@ -33,7 +33,7 @@ export default async function SstPage() {
   }
 
   const supabase = await createClient();
-  const { perfil, conteo, d } = await getDiagnostico(supabase);
+  const { perfil, conteo, d, errorPerfil } = await getDiagnostico(supabase);
   const pendientes = pendientesSst(
     await getInsumosTablero(supabase, {
       hoy: hoyColombia(),
@@ -45,7 +45,12 @@ export default async function SstPage() {
 
   return (
     <div className="space-y-6">
-      {!conteo || !d ? (
+      {errorPerfil ? (
+        <Alert variant="destructive">
+          <TriangleAlertIcon />
+          <AlertDescription>No pudimos leer el perfil de SG-SST de tu clínica, así que no mostramos un diagnóstico que podría ser incorrecto. Recarga la página; si sigue igual, avísanos.</AlertDescription>
+        </Alert>
+      ) : !conteo || !d ? (
         <Alert>
           <TriangleAlertIcon />
           <AlertDescription>El SG-SST se está terminando de instalar en tu cuenta. Vuelve a intentarlo en unos minutos.</AlertDescription>

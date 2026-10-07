@@ -193,7 +193,11 @@ export async function guardarInvestigacion(
   if (!check.ok) return { error: check.error };
   const supabase = await createClient();
 
-  const { data: existente } = await supabase.from("sst_investigaciones").select("id, estado").eq("accidente_id", accidenteId).maybeSingle();
+  const { data: existente, error: errorExistente } = await supabase.from("sst_investigaciones").select("id, estado").eq("accidente_id", accidenteId).maybeSingle();
+  if (errorExistente) {
+    console.error("[sst] guardarInvestigacion: leer la investigación existente", errorExistente);
+    return { error: "No se pudo verificar la investigación. Intenta de nuevo." };
+  }
   if (existente?.estado === "cerrada") return { error: "La investigación ya está cerrada." };
   if (existente) {
     const editar = await requirePermiso("sst", "EDIT");

@@ -8,6 +8,9 @@ import type { DocumentoCatalogo, VersionDocumento } from "@/lib/habilitacion/tip
 export type EstadoDocumento =
   | { estado: "pendiente"; detalle: string }
   | { estado: "no_aplica"; detalle: string }
+  // Documento financiero que RLS le oculta a quien no tiene EDIT (0068): no se
+  // puede saber si está cargado, y decir "Falta cargarlo" sería falso.
+  | { estado: "sin_permiso"; detalle: string }
   | { estado: "cargado"; detalle: string }
   | { estado: "por_vencer"; detalle: string; dias: number }
   | { estado: "vencido"; detalle: string };

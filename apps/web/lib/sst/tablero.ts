@@ -16,7 +16,11 @@ export type InsumosTablero = {
     id: string;
     fecha: string;
     tipo_evento: "incidente" | "accidente" | "enfermedad_laboral";
+    gravedad: "leve" | "grave" | "mortal" | null;
     reportado_arl: boolean;
+    reportado_eps: boolean;
+    reportado_mintrabajo: boolean;
+    cerrado: boolean;
     fecha_limite_reporte: string | null;
     fecha_limite_investigacion: string | null;
     investigacion_cerrada: boolean;
@@ -29,6 +33,18 @@ export type InsumosTablero = {
   comites: { tipo: "vigia" | "copasst" | "convivencia"; fecha_fin: string }[];
   registroAnual: { fecha: string } | null;
 };
+
+// Un reporte por destino, como las alertas del cron (0086): ARL y EPS en todo
+// accidente o enfermedad laboral; MinTrabajo solo si es grave o mortal. Mismo
+// criterio que pendientesEvento (plazos.ts); el incidente no se reporta.
+function reportesPendientes(e: InsumosTablero["eventos"][number]): { clave: "arl" | "eps" | "mintrabajo"; destino: string }[] {
+  if (e.tipo_evento === "incidente") return [];
+  const r: { clave: "arl" | "eps" | "mintrabajo"; destino: string }[] = [];
+  if (!e.reportado_arl) r.push({ clave: "arl", destino: "la ARL" });
+  if (!e.reportado_eps) r.push({ clave: "eps", destino: "la EPS" });
+  if ((e.gravedad === "grave" || e.gravedad === "mortal") && !e.reportado_mintrabajo) r.push({ clave: "mintrabajo", destino: "MinTrabajo" });
+  return r;
+}
 
 const plural = (n: number, s: string, p = `${s}s`) => `${n} ${n === 1 ? s : p}`;
 
@@ -48,16 +64,20 @@ export function pendientesSst(x: InsumosTablero): Pendiente[] {
   const mes = Number(x.hoy.slice(5, 7));
 
   for (const e of x.eventos) {
-    if (e.tipo_evento !== "incidente" && !e.reportado_arl && e.fecha_limite_reporte) {
+    // Un evento cerrado no genera pendientes (igual que pendientesEvento y el cron).
+    if (e.cerrado) continue;
+    if (e.fecha_limite_reporte) {
       const d = diasHasta(e.fecha_limite_reporte, x.hoy);
-      r.push({
-        clave: `reporte-${e.id}`,
-        titulo: e.tipo_evento === "enfermedad_laboral" ? "Reportar la enfermedad laboral a la ARL y la EPS" : "Reportar el accidente a la ARL y la EPS",
-        detalle: `Evento del ${fechaLegible(e.fecha)} · ${cuandoVence(d)} (2 días hábiles)`,
-        href: `/sst/eventos/${e.id}`,
-        tono: "rojo",
-        orden: d,
-      });
+      for (const p of reportesPendientes(e)) {
+        r.push({
+          clave: `reporte-${p.clave}-${e.id}`,
+          titulo: `Reportar ${e.tipo_evento === "enfermedad_laboral" ? "la enfermedad laboral" : "el accidente"} a ${p.destino}`,
+          detalle: `Evento del ${fechaLegible(e.fecha)} · ${cuandoVence(d)} (2 días hábiles)`,
+          href: `/sst/eventos/${e.id}`,
+          tono: "rojo",
+          orden: d,
+        });
+      }
     }
     if (!e.investigacion_cerrada && e.fecha_limite_investigacion) {
       const d = diasHasta(e.fecha_limite_investigacion, x.hoy);
@@ -132,6 +152,19 @@ export function pendientesSst(x: InsumosTablero): Pendiente[] {
       href: "/sst/estandares",
       tono: tonoDe(d, 60),
       orden: d,
+    });
+  }
+
+  // Sin fecha configurada para el año, el aviso del registro anual no sale
+  // nunca (0079): se dice a la vista en vez de callar.
+  if (x.modo === "empleador" && !x.registroAnual) {
+    r.push({
+      clave: "registro-sin-fecha",
+      titulo: `Falta la fecha del registro anual ${anio}`,
+      detalle: "No hay una fecha límite configurada para este año: el aviso del registro ante el Ministerio del Trabajo no saldrá. Consulta la circular del año y avísanos para configurarla.",
+      href: "/sst/estandares",
+      tono: "ambar",
+      orden: 5,
     });
   }
 
