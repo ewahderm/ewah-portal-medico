@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import {
   BanIcon,
   CheckIcon,
@@ -76,6 +76,21 @@ export function EstadoChip({ estado, className }: { estado: EstadoEvaluacion; cl
   );
 }
 
+// "Ver más" solo si el texto de verdad quedó cortado a 6 líneas (depende
+// del ancho: el mismo criterio cabe en escritorio y no en un teléfono).
+// Textos cortos no pueden pasar de 6 líneas ni a 390 px: no se miden.
+function useRecortado(ref: React.RefObject<HTMLParagraphElement | null>, medir: boolean) {
+  const [recortado, setRecortado] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!medir || !el) return;
+    const ro = new ResizeObserver(() => setRecortado(el.scrollHeight > el.clientHeight + 1));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [ref, medir]);
+  return recortado;
+}
+
 type Props = {
   fila: FilaCriterio;
   derivado: EstadoDerivado;
@@ -91,7 +106,20 @@ type Props = {
 };
 
 // memo: con ~250 tarjetas en pantalla, marcar una no debe re-renderizar las
-// demás (las props de las otras no cambian).
+// demás. `derivado` se recalcula como objeto nuevo en cada cambio, así que
+// se compara por valor; el resto de props son primitivas o estables.
+function mismasProps(a: Props, b: Props) {
+  for (const k of Object.keys(a) as (keyof Props)[]) {
+    if (k === "derivado") continue;
+    if (a[k] !== b[k]) return false;
+  }
+  return (
+    a.derivado.estado === b.derivado.estado &&
+    a.derivado.cumplen === b.derivado.cumplen &&
+    a.derivado.total === b.derivado.total
+  );
+}
+
 export const CriterioCard = memo(function CriterioCard({
   fila,
   derivado,
@@ -106,7 +134,8 @@ export const CriterioCard = memo(function CriterioCard({
   onDetalle,
 }: Props) {
   const [expandido, setExpandido] = useState(false);
-  const largo = fila.texto_literal.length > 420;
+  const textoRef = useRef<HTMLParagraphElement>(null);
+  const recortado = useRecortado(textoRef, fila.texto_literal.length > 240);
   const estado = derivado.estado;
   const sangria = Math.min(profundidad, 3);
 
@@ -126,8 +155,10 @@ export const CriterioCard = memo(function CriterioCard({
 
   const texto = (
     <div>
-      <p className={cn("text-sm whitespace-pre-line", largo && !expandido && "line-clamp-6")}>{fila.texto_literal}</p>
-      {largo ? (
+      <p ref={textoRef} className={cn("text-sm whitespace-pre-line", !expandido && "line-clamp-6")}>
+        {fila.texto_literal}
+      </p>
+      {recortado || expandido ? (
         <button
           type="button"
           className="mt-1 text-xs font-medium text-primary underline-offset-4 hover:underline"
@@ -288,4 +319,4 @@ export const CriterioCard = memo(function CriterioCard({
       ) : null}
     </article>
   );
-});
+}, mismasProps);
