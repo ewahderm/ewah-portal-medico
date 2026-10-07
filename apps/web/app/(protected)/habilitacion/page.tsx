@@ -16,9 +16,16 @@ import {
   getAccesoHabilitacion,
   getPerfilPrestador,
   getSedesConServicios,
+  getClinicaRegulatoria,
+  getDocumentosClinica,
+  getObligacionesClinica,
+  getOcurrenciasPendientesHasta,
   getProgresoAutoevaluacion,
   hoyColombia,
 } from "@/lib/habilitacion/consultas";
+import { armarChecklist, contextoDocumentos, resumenChecklist } from "@/lib/habilitacion/checklist";
+import { estadoOcurrencia, porConfirmar, resumenObligaciones, UMBRALES_SEMAFORO } from "@/lib/habilitacion/semaforo";
+import { SemaforoBadge } from "./_components/semaforo-badge";
 import { indicadoresDeProgreso } from "@/lib/habilitacion/estado-criterio";
 import {
   calcularRuta,
@@ -27,6 +34,7 @@ import {
   fechaLegible,
   nivelVencimientoReps,
   perfilCompleto,
+  sumarDias,
 } from "@/lib/habilitacion/ruta";
 import { DESCRIPCION_GRUPO, USOS_EDIFICACION, etiquetaDe } from "@/lib/habilitacion/constantes";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -48,11 +56,35 @@ export default async function HabilitacionResumenPage() {
   }
 
   const supabase = await createClient();
-  const [perfil, { sedes, serviciosSinSede }, progreso] = await Promise.all([
+  const hoy = hoyColombia();
+  const [perfil, { sedes, serviciosSinSede }, progreso, clinica, documentos, configObligaciones, pendientes] = await Promise.all([
     getPerfilPrestador(supabase),
     getSedesConServicios(supabase),
     acceso.gestion ? getProgresoAutoevaluacion(supabase) : Promise.resolve(null),
+    acceso.gestion ? getClinicaRegulatoria(supabase) : Promise.resolve(null),
+    acceso.gestion ? getDocumentosClinica(supabase) : Promise.resolve(null),
+    getObligacionesClinica(supabase),
+    getOcurrenciasPendientesHasta(supabase, sumarDias(hoy, UMBRALES_SEMAFORO.rojo)),
   ]);
+
+  // Paso 3: mismo checklist que la página de Documentos.
+  const checklist =
+    documentos && perfilCompleto(perfil)
+      ? armarChecklist(
+          documentos.catalogo,
+          documentos.renglones,
+          contextoDocumentos(perfil, clinica?.tipo_persona?.codigo ? clinica.tipo_persona.codigo === "JURIDICA" : null, sedes),
+          perfil?.fecha_planeada_radicacion ?? null,
+          hoy,
+        )
+      : null;
+  // Lo urgente (§5.6): vencidas y ≤ 7 días de obligaciones activas y
+  // confirmadas, más los documentos vencidos. Arriba de todo.
+  const porObligacion = new Map((configObligaciones ?? []).map((c) => [c.obligacion_id, c]));
+  const urgentes = pendientes
+    .map((o) => ({ o, c: porObligacion.get(o.obligacion_id) }))
+    .filter((x): x is { o: (typeof pendientes)[number]; c: NonNullable<typeof x.c> } => !!x.c && x.c.activa && !porConfirmar(x.c));
+  const documentosVencidos = (checklist ?? []).filter((i) => i.aplica !== "ya_no_aplica" && i.estado.estado === "vencido");
 
   // Criterios por sede (motor SQL, 0065) — solo con gestión: es la parte de
   // pago. Solo sedes con servicios (sin servicios el motor devuelve 0).
@@ -70,11 +102,12 @@ export default async function HabilitacionResumenPage() {
     serviciosSinSede: serviciosSinSede.length,
     gestion: acceso.gestion,
     autoevaluacion: progreso ? indicadoresDeProgreso(progreso) : null,
+    documentos: checklist ? resumenChecklist(checklist) : null,
+    obligaciones: configObligaciones ? resumenObligaciones(configObligaciones, pendientes, hoy) : null,
   });
   const todosServicios = [...sedes.flatMap((s) => s.servicios), ...serviciosSinSede];
   const incompletos = todosServicios.filter((s) => faltanteServicio(s) !== null).length;
 
-  const hoy = hoyColombia();
   const diasReps = perfil?.fecha_vencimiento_reps ? diasHasta(perfil.fecha_vencimiento_reps, hoy) : null;
   const nivelReps = diasReps === null ? null : nivelVencimientoReps(diasReps);
 
@@ -100,6 +133,56 @@ export default async function HabilitacionResumenPage() {
                 </Button>
               </div>
             ) : null}
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {urgentes.length > 0 || documentosVencidos.length > 0 ? (
+        <Card className="border-destructive/40">
+          <CardHeader>
+            <CardTitle className="text-base font-semibold">Lo urgente</CardTitle>
+            <p className="text-sm text-muted-foreground">Vencido o con plazo en los próximos 7 días.</p>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-2">
+              {urgentes.map(({ o, c }) => {
+                const e = estadoOcurrencia(o, hoy);
+                const cat = c.hab_obligaciones_catalogo;
+                return (
+                  <li key={o.id} className="flex flex-col gap-1 rounded-lg border p-2 text-sm sm:flex-row sm:items-center sm:justify-between">
+                    <span className="min-w-0">
+                      <span className="font-medium">{cat.nombre}</span>
+                      <span className="text-muted-foreground"> · {fechaLegible(o.fecha_limite)}{o.dia_no_habil ? " (día no hábil: preséntalo antes)" : ""}</span>
+                    </span>
+                    <span className="flex shrink-0 items-center gap-2">
+                      <SemaforoBadge semaforo={e.semaforo} etiqueta={e.etiqueta} />
+                      {cat.plataforma_url ? (
+                        <a href={cat.plataforma_url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary underline-offset-4 hover:underline">
+                          Portal
+                        </a>
+                      ) : null}
+                      <Link href="/habilitacion/obligaciones" className="text-xs text-primary underline-offset-4 hover:underline">
+                        Ver
+                      </Link>
+                    </span>
+                  </li>
+                );
+              })}
+              {documentosVencidos.map((i) => (
+                <li key={i.clave} className="flex flex-col gap-1 rounded-lg border p-2 text-sm sm:flex-row sm:items-center sm:justify-between">
+                  <span className="min-w-0">
+                    <span className="font-medium">{i.nombre}</span>
+                    {i.sede ? <span className="text-muted-foreground"> · {i.sede.nombre}</span> : null}
+                  </span>
+                  <span className="flex shrink-0 items-center gap-2">
+                    <SemaforoBadge semaforo="rojo" etiqueta="Documento vencido" />
+                    <Link href="/habilitacion/documentos" className="text-xs text-primary underline-offset-4 hover:underline">
+                      Ver
+                    </Link>
+                  </span>
+                </li>
+              ))}
+            </ul>
           </CardContent>
         </Card>
       ) : null}
