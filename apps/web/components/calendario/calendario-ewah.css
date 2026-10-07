@@ -1,0 +1,138 @@
+/* Reviste react-big-calendar con la identidad EWAH Tech (cyan/navy) en
+   vez de su tema por defecto — ver components/ui/dialog.tsx y select.tsx
+   para el mismo criterio de "usar la librería pero vestirla con la marca".
+   Compartido por TODO calendario del sistema (Agenda de citas y
+   calendario regulatorio de Habilitación): el contenedor lleva la clase
+   `ewah-calendario` y el componente importa este archivo junto con
+   calendario-base.ts. Un calendario nuevo no trae su propio tema. */
+
+.ewah-calendario .rbc-calendar {
+  font-family: var(--font-sans);
+  color: var(--foreground);
+}
+
+.ewah-calendario .rbc-toolbar {
+  margin-bottom: 1rem;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.ewah-calendario .rbc-toolbar button {
+  color: var(--foreground);
+  border: 1px solid var(--border);
+  background: var(--background);
+  border-radius: var(--radius-lg);
+  padding: 0.25rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  transition: background-color 0.15s ease;
+}
+
+.ewah-calendario .rbc-toolbar button:hover {
+  background: var(--muted);
+}
+
+.ewah-calendario .rbc-toolbar button.rbc-active {
+  background: var(--ewah-cyan);
+  border-color: var(--ewah-cyan);
+  color: var(--ewah-navy);
+}
+
+.ewah-calendario .rbc-toolbar-label {
+  font-weight: 600;
+  font-size: 1rem;
+  text-transform: capitalize;
+}
+
+.ewah-calendario .rbc-header {
+  padding: 0.5rem 0;
+  font-weight: 600;
+  text-transform: capitalize;
+  border-color: var(--border);
+}
+
+.ewah-calendario .rbc-month-view,
+.ewah-calendario .rbc-time-view,
+.ewah-calendario .rbc-time-header.rbc-overflowing {
+  border-color: var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.ewah-calendario .rbc-day-bg + .rbc-day-bg,
+.ewah-calendario .rbc-header + .rbc-header,
+.ewah-calendario .rbc-timeslot-group,
+.ewah-calendario .rbc-time-content > * + * > * {
+  border-color: var(--border);
+}
+
+.ewah-calendario .rbc-off-range-bg {
+  background: var(--muted);
+}
+
+.ewah-calendario .rbc-today {
+  background: color-mix(in oklch, var(--ewah-cyan), transparent 90%);
+}
+
+.ewah-calendario .rbc-event {
+  position: relative;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 2px 6px;
+  font-size: 0.75rem;
+}
+
+.ewah-calendario .rbc-event.rbc-selected {
+  box-shadow: 0 0 0 2px var(--ewah-navy);
+}
+
+.ewah-calendario .rbc-current-time-indicator {
+  background-color: var(--ewah-cyan);
+  height: 2px;
+}
+
+.ewah-calendario .rbc-show-more {
+  color: var(--ewah-cyan-dark);
+  font-weight: 500;
+}
+
+/* Vista "Agenda" (lista) — la usa el calendario regulatorio. */
+.ewah-calendario .rbc-agenda-view table.rbc-agenda-table {
+  border-color: var(--border);
+  border-radius: var(--radius-lg);
+  font-size: 0.85rem;
+}
+
+.ewah-calendario .rbc-agenda-view table.rbc-agenda-table thead > tr > th {
+  border-color: var(--border);
+  font-weight: 600;
+  padding: 0.5rem;
+  text-align: left;
+}
+
+.ewah-calendario .rbc-agenda-view table.rbc-agenda-table tbody > tr > td,
+.ewah-calendario .rbc-agenda-view table.rbc-agenda-table tbody > tr + tr {
+  border-color: var(--border);
+  padding: 0.4rem 0.5rem;
+  vertical-align: middle;
+}
+
+.ewah-calendario .rbc-agenda-date-cell {
+  text-transform: capitalize;
+  font-weight: 500;
+}
+
+.ewah-calendario .rbc-agenda-empty {
+  padding: 1rem;
+  color: var(--muted-foreground);
+}
+
+/* Número del día en la vista mes. */
+.ewah-calendario .rbc-date-cell .rbc-button-link {
+  font-size: 0.8rem;
+  color: var(--muted-foreground);
+}
+
+.ewah-calendario .rbc-date-cell.rbc-now .rbc-button-link {
+  color: var(--ewah-navy);
+  font-weight: 700;
+}

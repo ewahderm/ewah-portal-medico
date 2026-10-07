@@ -7,6 +7,7 @@ import { Calendar, Views, type EventProps, type View } from "react-big-calendar"
 import { format } from "date-fns";
 import { CalendarCheckIcon, ClipboardListIcon, FileClockIcon, type LucideIcon } from "lucide-react";
 import "react-big-calendar/lib/css/react-big-calendar.css";
+import "@/components/calendario/calendario-ewah.css";
 import { localizerEs, mensajesCalendario } from "@/components/calendario/calendario-base";
 import { estadoOcurrencia, porConfirmar, type Semaforo } from "@/lib/habilitacion/semaforo";
 import { fechaLegible } from "@/lib/habilitacion/ruta";
@@ -56,7 +57,12 @@ function EventoCelda({ event }: EventProps<Evento>) {
   const Icono = ICONO_TIPO[r.clase === "ocurrencia" ? "ocurrencia" : r.e.tipo];
   return (
     <span className="flex min-w-0 items-center gap-1 text-xs" title={`${event.title} — ${r.etiqueta}`}>
-      <Icono className="size-3 shrink-0" aria-hidden />
+      <span
+        aria-hidden
+        className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[var(--ewah-navy)]"
+      >
+        <Icono className="h-2.5 w-2.5 text-white" strokeWidth={2.5} />
+      </span>
       <span className="truncate">{event.title}</span>
     </span>
   );
@@ -106,28 +112,42 @@ export function CalendarioObligaciones({
   }
 
   return (
-    <div className="space-y-3">
-      <div className="flex flex-col gap-2 text-xs text-muted-foreground sm:flex-row sm:flex-wrap sm:gap-x-6">
-        <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+    <div>
+      {/* Leyendas con el mismo formato que la Agenda (citas): punto de
+          color para el canal de relleno, insignia con ícono para el otro. */}
+      <div className="ewah-calendario" style={{ height: "70vh" }}>
+        <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
           <span className="font-medium text-foreground">Semáforo:</span>
           {LEYENDA_SEMAFORO.map((l) => (
-            <span key={l.s} className="inline-flex items-center gap-1">
-              <span className="size-3 rounded-sm border" style={{ backgroundColor: `color-mix(in oklch, ${ESTILO_SEMAFORO[l.s].color}, transparent 75%)`, borderColor: ESTILO_SEMAFORO[l.s].color }} aria-hidden />
+            <span key={l.s} className="inline-flex items-center gap-1.5">
+              <span
+                className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
+                style={
+                  l.s === "por_confirmar"
+                    ? { border: `1.5px dashed ${ESTILO_SEMAFORO[l.s].color}` }
+                    : { backgroundColor: ESTILO_SEMAFORO[l.s].color }
+                }
+                aria-hidden
+              />
               {l.label}
             </span>
           ))}
-        </span>
-        <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        </div>
+        <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
           <span className="font-medium text-foreground">Tipo:</span>
           {LEYENDA_TIPO.map((l) => (
-            <span key={l.label} className="inline-flex items-center gap-1">
-              <l.Icono className="size-3.5" aria-hidden /> {l.label}
+            <span key={l.label} className="inline-flex items-center gap-1.5">
+              <span
+                className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[var(--ewah-navy)]"
+                aria-hidden
+              >
+                <l.Icono className="h-2.5 w-2.5 text-white" strokeWidth={2.5} />
+              </span>
+              {l.label}
             </span>
           ))}
-        </span>
-      </div>
+        </div>
 
-      <div className="h-[44rem] rounded-xl border bg-card p-2">
         <Calendar
           localizer={localizerEs}
           culture="es"
@@ -147,9 +167,10 @@ export function CalendarioObligaciones({
             const punteado = (e as Evento).resource.semaforo === "por_confirmar";
             return {
               style: {
+                // Mismo tratamiento que los eventos de la Agenda.
                 backgroundColor: `color-mix(in oklch, ${c}, transparent 82%)`,
-                color: "var(--foreground)",
-                borderLeft: `4px ${punteado ? "dashed" : "solid"} ${c}`,
+                color: "var(--ewah-navy)",
+                borderLeft: `5px ${punteado ? "dashed" : "solid"} ${c}`,
               },
             };
           }}

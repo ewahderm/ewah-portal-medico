@@ -21,7 +21,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import "react-big-calendar/lib/css/react-big-calendar.css";
-import "./agenda-calendario.css";
+import "@/components/calendario/calendario-ewah.css";
 import { CitaDetalleDialog } from "./cita-detalle-dialog";
 import { CitaDialog } from "./cita-dialog";
 import { redondearA15 } from "@/lib/citas/horarios";
@@ -252,7 +252,7 @@ export function AgendaCalendario({
   }
 
   return (
-    <div className="ewah-agenda" style={{ height: "70vh" }}>
+    <div className="ewah-calendario" style={{ height: "70vh" }}>
       {profesionales.length > 0 ? (
         <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
           <span className="font-medium text-foreground">Profesional:</span>
