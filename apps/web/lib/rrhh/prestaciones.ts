@@ -12,6 +12,7 @@ import {
   calcularInteresesCesantias,
   calcularAuxilioTransporte,
 } from "./calculo";
+import type { ResultadoAccion } from "@/lib/forms/resultado";
 
 // Liquidación de prestaciones sociales (migración 0059) — recibo propio,
 // separado de la nómina (decisión del usuario). Mismo flujo que
@@ -50,14 +51,14 @@ function restarMeses(fecha: string, meses: number): string {
 export async function calcularPrestacionesPreview(
   empleadoId: string,
   formData: FormData,
-): Promise<DesglosePrestaciones> {
+): Promise<DesglosePrestaciones | { error: string }> {
   const tipo = String(formData.get("tipo") ?? "") as Tipo;
   const anio = Number(formData.get("anio"));
-  if (!["prima_primer_semestre", "fin_de_anio"].includes(tipo)) throw new Error("Tipo de liquidación inválido.");
-  if (!Number.isInteger(anio) || anio < 2000 || anio > 2100) throw new Error("Año inválido.");
+  if (!["prima_primer_semestre", "fin_de_anio"].includes(tipo)) return { error: "Tipo de liquidación inválido." };
+  if (!Number.isInteger(anio) || anio < 2000 || anio > 2100) return { error: "Año inválido." };
 
   const check = await requirePermisoBase("nomina", "CREATE");
-  if (!check.ok) throw new Error(check.error);
+  if (!check.ok) return { error: check.error };
 
   const supabase = await createClient();
 
@@ -66,12 +67,12 @@ export async function calcularPrestacionesPreview(
     .select("categoria_contrato, fecha_inicio_contrato, fecha_fin_contrato, tipos_contrato(codigo)")
     .eq("id", empleadoId)
     .maybeSingle();
-  if (!empleado) throw new Error("Empleado no encontrado.");
+  if (!empleado) return { error: "Empleado no encontrado." };
   if (empleado.categoria_contrato !== "laboral") {
-    throw new Error("Las prestaciones sociales solo aplican a contratos laborales.");
+    return { error: "Las prestaciones sociales solo aplican a contratos laborales." };
   }
   if ((empleado.tipos_contrato as unknown as { codigo: string } | null)?.codigo === "APRENDIZAJE") {
-    throw new Error("El contrato de aprendizaje no causa prima, cesantías ni intereses.");
+    return { error: "El contrato de aprendizaje no causa prima, cesantías ni intereses." };
   }
 
   const { data: clinica } = await supabase
@@ -80,7 +81,7 @@ export async function calcularPrestacionesPreview(
     .eq("id", check.usuario.clinica_id)
     .single();
   if ((clinica?.paises as unknown as { codigo: string } | null)?.codigo !== "CO") {
-    throw new Error("La liquidación automática de prestaciones solo está disponible para Colombia.");
+    return { error: "La liquidación automática de prestaciones solo está disponible para Colombia." };
   }
 
   const { data: valores } = await supabase
@@ -89,7 +90,7 @@ export async function calcularPrestacionesPreview(
     .eq("pais_id", clinica!.pais_operacion_id)
     .eq("anio", anio)
     .maybeSingle();
-  if (!valores?.smlv) throw new Error(`No hay salario mínimo cargado para ${anio}.`);
+  if (!valores?.smlv) return { error: `No hay salario mínimo cargado para ${anio}.` };
   const smlv = Number(valores.smlv);
   const auxilioAnual = Number(valores.auxilio_transporte ?? 0);
 
@@ -105,12 +106,12 @@ export async function calcularPrestacionesPreview(
   // Base de liquidación (CST art. 253): si el salario no cambió en los
   // últimos 3 meses del período, se toma el último; si cambió, el promedio
   // del período. + auxilio de transporte si el trabajador tiene derecho.
-  async function baseDelPeriodo(desde: string, hasta: string): Promise<number> {
+  async function baseDelPeriodo(desde: string, hasta: string): Promise<number | { error: string }> {
     const historial = await historialSalarioEnRango(supabase, empleadoId, desde, hasta);
     const resultado = promedioSalarioPeriodo(historial, desde, hasta);
-    if (!resultado) throw new Error("El empleado no tiene salario registrado en el período.");
+    if (!resultado) return { error: "El empleado no tiene salario registrado en el período." };
     if (resultado.huboIntegral) {
-      throw new Error("El empleado tuvo salario integral en el período — el salario integral ya incluye prima, cesantías e intereses.");
+      return { error: "El empleado tuvo salario integral en el período — el salario integral ya incluye prima, cesantías e intereses." };
     }
     const cambioReciente = historial.some((h) => h.fechaInicio > restarMeses(hasta, 3) && h.fechaInicio <= hasta);
     const ultimo = historial.at(-1)!.salario;
@@ -136,7 +137,9 @@ export async function calcularPrestacionesPreview(
 
   const periodoPrima = recortar(...(tipo === "prima_primer_semestre" ? [semestre1.desde, semestre1.hasta] as const : [semestre2.desde, semestre2.hasta] as const));
   if (periodoPrima.dias > 0) {
-    basePrima = await baseDelPeriodo(periodoPrima.inicio, periodoPrima.fin);
+    const base = await baseDelPeriodo(periodoPrima.inicio, periodoPrima.fin);
+    if (typeof base !== "number") return base;
+    basePrima = base;
     diasPrima = periodoPrima.dias;
     valorPrima = calcularPrestacion(basePrima, diasPrima);
   }
@@ -144,7 +147,9 @@ export async function calcularPrestacionesPreview(
   if (tipo === "fin_de_anio") {
     const periodoAnual = recortar(`${anio}-01-01`, `${anio}-12-31`);
     if (periodoAnual.dias > 0) {
-      baseCesantias = await baseDelPeriodo(periodoAnual.inicio, periodoAnual.fin);
+      const base = await baseDelPeriodo(periodoAnual.inicio, periodoAnual.fin);
+      if (typeof base !== "number") return base;
+      baseCesantias = base;
       diasCesantias = periodoAnual.dias;
       valorCesantias = calcularPrestacion(baseCesantias, diasCesantias);
       valorIntereses = calcularInteresesCesantias(valorCesantias, diasCesantias);
@@ -157,7 +162,7 @@ export async function calcularPrestacionesPreview(
   }
 
   if (diasPrima === 0 && diasCesantias === 0) {
-    throw new Error("El contrato del empleado no cubre ningún día de este período.");
+    return { error: "El contrato del empleado no cubre ningún día de este período." };
   }
 
   return {
@@ -188,10 +193,10 @@ function datosDesdeForm(formData: FormData) {
   const anio = Number(formData.get("anio"));
   const fechaInicio = String(formData.get("fechaInicio") ?? "");
   const fechaFin = String(formData.get("fechaFin") ?? "");
-  if (!["prima_primer_semestre", "fin_de_anio"].includes(tipo)) throw new Error("Tipo de liquidación inválido.");
-  if (!Number.isInteger(anio)) throw new Error("Año inválido.");
-  if (!fechaInicio || !fechaFin || fechaFin < fechaInicio) throw new Error("Período inválido.");
-  return {
+  if (!["prima_primer_semestre", "fin_de_anio"].includes(tipo)) return { error: "Tipo de liquidación inválido." };
+  if (!Number.isInteger(anio)) return { error: "Año inválido." };
+  if (!fechaInicio || !fechaFin || fechaFin < fechaInicio) return { error: "Período inválido." };
+  return { datos: {
     tipo,
     anio,
     fecha_inicio: fechaInicio,
@@ -205,13 +210,15 @@ function datosDesdeForm(formData: FormData) {
     valor_intereses_cesantias: numero(formData, "valorIntereses"),
     total_pagar_trabajador: numero(formData, "totalPagarTrabajador"),
     total_consignar_fondo: numero(formData, "totalConsignarFondo"),
-  };
+  } };
 }
 
-export async function generarLiquidacionPrestaciones(empleadoId: string, formData: FormData) {
-  const datos = datosDesdeForm(formData);
+export async function generarLiquidacionPrestaciones(empleadoId: string, formData: FormData): Promise<ResultadoAccion> {
+  const resultadoDatos = datosDesdeForm(formData);
+  if ("error" in resultadoDatos) return { error: resultadoDatos.error };
+  const datos = resultadoDatos.datos;
   const check = await requirePermisoBase("nomina", "CREATE");
-  if (!check.ok) throw new Error(check.error);
+  if (!check.ok) return { error: check.error };
 
   const supabase = await createClient();
   const { error } = await supabase.from("comprobantes_prestaciones").insert({
@@ -222,16 +229,17 @@ export async function generarLiquidacionPrestaciones(empleadoId: string, formDat
   });
   if (error) {
     if (error.code === "23505") {
-      throw new Error("Ya existe una liquidación vigente de este tipo para ese año — anúlala o elimínala primero.");
+      return { error: "Ya existe una liquidación vigente de este tipo para ese año — anúlala o elimínala primero." };
     }
-    throw new Error("No se pudo guardar la liquidación.");
+    return { error: "No se pudo guardar la liquidación." };
   }
   revalidatePath(`/rrhh/${empleadoId}`);
+  return {};
 }
 
-export async function aprobarLiquidacionPrestaciones(id: string, empleadoId: string) {
+export async function aprobarLiquidacionPrestaciones(id: string, empleadoId: string): Promise<ResultadoAccion> {
   const check = await requirePermisoBase("nomina", "EDIT");
-  if (!check.ok) throw new Error(check.error);
+  if (!check.ok) return { error: check.error };
 
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -239,31 +247,33 @@ export async function aprobarLiquidacionPrestaciones(id: string, empleadoId: str
     .update({ aprobado: true, aprobado_en: new Date().toISOString(), aprobado_por: check.usuario.id })
     .eq("id", id)
     .select("id");
-  if (error) throw new Error("No se pudo aprobar la liquidación.");
-  if (!data || data.length === 0) throw new Error("Esta liquidación ya estaba aprobada.");
+  if (error) return { error: "No se pudo aprobar la liquidación." };
+  if (!data || data.length === 0) return { error: "Esta liquidación ya estaba aprobada." };
   revalidatePath(`/rrhh/${empleadoId}`);
+  return {};
 }
 
-export async function eliminarLiquidacionPrestaciones(id: string, empleadoId: string) {
+export async function eliminarLiquidacionPrestaciones(id: string, empleadoId: string): Promise<ResultadoAccion> {
   const check = await requirePermisoBase("nomina", "EDIT");
-  if (!check.ok) throw new Error(check.error);
+  if (!check.ok) return { error: check.error };
 
   const supabase = await createClient();
   const { error, count } = await supabase
     .from("comprobantes_prestaciones")
     .delete({ count: "exact" })
     .eq("id", id);
-  if (error) throw new Error("No se pudo eliminar la liquidación.");
-  if (!count) throw new Error("Esta liquidación ya fue aprobada y no se puede eliminar — solo anular.");
+  if (error) return { error: "No se pudo eliminar la liquidación." };
+  if (!count) return { error: "Esta liquidación ya fue aprobada y no se puede eliminar — solo anular." };
   revalidatePath(`/rrhh/${empleadoId}`);
+  return {};
 }
 
-export async function anularLiquidacionPrestaciones(id: string, empleadoId: string, formData: FormData) {
+export async function anularLiquidacionPrestaciones(id: string, empleadoId: string, formData: FormData): Promise<ResultadoAccion> {
   const motivo = campoOpcional(formData, "motivo");
-  if (!motivo) throw new Error("El motivo de anulación es obligatorio.");
+  if (!motivo) return { error: "El motivo de anulación es obligatorio." };
 
   const check = await requirePermisoBase("nomina", "VOID");
-  if (!check.ok) throw new Error(check.error);
+  if (!check.ok) return { error: check.error };
 
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -271,9 +281,10 @@ export async function anularLiquidacionPrestaciones(id: string, empleadoId: stri
     .update({ anulado: true, anulado_motivo: motivo })
     .eq("id", id)
     .select("id");
-  if (error) throw new Error("No se pudo anular la liquidación.");
-  if (!data || data.length === 0) throw new Error("Solo se puede anular una liquidación ya aprobada.");
+  if (error) return { error: "No se pudo anular la liquidación." };
+  if (!data || data.length === 0) return { error: "Solo se puede anular una liquidación ya aprobada." };
   revalidatePath(`/rrhh/${empleadoId}`);
+  return {};
 }
 
 export async function listarLiquidacionesPrestaciones(empleadoId: string) {

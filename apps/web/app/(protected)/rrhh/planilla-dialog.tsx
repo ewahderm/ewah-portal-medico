@@ -16,6 +16,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { exigirExito } from "@/lib/forms/resultado";
 
 export function PlanillaDialog({ onSubido }: { onSubido: () => void }) {
   const [open, setOpen] = useState(false);
@@ -27,7 +28,7 @@ export function PlanillaDialog({ onSubido }: { onSubido: () => void }) {
     setError(null);
     startTransition(async () => {
       try {
-        await subirComprobantePlanilla(formData);
+        exigirExito(await subirComprobantePlanilla(formData));
         onSubido();
         toast.add({ title: "Comprobante guardado", type: "success" });
         setOpen(false);

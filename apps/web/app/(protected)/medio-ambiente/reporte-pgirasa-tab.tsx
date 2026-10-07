@@ -25,6 +25,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useCerrarAlExito } from "@/lib/forms/cerrarAlExito";
 import type { Opcion } from "@/lib/forms/opciones";
 import { MesAnioSelect } from "./mes-anio-select";
+import { exigirExito } from "@/lib/forms/resultado";
 
 const ETIQUETAS_CATEGORIA = {
   micro: "Microgenerador: menos de 10 kg/mes",
@@ -64,7 +65,7 @@ export function ReportePgirasaTab({
     setError(null);
     startTransition(async () => {
       try {
-        setReporte(await obtenerReportePgirasa(sedeId, mes));
+        setReporte(exigirExito(await obtenerReportePgirasa(sedeId, mes)));
       } catch (e) {
         setReporte(null);
         setError(e instanceof Error ? e.message : "No se pudo cargar el reporte PGIRASA.");

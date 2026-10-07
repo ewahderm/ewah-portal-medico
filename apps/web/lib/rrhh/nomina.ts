@@ -17,6 +17,7 @@ import {
   ibcMensual,
   porcentajeFondoSolidaridad,
 } from "./calculo";
+import type { ResultadoAccion } from "@/lib/forms/resultado";
 
 function requirePermisoCrear() {
   return requirePermisoBase("nomina", "CREATE");
@@ -58,14 +59,14 @@ export type DesgloseNomina = {
 export async function calcularComprobanteNominaPreview(
   empleadoId: string,
   formData: FormData,
-): Promise<DesgloseNomina> {
+): Promise<DesgloseNomina | { error: string }> {
   const tipoPeriodo = String(formData.get("tipoPeriodo") ?? "");
   const fechaInicio = String(formData.get("fechaInicio") ?? "");
-  if (!["quincenal", "mensual"].includes(tipoPeriodo)) throw new Error("Tipo de período inválido.");
-  if (!fechaInicio) throw new Error("La fecha de inicio es obligatoria.");
+  if (!["quincenal", "mensual"].includes(tipoPeriodo)) return { error: "Tipo de período inválido." };
+  if (!fechaInicio) return { error: "La fecha de inicio es obligatoria." };
 
   const check = await requirePermisoCrear();
-  if (!check.ok) throw new Error(check.error);
+  if (!check.ok) return { error: check.error };
 
   const supabase = await createClient();
 
@@ -75,7 +76,7 @@ export async function calcularComprobanteNominaPreview(
     .eq("id", empleadoId)
     .maybeSingle();
   if (empleado?.categoria_contrato !== "laboral") {
-    throw new Error("Este empleado no tiene un contrato laboral — genera un comprobante de honorarios.");
+    return { error: "Este empleado no tiene un contrato laboral — genera un comprobante de honorarios." };
   }
 
   const { data: clinica } = await supabase
@@ -87,7 +88,7 @@ export async function calcularComprobanteNominaPreview(
   const clinicaExonerada = clinica?.exoneracion_aportes_salud_parafiscales ?? false;
 
   const vigente = await salarioVigente(supabase, empleadoId, fechaInicio);
-  if (vigente === null) throw new Error("El empleado no tiene un salario registrado en su historial.");
+  if (vigente === null) return { error: "El empleado no tiene un salario registrado en su historial." };
   const salarioMensual = vigente.salario;
   const salarioIntegral = vigente.tipoSalario === "integral";
 
@@ -196,16 +197,16 @@ function redondear(valor: number): number {
 // formulario (ver calcularComprobanteNominaPreview) — esta acción guarda
 // los valores TAL COMO se entregan, no los vuelve a calcular. Queda como
 // borrador (aprobado=false): editable/eliminable hasta que se apruebe.
-export async function generarComprobanteNomina(empleadoId: string, formData: FormData) {
+export async function generarComprobanteNomina(empleadoId: string, formData: FormData): Promise<ResultadoAccion> {
   const tipoPeriodo = String(formData.get("tipoPeriodo") ?? "");
   const fechaInicio = String(formData.get("fechaInicio") ?? "");
   const fechaFin = String(formData.get("fechaFin") ?? "");
-  if (!["quincenal", "mensual"].includes(tipoPeriodo)) throw new Error("Tipo de período inválido.");
-  if (!fechaInicio || !fechaFin) throw new Error("Las fechas del período son obligatorias.");
-  if (fechaFin < fechaInicio) throw new Error("La fecha de fin no puede ser anterior a la de inicio.");
+  if (!["quincenal", "mensual"].includes(tipoPeriodo)) return { error: "Tipo de período inválido." };
+  if (!fechaInicio || !fechaFin) return { error: "Las fechas del período son obligatorias." };
+  if (fechaFin < fechaInicio) return { error: "La fecha de fin no puede ser anterior a la de inicio." };
 
   const check = await requirePermisoCrear();
-  if (!check.ok) throw new Error(check.error);
+  if (!check.ok) return { error: check.error };
 
   const supabase = await createClient();
   const { error } = await supabase.from("comprobantes_nomina").insert({
@@ -232,25 +233,26 @@ export async function generarComprobanteNomina(empleadoId: string, formData: For
     neto_pagar: numeroFormulario(formData, "netoPagar"),
     created_by: check.usuario.id,
   });
-  if (error) throw new Error("No se pudo generar el comprobante de nómina.");
+  if (error) return { error: "No se pudo generar el comprobante de nómina." };
 
   revalidatePath(`/rrhh/${empleadoId}`);
+  return {};
 }
 
 // Mismo set de campos que generar, pero sobre un borrador ya existente —
 // el RLS (aprobado=false) es quien realmente impide editar uno aprobado;
 // esta acción no necesita repetir esa validación para dar un buen mensaje
 // porque el UPDATE simplemente no afecta ninguna fila si ya está aprobado.
-export async function editarComprobanteNomina(id: string, empleadoId: string, formData: FormData) {
+export async function editarComprobanteNomina(id: string, empleadoId: string, formData: FormData): Promise<ResultadoAccion> {
   const tipoPeriodo = String(formData.get("tipoPeriodo") ?? "");
   const fechaInicio = String(formData.get("fechaInicio") ?? "");
   const fechaFin = String(formData.get("fechaFin") ?? "");
-  if (!["quincenal", "mensual"].includes(tipoPeriodo)) throw new Error("Tipo de período inválido.");
-  if (!fechaInicio || !fechaFin) throw new Error("Las fechas del período son obligatorias.");
-  if (fechaFin < fechaInicio) throw new Error("La fecha de fin no puede ser anterior a la de inicio.");
+  if (!["quincenal", "mensual"].includes(tipoPeriodo)) return { error: "Tipo de período inválido." };
+  if (!fechaInicio || !fechaFin) return { error: "Las fechas del período son obligatorias." };
+  if (fechaFin < fechaInicio) return { error: "La fecha de fin no puede ser anterior a la de inicio." };
 
   const check = await requirePermisoEditar();
-  if (!check.ok) throw new Error(check.error);
+  if (!check.ok) return { error: check.error };
 
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -278,17 +280,18 @@ export async function editarComprobanteNomina(id: string, empleadoId: string, fo
     })
     .eq("id", id)
     .select("id");
-  if (error) throw new Error("No se pudo actualizar el comprobante.");
+  if (error) return { error: "No se pudo actualizar el comprobante." };
   if (!data || data.length === 0) {
-    throw new Error("Este comprobante ya fue aprobado y no se puede editar.");
+    return { error: "Este comprobante ya fue aprobado y no se puede editar." };
   }
 
   revalidatePath(`/rrhh/${empleadoId}`);
+  return {};
 }
 
-export async function aprobarComprobanteNomina(id: string, empleadoId: string) {
+export async function aprobarComprobanteNomina(id: string, empleadoId: string): Promise<ResultadoAccion> {
   const check = await requirePermisoEditar();
-  if (!check.ok) throw new Error(check.error);
+  if (!check.ok) return { error: check.error };
 
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -296,33 +299,35 @@ export async function aprobarComprobanteNomina(id: string, empleadoId: string) {
     .update({ aprobado: true, aprobado_en: new Date().toISOString(), aprobado_por: check.usuario.id })
     .eq("id", id)
     .select("id");
-  if (error) throw new Error("No se pudo aprobar el comprobante.");
-  if (!data || data.length === 0) throw new Error("Este comprobante ya estaba aprobado.");
+  if (error) return { error: "No se pudo aprobar el comprobante." };
+  if (!data || data.length === 0) return { error: "Este comprobante ya estaba aprobado." };
 
   revalidatePath(`/rrhh/${empleadoId}`);
+  return {};
 }
 
-export async function eliminarComprobanteNomina(id: string, empleadoId: string) {
+export async function eliminarComprobanteNomina(id: string, empleadoId: string): Promise<ResultadoAccion> {
   const check = await requirePermisoEditar();
-  if (!check.ok) throw new Error(check.error);
+  if (!check.ok) return { error: check.error };
 
   const supabase = await createClient();
   const { error, count } = await supabase
     .from("comprobantes_nomina")
     .delete({ count: "exact" })
     .eq("id", id);
-  if (error) throw new Error("No se pudo eliminar el comprobante.");
-  if (!count) throw new Error("Este comprobante ya fue aprobado y no se puede eliminar — solo anular.");
+  if (error) return { error: "No se pudo eliminar el comprobante." };
+  if (!count) return { error: "Este comprobante ya fue aprobado y no se puede eliminar — solo anular." };
 
   revalidatePath(`/rrhh/${empleadoId}`);
+  return {};
 }
 
-export async function anularComprobanteNomina(id: string, empleadoId: string, formData: FormData) {
+export async function anularComprobanteNomina(id: string, empleadoId: string, formData: FormData): Promise<ResultadoAccion> {
   const motivo = campoOpcional(formData, "motivo");
-  if (!motivo) throw new Error("El motivo de anulación es obligatorio.");
+  if (!motivo) return { error: "El motivo de anulación es obligatorio." };
 
   const check = await requirePermisoAnular();
-  if (!check.ok) throw new Error(check.error);
+  if (!check.ok) return { error: check.error };
 
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -330,12 +335,13 @@ export async function anularComprobanteNomina(id: string, empleadoId: string, fo
     .update({ anulado: true, anulado_motivo: motivo })
     .eq("id", id)
     .select("id");
-  if (error) throw new Error("No se pudo anular el comprobante.");
+  if (error) return { error: "No se pudo anular el comprobante." };
   if (!data || data.length === 0) {
-    throw new Error("Solo se puede anular un comprobante ya aprobado.");
+    return { error: "Solo se puede anular un comprobante ya aprobado." };
   }
 
   revalidatePath(`/rrhh/${empleadoId}`);
+  return {};
 }
 
 export async function listarComprobantesNomina(filtros: { empleadoId?: string; pagina?: number }) {

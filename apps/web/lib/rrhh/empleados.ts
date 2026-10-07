@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requirePermiso as requirePermisoBase } from "@/lib/auth/requirePermiso";
 import { campoOpcional, valorOpcionalSelect } from "@/lib/forms/opcional";
 import type { ActionState } from "@/lib/auth/actions";
+import type { ResultadoAccion } from "@/lib/forms/resultado";
 
 function requirePermiso(permiso: "CREATE" | "EDIT") {
   return requirePermisoBase("rrhh", permiso);
@@ -130,13 +131,14 @@ export async function editarEmpleado(
   return null;
 }
 
-export async function toggleEmpleado(id: string, activo: boolean) {
+export async function toggleEmpleado(id: string, activo: boolean): Promise<ResultadoAccion> {
   const check = await requirePermiso("EDIT");
-  if (!check.ok) throw new Error(check.error);
+  if (!check.ok) return { error: check.error };
 
   const supabase = await createClient();
   const { error } = await supabase.from("empleados").update({ activo }).eq("id", id);
-  if (error) throw new Error("No se pudo actualizar el empleado.");
+  if (error) return { error: "No se pudo actualizar el empleado." };
 
   revalidatePath("/rrhh");
+  return {};
 }

@@ -6,6 +6,7 @@ import { requirePermiso as requirePermisoBase } from "@/lib/auth/requirePermiso"
 import { campoOpcional } from "@/lib/forms/opcional";
 import { rangoPagina, esRangoFueraDeLimite } from "@/lib/pagination";
 import type { ActionState } from "@/lib/auth/actions";
+import type { ResultadoAccion } from "@/lib/forms/resultado";
 
 function requirePermisoCrear() {
   return requirePermisoBase("rrhh", "CREATE");
@@ -43,9 +44,9 @@ export async function crearAccidenteTrabajo(
   return null;
 }
 
-export async function actualizarAccidenteTrabajo(id: string, formData: FormData) {
+export async function actualizarAccidenteTrabajo(id: string, formData: FormData): Promise<ResultadoAccion> {
   const check = await requirePermisoEditar();
-  if (!check.ok) throw new Error(check.error);
+  if (!check.ok) return { error: check.error };
 
   const reportadoCentroTrabajo = formData.get("reportadoCentroTrabajo") === "on";
   const reportadoArl = formData.get("reportadoArl") === "on";
@@ -72,9 +73,10 @@ export async function actualizarAccidenteTrabajo(id: string, formData: FormData)
       resumen_cierre: cerrado ? campoOpcional(formData, "resumenCierre") : null,
     })
     .eq("id", id);
-  if (error) throw new Error("No se pudo actualizar el accidente.");
+  if (error) return { error: "No se pudo actualizar el accidente." };
 
   revalidatePath("/rrhh/accidentes");
+  return {};
 }
 
 export async function listarAccidentesTrabajo(filtros: { empleadoId?: string; pagina?: number }) {

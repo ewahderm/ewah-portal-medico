@@ -27,6 +27,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Combobox } from "@/components/ui/combobox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { exigirExito } from "@/lib/forms/resultado";
 
 function CampoNumero({ id, label, valor }: { id: string; label: string; valor: number }) {
   return (
@@ -61,7 +62,7 @@ function LiquidarPrestacionesDialog({ empleadoId, onCreado }: { empleadoId: stri
     setError(null);
     startCalculo(async () => {
       try {
-        setDesglose(await calcularPrestacionesPreview(empleadoId, formData));
+        setDesglose(exigirExito(await calcularPrestacionesPreview(empleadoId, formData)));
       } catch (e) {
         setDesglose(null);
         setError(e instanceof Error ? e.message : "No se pudo calcular.");
@@ -73,7 +74,7 @@ function LiquidarPrestacionesDialog({ empleadoId, onCreado }: { empleadoId: stri
     setError(null);
     startGuardar(async () => {
       try {
-        await generarLiquidacionPrestaciones(empleadoId, formData);
+        exigirExito(await generarLiquidacionPrestaciones(empleadoId, formData));
         onCreado();
         toast.add({ title: "Liquidación guardada como borrador", type: "success" });
         setOpen(false);
@@ -184,7 +185,7 @@ function AnularLiquidacionDialog({ id, empleadoId, onAnulado }: { id: string; em
     setError(null);
     startTransition(async () => {
       try {
-        await anularLiquidacionPrestaciones(id, empleadoId, formData);
+        exigirExito(await anularLiquidacionPrestaciones(id, empleadoId, formData));
         onAnulado();
         toast.add({ title: "Liquidación anulada", type: "success" });
         setOpen(false);
@@ -240,7 +241,7 @@ export function PrestacionesCard({
 
   async function aprobar(id: string) {
     try {
-      await aprobarLiquidacionPrestaciones(id, empleadoId);
+      exigirExito(await aprobarLiquidacionPrestaciones(id, empleadoId));
       cargar();
       toast.add({ title: "Liquidación aprobada — ya no se puede editar", type: "success" });
     } catch (e) {
@@ -255,7 +256,7 @@ export function PrestacionesCard({
     }
     setConfirmandoId(null);
     try {
-      await eliminarLiquidacionPrestaciones(id, empleadoId);
+      exigirExito(await eliminarLiquidacionPrestaciones(id, empleadoId));
       cargar();
       toast.add({ title: "Borrador eliminado", type: "success" });
     } catch (e) {
@@ -265,7 +266,8 @@ export function PrestacionesCard({
 
   async function descargarPdf(id: string) {
     try {
-      const [clinica, liquidacion] = await Promise.all([obtenerClinicaParaPdf(), obtenerLiquidacionPrestaciones(id)]);
+      const [resultadoClinica, liquidacion] = await Promise.all([obtenerClinicaParaPdf(), obtenerLiquidacionPrestaciones(id)]);
+      const clinica = exigirExito(resultadoClinica);
       if (!liquidacion) throw new Error("No se encontró la liquidación.");
       const empleado = liquidacion.empleados as unknown as {
         nombre: string;

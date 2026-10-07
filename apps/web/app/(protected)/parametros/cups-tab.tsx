@@ -14,6 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { exigirExito } from "@/lib/forms/resultado";
 
 // ~10,000 códigos — nunca se listan todos de una. Sin texto de búsqueda
 // se muestran los que la clínica ya activó (lo primero que alguien quiere
@@ -48,8 +49,8 @@ export function CupsTab({ inicial }: { inicial: CupsResultado[] }) {
     setError(null);
     startTransition(async () => {
       try {
-        if (next) await activarCups(id);
-        else await desactivarCups(id);
+        if (next) exigirExito(await activarCups(id));
+        else exigirExito(await desactivarCups(id));
       } catch (e) {
         setEstados((prev) => new Map(prev).set(id, !next));
         setError(e instanceof Error ? e.message : "No se pudo actualizar.");

@@ -27,7 +27,9 @@ export default async function ReportesPage() {
   let errorAnalitica: string | null = null;
   if (acceso.puedeVerClinica) {
     try {
-      analiticaInicial = await obtenerAnaliticaClinica(fechaInicial, fechaFinal);
+      const resultado = await obtenerAnaliticaClinica(fechaInicial, fechaFinal);
+      if ("error" in resultado) errorAnalitica = resultado.error;
+      else analiticaInicial = resultado;
     } catch (error) {
       errorAnalitica = error instanceof Error ? error.message : "No se pudo cargar la analítica clínica.";
     }

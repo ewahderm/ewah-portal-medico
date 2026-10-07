@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/table";
 import { InsumoDialog } from "./insumo-dialog";
 import type { Opcion } from "@/lib/forms/opciones";
+import { exigirExito } from "@/lib/forms/resultado";
 
 export type InsumoRow = {
   id: string;
@@ -53,7 +54,7 @@ export function InsumosTable({
     setError(null);
     startTransition(async () => {
       try {
-        await toggleInsumo(id, next);
+        exigirExito(await toggleInsumo(id, next));
       } catch (e) {
         setEstados((prev) => new Map(prev).set(id, !next));
         setError(e instanceof Error ? e.message : "No se pudo actualizar.");

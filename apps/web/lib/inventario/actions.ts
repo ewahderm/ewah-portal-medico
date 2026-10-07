@@ -7,6 +7,7 @@ import { requirePermiso as requirePermisoBase } from "@/lib/auth/requirePermiso"
 import { requireEntitlement } from "@/lib/auth/requireEntitlement";
 import { campoOpcional } from "@/lib/forms/opcional";
 import { rangoPagina, esRangoFueraDeLimite } from "@/lib/pagination";
+import type { ResultadoAccion } from "@/lib/forms/resultado";
 
 export type InventarioActionState = { error?: string; warning?: string } | null;
 
@@ -119,29 +120,30 @@ export async function crearLote(
 // Inventario) — "desactivar" es la forma de sacarlo de circulación cuando
 // se agotó o se dio de baja, sin perder su historial de movimientos. No
 // existía ninguna forma de hacerlo desde la UI hasta ahora.
-export async function toggleLote(id: string, activo: boolean) {
+export async function toggleLote(id: string, activo: boolean): Promise<ResultadoAccion> {
   const check = await requirePermiso("VOID");
-  if (!check.ok) throw new Error(check.error);
+  if (!check.ok) return { error: check.error };
 
   const checkPlan = await requireEntitlement("inventario");
-  if (!checkPlan.ok) throw new Error(checkPlan.error);
+  if (!checkPlan.ok) return { error: checkPlan.error };
 
   const supabase = await createClient();
   const { error } = await supabase.from("lotes").update({ activo }).eq("id", id);
-  if (error) throw new Error("No se pudo actualizar el lote.");
+  if (error) return { error: "No se pudo actualizar el lote." };
 
   revalidatePath("/inventario");
+  return {};
 }
 
-export async function registrarAjusteLote(id: string, cantidad: number, motivo: string) {
-  if (!motivo.trim()) throw new Error("El motivo del ajuste es obligatorio.");
-  if (cantidad === 0) throw new Error("La cantidad del ajuste no puede ser cero.");
+export async function registrarAjusteLote(id: string, cantidad: number, motivo: string): Promise<ResultadoAccion> {
+  if (!motivo.trim()) return { error: "El motivo del ajuste es obligatorio." };
+  if (cantidad === 0) return { error: "La cantidad del ajuste no puede ser cero." };
 
   const check = await requirePermiso("VOID");
-  if (!check.ok) throw new Error(check.error);
+  if (!check.ok) return { error: check.error };
 
   const checkPlan = await requireEntitlement("inventario");
-  if (!checkPlan.ok) throw new Error(checkPlan.error);
+  if (!checkPlan.ok) return { error: checkPlan.error };
 
   const supabase = await createClient();
   const { error } = await supabase.from("movimientos_insumos").insert({
@@ -153,9 +155,10 @@ export async function registrarAjusteLote(id: string, cantidad: number, motivo: 
     created_by: check.usuario.id,
   });
 
-  if (error) throw new Error("No se pudo registrar el ajuste.");
+  if (error) return { error: "No se pudo registrar el ajuste." };
 
   revalidatePath("/inventario");
+  return {};
 }
 
 export type LotePorId = {
@@ -176,12 +179,12 @@ export type LotePorId = {
 // "código inventado" que alguien intente pasar aquí simplemente no
 // encuentra nada (RLS ya limita la búsqueda a la propia clínica, esto no
 // necesita un chequeo de pertenencia aparte).
-export async function buscarLotePorId(id: string): Promise<LotePorId | null> {
+export async function buscarLotePorId(id: string): Promise<LotePorId | null | { error: string }> {
   const check = await requirePermiso("VIEW");
-  if (!check.ok) throw new Error(check.error);
+  if (!check.ok) return { error: check.error };
 
   const checkPlan = await requireEntitlement("inventario");
-  if (!checkPlan.ok) throw new Error(checkPlan.error);
+  if (!checkPlan.ok) return { error: checkPlan.error };
 
   const supabase = await createClient();
   const { data } = await supabase
@@ -483,8 +486,8 @@ export async function listarConsumoTratamiento(tratamientoId: string) {
   return data ?? [];
 }
 
-export async function revertirConsumo(movimientoId: string, motivo: string) {
-  if (!motivo.trim()) throw new Error("El motivo de la reversa es obligatorio.");
+export async function revertirConsumo(movimientoId: string, motivo: string): Promise<ResultadoAccion> {
+  if (!motivo.trim()) return { error: "El motivo de la reversa es obligatorio." };
 
   // Mismo nivel de permiso que anular un tratamiento o ajustar stock — no
   // el permiso operativo básico (CREATE) que cualquiera usa para registrar
@@ -492,7 +495,7 @@ export async function revertirConsumo(movimientoId: string, motivo: string) {
   // insumo, así que exige la misma autorización elevada que cualquier otra
   // corrección del sistema.
   const check = await requirePermiso("VOID");
-  if (!check.ok) throw new Error(check.error);
+  if (!check.ok) return { error: check.error };
 
   const supabase = await createClient();
   const { data: original } = await supabase
@@ -502,7 +505,7 @@ export async function revertirConsumo(movimientoId: string, motivo: string) {
     .maybeSingle();
 
   if (!original || original.motivo_movimiento !== "consumo_tratamiento") {
-    throw new Error("Ese movimiento no es un consumo válido para revertir.");
+    return { error: "Ese movimiento no es un consumo válido para revertir." };
   }
 
   const { data: yaRevertido } = await supabase
@@ -510,7 +513,7 @@ export async function revertirConsumo(movimientoId: string, motivo: string) {
     .select("id")
     .eq("revierte_movimiento_id", movimientoId)
     .maybeSingle();
-  if (yaRevertido) throw new Error("Este consumo ya fue revertido.");
+  if (yaRevertido) return { error: "Este consumo ya fue revertido." };
 
   const { error } = await supabase.from("movimientos_insumos").insert({
     clinica_id: check.usuario.clinica_id,
@@ -523,10 +526,11 @@ export async function revertirConsumo(movimientoId: string, motivo: string) {
     motivo: motivo.trim(),
     created_by: check.usuario.id,
   });
-  if (error) throw new Error("No se pudo revertir el consumo.");
+  if (error) return { error: "No se pudo revertir el consumo." };
 
   revalidatePath("/tratamientos");
   revalidatePath("/inventario");
+  return {};
 }
 
 export type CorteInventarioFila = {

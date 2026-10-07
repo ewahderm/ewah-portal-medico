@@ -19,6 +19,7 @@ import {
 import { DocumentoUploadDialog } from "./documento-upload-dialog";
 import type { Opcion } from "@/lib/forms/opciones";
 import { hoy } from "@/lib/format";
+import { exigirExito } from "@/lib/forms/resultado";
 
 type Documento = {
   id: string;
@@ -61,8 +62,12 @@ export function DocumentosTab({
   }, []);
 
   async function descargar(storagePath: string) {
-    const url = await urlFirmadaDocumentoRrhh(storagePath);
-    window.open(url, "_blank");
+    const resultado = await urlFirmadaDocumentoRrhh(storagePath);
+    if ("error" in resultado) {
+      toast.add({ title: resultado.error, type: "error" });
+      return;
+    }
+    window.open(resultado.url, "_blank");
   }
 
   async function eliminar(id: string) {
@@ -72,7 +77,7 @@ export function DocumentosTab({
     }
     setConfirmandoId(null);
     try {
-      await eliminarDocumentoEmpleado(id, empleadoId);
+      exigirExito(await eliminarDocumentoEmpleado(id, empleadoId));
       cargar();
       toast.add({ title: "Documento eliminado", type: "success" });
     } catch (e) {

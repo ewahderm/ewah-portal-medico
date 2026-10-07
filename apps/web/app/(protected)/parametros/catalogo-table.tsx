@@ -16,6 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { exigirExito } from "@/lib/forms/resultado";
 
 type ValorCatalogo = {
   id: string;
@@ -47,7 +48,7 @@ export function CatalogoTable({
     setError(null);
     startTransition(async () => {
       try {
-        await toggleValorCatalogo(tabla, id, next);
+        exigirExito(await toggleValorCatalogo(tabla, id, next));
       } catch (e) {
         setEstados((prev) => new Map(prev).set(id, !next));
         setError(e instanceof Error ? e.message : "No se pudo actualizar.");

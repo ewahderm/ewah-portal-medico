@@ -13,6 +13,7 @@ import { formatoFecha } from "@/lib/medio-ambiente/fecha-local";
 import { obtenerComisionesNomina } from "@/lib/reportes/actions-regulatorios";
 import { etiquetaTipoPeriodo } from "@/lib/reportes/formato";
 import type { ComisionNomina } from "@/lib/reportes/nomina";
+import { exigirExito } from "@/lib/forms/resultado";
 
 export function ComisionesReport({ fechaInicial, fechaFinal }: { fechaInicial: string; fechaFinal: string }) {
   const [desde, setDesde] = useState(fechaInicial);
@@ -26,7 +27,7 @@ export function ComisionesReport({ fechaInicial, fechaFinal }: { fechaInicial: s
     setError(null);
     startTransition(async () => {
       try {
-        setFilas(await obtenerComisionesNomina(desde, hasta));
+        setFilas(exigirExito(await obtenerComisionesNomina(desde, hasta)));
       } catch (reason) {
         setError(reason instanceof Error ? reason.message : "No se pudieron consultar las comisiones de nómina.");
       }

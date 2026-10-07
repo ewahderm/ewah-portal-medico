@@ -7,8 +7,9 @@ import { buscarLotePorId } from "@/lib/inventario/actions";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { exigirExito } from "@/lib/forms/resultado";
 
-export type LoteEscaneado = NonNullable<Awaited<ReturnType<typeof buscarLotePorId>>>;
+export type LoteEscaneado = Exclude<NonNullable<Awaited<ReturnType<typeof buscarLotePorId>>>, { error: string }>;
 
 /**
  * Input siempre listo para recibir el "tecleo + Enter" de una pistola láser,
@@ -56,7 +57,7 @@ export function LoteScanner({
     setErrorBusqueda(null);
     startBusqueda(async () => {
       try {
-        const data = await buscarLotePorId(id);
+        const data = exigirExito(await buscarLotePorId(id));
         if (!data) {
           setErrorBusqueda("No se encontró ningún lote con ese código.");
           return;

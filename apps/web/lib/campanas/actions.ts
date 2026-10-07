@@ -6,6 +6,7 @@ import { requirePermiso as requirePermisoBase } from "@/lib/auth/requirePermiso"
 import { requireEntitlement } from "@/lib/auth/requireEntitlement";
 import { valorOpcionalSelect, campoOpcional } from "@/lib/forms/opcional";
 import type { ActionState } from "@/lib/auth/actions";
+import type { ResultadoAccion } from "@/lib/forms/resultado";
 
 function requirePermiso(permiso: "CREATE" | "EDIT") {
   return requirePermisoBase("campanas", permiso);
@@ -111,18 +112,19 @@ export async function actualizarCampana(
   return null;
 }
 
-export async function toggleActivoCampana(id: string, activo: boolean) {
+export async function toggleActivoCampana(id: string, activo: boolean): Promise<ResultadoAccion> {
   const check = await requirePermiso("EDIT");
-  if (!check.ok) throw new Error(check.error);
+  if (!check.ok) return { error: check.error };
 
   const checkPlan = await requireEntitlement("campanas");
-  if (!checkPlan.ok) throw new Error(checkPlan.error);
+  if (!checkPlan.ok) return { error: checkPlan.error };
 
   const supabase = await createClient();
   const { error } = await supabase.from("campanas").update({ activo }).eq("id", id);
-  if (error) throw new Error("No se pudo actualizar la campaña.");
+  if (error) return { error: "No se pudo actualizar la campaña." };
 
   revalidatePath("/campanas");
+  return {};
 }
 
 export type FunnelCampana = {

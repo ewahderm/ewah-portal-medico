@@ -11,6 +11,7 @@ import {
   type FilaReportePgirasa,
   type ReportePgirasa,
 } from "./calculo-pgirasa";
+import type { ResultadoAccion } from "@/lib/forms/resultado";
 
 export type MedioAmbienteActionState = { error?: string } | null;
 
@@ -352,16 +353,16 @@ export async function revocarCeroResiduo(
   return null;
 }
 
-export async function obtenerReportePgirasa(sedeId: string, mes: string): Promise<ReportePgirasa> {
+export async function obtenerReportePgirasa(sedeId: string, mes: string): Promise<ReportePgirasa | { error: string }> {
   if (!UUID.test(sedeId)) {
-    throw new Error("Selecciona una sede válida.");
+    return { error: "Selecciona una sede válida." };
   }
   if (!MES_AAAA_MM.test(mes)) {
-    throw new Error("Selecciona un mes válido.");
+    return { error: "Selecciona un mes válido." };
   }
 
   const check = await requirePermiso("VIEW");
-  if (!check.ok) throw new Error(check.error);
+  if (!check.ok) return { error: check.error };
 
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("fn_pgirasa_reporte_sede", {
@@ -369,13 +370,18 @@ export async function obtenerReportePgirasa(sedeId: string, mes: string): Promis
     p_mes: `${mes}-01`,
   });
   if (error) {
-    if (esMensajeDeNegocio(error)) throw new Error(error.message);
+    if (esMensajeDeNegocio(error)) return { error: error.message };
     console.error("[medio-ambiente] fn_pgirasa_reporte_sede", error);
-    throw new Error("No se pudo cargar el consolidado PGIRASA.");
+    return { error: "No se pudo cargar el consolidado PGIRASA." };
   }
-  if (!data) throw new Error("La consulta del consolidado PGIRASA no devolvió datos.");
+  if (!data) return { error: "La consulta del consolidado PGIRASA no devolvió datos." };
 
-  return construirReportePgirasa(mes, data as FilaReportePgirasa[]);
+  try {
+    return construirReportePgirasa(mes, data as FilaReportePgirasa[]);
+  } catch (e) {
+    console.error("[medio-ambiente] construirReportePgirasa", e);
+    return { error: "No se pudo cargar el consolidado PGIRASA." };
+  }
 }
 
 // ============================================================
@@ -473,15 +479,16 @@ export async function editarExtintor(
 // "Dar de baja" un extintor es desactivarlo (activo=false), no una
 // anulación con motivo — es un activo físico que puede volver a ponerse en
 // servicio (reactivar) si se recupera. fn_auditoria() registra cada cambio.
-export async function toggleExtintor(id: string, activo: boolean) {
+export async function toggleExtintor(id: string, activo: boolean): Promise<ResultadoAccion> {
   const check = await requirePermiso("EDIT");
-  if (!check.ok) throw new Error(check.error);
+  if (!check.ok) return { error: check.error };
 
   const supabase = await createClient();
   const { error } = await supabase.from("extintores").update({ activo }).eq("id", id);
-  if (error) throw new Error("No se pudo actualizar el extintor.");
+  if (error) return { error: "No se pudo actualizar el extintor." };
 
   revalidatePath("/medio-ambiente");
+  return {};
 }
 
 export async function listarExtintores(filtros: {

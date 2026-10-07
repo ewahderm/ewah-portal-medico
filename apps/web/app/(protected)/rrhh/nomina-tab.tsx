@@ -20,6 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { PlanillaDialog } from "./planilla-dialog";
+import { toast } from "@/components/ui/toast";
 
 export function NominaTab() {
   const [nomina, setNomina] = useState<Awaited<ReturnType<typeof listarComprobantesNomina>>["registros"]>([]);
@@ -45,8 +46,12 @@ export function NominaTab() {
   }, []);
 
   async function descargar(storagePath: string) {
-    const url = await urlFirmadaDocumentoRrhh(storagePath);
-    window.open(url, "_blank");
+    const resultado = await urlFirmadaDocumentoRrhh(storagePath);
+    if ("error" in resultado) {
+      toast.add({ title: resultado.error, type: "error" });
+      return;
+    }
+    window.open(resultado.url, "_blank");
   }
 
   return (

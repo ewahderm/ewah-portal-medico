@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/table";
 import { CargoDialog } from "./cargo-dialog";
 import type { Opcion } from "@/lib/forms/opciones";
+import { exigirExito } from "@/lib/forms/resultado";
 
 export type CargoRow = {
   id: string;
@@ -44,7 +45,7 @@ export function CargosTable({
     setError(null);
     startTransition(async () => {
       try {
-        await toggleCargo(id, next);
+        exigirExito(await toggleCargo(id, next));
       } catch (e) {
         setEstados((prev) => new Map(prev).set(id, !next));
         setError(e instanceof Error ? e.message : "No se pudo actualizar.");

@@ -11,6 +11,7 @@ import {
   insertarServicioHabilitado,
   mensajeErrorServicio as mensajeError,
 } from "@/lib/clinicas/servicios-habilitados-db";
+import type { ResultadoAccion } from "@/lib/forms/resultado";
 
 // Lista de servicios habilitados ante REPS (0055, por sede desde 0061) —
 // cada fila persiste de inmediato (igual que activarCups/desactivarCups),
@@ -23,20 +24,22 @@ export type { ServicioHabilitado };
 
 async function requireAdmin() {
   const usuario = await getCurrentUsuario();
-  if (!usuario) throw new Error("Sesión inválida.");
+  if (!usuario) return { ok: false as const, error: "Sesión inválida." };
   if (!esAdministrador(usuario)) {
-    throw new Error("Solo un administrador puede cambiar esta configuración.");
+    return { ok: false as const, error: "Solo un administrador puede cambiar esta configuración." };
   }
-  return usuario;
+  return { ok: true as const, usuario };
 }
 
 export async function agregarServicioHabilitado(
   practicaMedicaId: string,
   sedeId: string | null,
   codigoHabilitacion: string | null,
-): Promise<ServicioHabilitado> {
-  const usuario = await requireAdmin();
-  if (!practicaMedicaId) throw new Error("Selecciona un servicio.");
+): Promise<{ error: string } | { servicio: ServicioHabilitado }> {
+  const acceso = await requireAdmin();
+  if (!acceso.ok) return { error: acceso.error };
+  const usuario = acceso.usuario;
+  if (!practicaMedicaId) return { error: "Selecciona un servicio." };
 
   const supabase = await createClient();
   const { data, error } = await insertarServicioHabilitado<ServicioHabilitado>(
@@ -46,16 +49,18 @@ export async function agregarServicioHabilitado(
     SERVICIO_HABILITADO_SELECT,
   );
   if (error || !data) {
-    throw new Error(error ? mensajeError(error, "No se pudo agregar el servicio habilitado.") : "No se pudo agregar el servicio habilitado.");
+    return { error: error ? mensajeError(error, "No se pudo agregar el servicio habilitado.") : "No se pudo agregar el servicio habilitado." };
   }
 
   revalidatePath("/parametros");
   revalidatePath("/habilitacion", "layout");
-  return data;
+  return { servicio: data };
 }
 
-export async function actualizarCodigoServicioHabilitado(id: string, codigoHabilitacion: string | null) {
-  const usuario = await requireAdmin();
+export async function actualizarCodigoServicioHabilitado(id: string, codigoHabilitacion: string | null): Promise<ResultadoAccion> {
+  const acceso = await requireAdmin();
+  if (!acceso.ok) return { error: acceso.error };
+  const usuario = acceso.usuario;
 
   const supabase = await createClient();
   const { error } = await supabase
@@ -63,16 +68,19 @@ export async function actualizarCodigoServicioHabilitado(id: string, codigoHabil
     .update({ codigo_habilitacion: codigoHabilitacion?.trim() || null, updated_by: usuario.id })
     .eq("id", id)
     .eq("clinica_id", usuario.clinica_id);
-  if (error) throw new Error(mensajeError(error, "No se pudo actualizar el código."));
+  if (error) return { error: mensajeError(error, "No se pudo actualizar el código.") };
 
   revalidatePath("/parametros");
   revalidatePath("/habilitacion", "layout");
+  return {};
 }
 
 // Asignar o cambiar la sede de una fila ya creada (p. ej. las creadas antes
 // de 0061, que quedaron sin sede).
-export async function actualizarSedeServicioHabilitado(id: string, sedeId: string | null) {
-  const usuario = await requireAdmin();
+export async function actualizarSedeServicioHabilitado(id: string, sedeId: string | null): Promise<ResultadoAccion> {
+  const acceso = await requireAdmin();
+  if (!acceso.ok) return { error: acceso.error };
+  const usuario = acceso.usuario;
 
   const supabase = await createClient();
   const { error } = await supabase
@@ -80,14 +88,17 @@ export async function actualizarSedeServicioHabilitado(id: string, sedeId: strin
     .update({ sede_id: sedeId || null, updated_by: usuario.id })
     .eq("id", id)
     .eq("clinica_id", usuario.clinica_id);
-  if (error) throw new Error(mensajeError(error, "No se pudo cambiar la sede."));
+  if (error) return { error: mensajeError(error, "No se pudo cambiar la sede.") };
 
   revalidatePath("/parametros");
   revalidatePath("/habilitacion", "layout");
+  return {};
 }
 
-export async function eliminarServicioHabilitado(id: string) {
-  const usuario = await requireAdmin();
+export async function eliminarServicioHabilitado(id: string): Promise<ResultadoAccion> {
+  const acceso = await requireAdmin();
+  if (!acceso.ok) return { error: acceso.error };
+  const usuario = acceso.usuario;
 
   const supabase = await createClient();
   const { error } = await supabase
@@ -95,8 +106,9 @@ export async function eliminarServicioHabilitado(id: string) {
     .delete()
     .eq("id", id)
     .eq("clinica_id", usuario.clinica_id);
-  if (error) throw new Error(mensajeError(error, "No se pudo eliminar el servicio habilitado."));
+  if (error) return { error: mensajeError(error, "No se pudo eliminar el servicio habilitado.") };
 
   revalidatePath("/parametros");
   revalidatePath("/habilitacion", "layout");
+  return {};
 }

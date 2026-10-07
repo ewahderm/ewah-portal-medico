@@ -108,6 +108,15 @@ Ya no hace falta pedirle al usuario que copie y pegue el SQL en el Editor de Sup
 
 `.mcp.json` declara el servidor oficial `https://mcp.vercel.com`, pero `list_teams`/`get_project` devuelven vacío/403 pese a varios intentos de reautorización — el team `ewah` no queda expuesto a la sesión OAuth aunque el CLI (`vercel login`/`vercel link`, autenticación por token, distinta al OAuth del MCP) sí lo ve perfecto. Se dejó en pausa; usar el CLI de Vercel (ya logueado como `ewahderm-9018`, proyecto linkeado en `apps/web/.vercel/project.json`) para cualquier tarea de deploy/env vars en vez de insistir con el MCP.
 
+### Errores en server actions
+
+En producción Next oculta el mensaje de toda excepción lanzada desde una server action: el usuario no ve el texto escrito para él sino "Minified React error #441". Regla para todo código nuevo:
+
+- Una server action **nunca** hace `throw new Error("mensaje para el usuario")`. Devuelve el error como valor: `Promise<ResultadoAccion>` (`{ error?: string }`, de `lib/forms/resultado.ts`) cuando no devuelve datos, o una unión discriminada (`{ error: string } | { ok: true, ... }`) cuando sí. Los formularios con `useActionState` siguen usando `ActionState`.
+- Los helpers internos que validan (permisos, tamaño de archivo, subida a Storage) también devuelven `{ ok: false, error }` / `{ error }`; el `throw` queda solo para errores inesperados de programación. El detalle técnico va a `console.error("[modulo] ...")`; nunca se expone un mensaje crudo de Postgres, salvo `P0001` (raise exception escrito para el usuario).
+- En el cliente se desenvuelve con `exigirExito(await accion(...))` dentro del `try/catch` que ya muestra `e.message` (o con `if ("error" in r)`). El `catch` solo recibe fallas de red o excepciones inesperadas.
+- Referencia: `actualizarDatosBasicosClinica` y `lib/forms/resultado.ts`.
+
 ### Nota de proceso: cómo verificar visualmente en este entorno
 
 `npx playwright install chromium` falla por red (timeout a `cdn.playwright.dev`). En vez de eso: `cd apps/web && npx playwright cli open --browser=chrome <url>` usa el Chrome/Edge ya instalado en Windows sin descargar nada. Comandos útiles: `goto`, `snapshot` (refs de elementos), `fill <ref> <valor>`, `click <ref>`, `console error`, `screenshot --filename=x.png`, `close`. Los artefactos quedan en `apps/web/.playwright-cli/` (gitignorado).

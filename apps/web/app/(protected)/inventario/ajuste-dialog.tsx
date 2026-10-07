@@ -14,6 +14,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { exigirExito } from "@/lib/forms/resultado";
 
 export function AjusteDialog({ loteId }: { loteId: string }) {
   const [open, setOpen] = useState(false);
@@ -31,7 +32,7 @@ export function AjusteDialog({ loteId }: { loteId: string }) {
     }
     startTransition(async () => {
       try {
-        await registrarAjusteLote(loteId, valor, motivo);
+        exigirExito(await registrarAjusteLote(loteId, valor, motivo));
         setOpen(false);
         setCantidad("");
         setMotivo("");

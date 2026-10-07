@@ -33,6 +33,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { exigirExito } from "@/lib/forms/resultado";
 
 type Incapacidad = Awaited<ReturnType<typeof listarIncapacidadesEmpleado>>[number];
 
@@ -46,7 +47,7 @@ function NuevaIncapacidadDialog({ empleadoId, onCreado }: { empleadoId: string; 
     setError(null);
     startTransition(async () => {
       try {
-        await crearIncapacidad(empleadoId, formData);
+        exigirExito(await crearIncapacidad(empleadoId, formData));
         onCreado();
         toast.add({ title: "Incapacidad registrada", type: "success" });
         setOpen(false);
@@ -133,7 +134,7 @@ export function IncapacidadesTab({ empleadoId, puedeCrear }: { empleadoId: strin
     }
     setConfirmandoId(null);
     try {
-      await eliminarIncapacidad(id, empleadoId);
+      exigirExito(await eliminarIncapacidad(id, empleadoId));
       cargar();
       toast.add({ title: "Incapacidad eliminada", type: "success" });
     } catch (e) {

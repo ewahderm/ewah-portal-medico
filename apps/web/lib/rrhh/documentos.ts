@@ -6,29 +6,30 @@ import { requirePermiso as requirePermisoBase } from "@/lib/auth/requirePermiso"
 import { esAdministrador } from "@/lib/auth/session";
 import { campoOpcional, valorOpcionalSelect } from "@/lib/forms/opcional";
 import { TIPOS_DOCUMENTO_EMPLEADO, MAX_DOCUMENTO_BYTES, TIPOS_DOCUMENTO_PERMITIDOS } from "./constantes";
+import type { ResultadoAccion } from "@/lib/forms/resultado";
 
 function requirePermiso(permiso: "CREATE") {
   return requirePermisoBase("rrhh", permiso);
 }
 
-export async function subirDocumentoEmpleado(empleadoId: string, formData: FormData) {
+export async function subirDocumentoEmpleado(empleadoId: string, formData: FormData): Promise<ResultadoAccion> {
   const tipo = String(formData.get("tipo") ?? "");
   if (!TIPOS_DOCUMENTO_EMPLEADO.some((t) => t.value === tipo)) {
-    throw new Error("Tipo de documento inválido.");
+    return { error: "Tipo de documento inválido." };
   }
 
   const check = await requirePermiso("CREATE");
-  if (!check.ok) throw new Error(check.error);
+  if (!check.ok) return { error: check.error };
 
   const archivo = formData.get("archivo");
   if (!(archivo instanceof File) || archivo.size === 0) {
-    throw new Error("Selecciona un archivo.");
+    return { error: "Selecciona un archivo." };
   }
   if (archivo.size > MAX_DOCUMENTO_BYTES) {
-    throw new Error("El archivo no puede pesar más de 10 MB.");
+    return { error: "El archivo no puede pesar más de 10 MB." };
   }
   if (!TIPOS_DOCUMENTO_PERMITIDOS.includes(archivo.type)) {
-    throw new Error("Formato no soportado. Usa JPG, PNG, WEBP o PDF.");
+    return { error: "Formato no soportado. Usa JPG, PNG, WEBP o PDF." };
   }
 
   const tipoVacunaId = valorOpcionalSelect(formData, "tipoVacunaId");
@@ -37,9 +38,9 @@ export async function subirDocumentoEmpleado(empleadoId: string, formData: FormD
   const fechaEvento = campoOpcional(formData, "fechaEvento");
   const fechaVencimiento = campoOpcional(formData, "fechaVencimiento");
 
-  if (tipo === "vacuna" && !tipoVacunaId) throw new Error("Selecciona el tipo de vacuna.");
+  if (tipo === "vacuna" && !tipoVacunaId) return { error: "Selecciona el tipo de vacuna." };
   if (tipo === "examen_ocupacional" && !tipoExamenId) {
-    throw new Error("Selecciona el tipo de examen ocupacional.");
+    return { error: "Selecciona el tipo de examen ocupacional." };
   }
 
   const supabase = await createClient();
@@ -49,7 +50,7 @@ export async function subirDocumentoEmpleado(empleadoId: string, formData: FormD
   const { error: uploadError } = await supabase.storage
     .from("documentos-rrhh")
     .upload(path, archivo, { contentType: archivo.type });
-  if (uploadError) throw new Error("No se pudo subir el archivo.");
+  if (uploadError) return { error: "No se pudo subir el archivo." };
 
   const { error: insertError } = await supabase.from("documentos_empleado").insert({
     clinica_id: check.usuario.clinica_id,
@@ -64,16 +65,17 @@ export async function subirDocumentoEmpleado(empleadoId: string, formData: FormD
     fecha_vencimiento: fechaVencimiento,
     created_by: check.usuario.id,
   });
-  if (insertError) throw new Error("No se pudo guardar el documento.");
+  if (insertError) return { error: "No se pudo guardar el documento." };
 
   revalidatePath(`/rrhh/${empleadoId}`);
+  return {};
 }
 
-export async function eliminarDocumentoEmpleado(id: string, empleadoId: string) {
+export async function eliminarDocumentoEmpleado(id: string, empleadoId: string): Promise<ResultadoAccion> {
   const check = await requirePermiso("CREATE");
-  if (!check.ok) throw new Error(check.error);
+  if (!check.ok) return { error: check.error };
   if (!esAdministrador(check.usuario)) {
-    throw new Error("Solo un administrador puede eliminar un documento.");
+    return { error: "Solo un administrador puede eliminar un documento." };
   }
 
   const supabase = await createClient();
@@ -84,13 +86,14 @@ export async function eliminarDocumentoEmpleado(id: string, empleadoId: string) 
     .maybeSingle();
 
   const { error } = await supabase.from("documentos_empleado").delete().eq("id", id);
-  if (error) throw new Error("No se pudo eliminar el documento.");
+  if (error) return { error: "No se pudo eliminar el documento." };
 
   if (doc?.storage_path) {
     await supabase.storage.from("documentos-rrhh").remove([doc.storage_path]);
   }
 
   revalidatePath(`/rrhh/${empleadoId}`);
+  return {};
 }
 
 export async function listarDocumentosEmpleado(empleadoId: string) {
@@ -109,11 +112,11 @@ export async function listarDocumentosEmpleado(empleadoId: string) {
 // entre documentos de empleado, actas, incapacidades, vacaciones,
 // protocolos y planilla — cualquier storage_path de ese bucket se firma
 // igual, sin importar de qué tabla venga.
-export async function urlFirmadaDocumentoRrhh(storagePath: string) {
+export async function urlFirmadaDocumentoRrhh(storagePath: string): Promise<{ error: string } | { url: string }> {
   const supabase = await createClient();
   const { data, error } = await supabase.storage
     .from("documentos-rrhh")
     .createSignedUrl(storagePath, 600);
-  if (error || !data) throw new Error("No se pudo generar el enlace.");
-  return data.signedUrl;
+  if (error || !data) return { error: "No se pudo generar el enlace." };
+  return { url: data.signedUrl };
 }

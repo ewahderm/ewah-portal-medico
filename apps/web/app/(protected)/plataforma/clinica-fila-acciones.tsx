@@ -5,6 +5,7 @@ import { cambiarPlanClinicaPlataforma, toggleActivoClinicaPlataforma } from "@/l
 import { toast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
+import { exigirExito } from "@/lib/forms/resultado";
 
 export function ClinicaFilaAcciones({
   clinicaId,
@@ -26,7 +27,7 @@ export function ClinicaFilaAcciones({
     setError(null);
     startTransition(async () => {
       try {
-        await cambiarPlanClinicaPlataforma(clinicaId, planCodigo);
+        exigirExito(await cambiarPlanClinicaPlataforma(clinicaId, planCodigo));
         toast.add({ title: "Plan actualizado", type: "success" });
       } catch (e) {
         setError(e instanceof Error ? e.message : "No se pudo cambiar el plan.");
@@ -43,7 +44,7 @@ export function ClinicaFilaAcciones({
     setError(null);
     startTransition(async () => {
       try {
-        await toggleActivoClinicaPlataforma(clinicaId, !activo);
+        exigirExito(await toggleActivoClinicaPlataforma(clinicaId, !activo));
         toast.add({ title: activo ? "Clínica desactivada" : "Clínica activada", type: "success" });
       } catch (e) {
         setError(e instanceof Error ? e.message : "No se pudo actualizar la clínica.");

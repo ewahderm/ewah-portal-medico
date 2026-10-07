@@ -16,6 +16,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ProtocoloUploadDialog } from "./protocolo-upload-dialog";
+import { toast } from "@/components/ui/toast";
 
 const LABEL_CATEGORIA: Record<string, string> = {
   rrhh: "RRHH",
@@ -50,8 +51,12 @@ export function ProtocolosTab({ puedeCrear }: { puedeCrear: boolean }) {
   }, []);
 
   async function descargar(storagePath: string) {
-    const url = await urlFirmadaDocumentoRrhh(storagePath);
-    window.open(url, "_blank");
+    const resultado = await urlFirmadaDocumentoRrhh(storagePath);
+    if ("error" in resultado) {
+      toast.add({ title: resultado.error, type: "error" });
+      return;
+    }
+    window.open(resultado.url, "_blank");
   }
 
   return (

@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { RotateCcwIcon } from "lucide-react";
 import { revertirAnulacionTratamiento } from "@/lib/tratamientos/actions";
 import { Button } from "@/components/ui/button";
+import { exigirExito } from "@/lib/forms/resultado";
 
 export function RevertirAnulacionButton({ id }: { id: string }) {
   const [pending, startTransition] = useTransition();
@@ -13,7 +14,7 @@ export function RevertirAnulacionButton({ id }: { id: string }) {
     setError(null);
     startTransition(async () => {
       try {
-        await revertirAnulacionTratamiento(id);
+        exigirExito(await revertirAnulacionTratamiento(id));
       } catch (e) {
         setError(e instanceof Error ? e.message : "No se pudo revertir la anulación.");
       }

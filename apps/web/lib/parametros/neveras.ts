@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requirePermiso as requirePermisoBase } from "@/lib/auth/requirePermiso";
 import { campoOpcional } from "@/lib/forms/opcional";
 import type { ActionState } from "@/lib/auth/actions";
+import type { ResultadoAccion } from "@/lib/forms/resultado";
 
 function requirePermiso(permiso: "CREATE" | "EDIT") {
   return requirePermisoBase("parametros", permiso);
@@ -73,13 +74,14 @@ export async function editarNevera(
   return null;
 }
 
-export async function toggleNevera(id: string, activo: boolean) {
+export async function toggleNevera(id: string, activo: boolean): Promise<ResultadoAccion> {
   const check = await requirePermiso("EDIT");
-  if (!check.ok) throw new Error(check.error);
+  if (!check.ok) return { error: check.error };
 
   const supabase = await createClient();
   const { error } = await supabase.from("neveras").update({ activo }).eq("id", id);
-  if (error) throw new Error("No se pudo actualizar la nevera.");
+  if (error) return { error: "No se pudo actualizar la nevera." };
 
   revalidatePath("/parametros");
+  return {};
 }

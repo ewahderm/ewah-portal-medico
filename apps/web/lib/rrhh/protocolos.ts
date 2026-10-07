@@ -4,21 +4,22 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requirePermiso as requirePermisoBase } from "@/lib/auth/requirePermiso";
 import { esAdministrador } from "@/lib/auth/session";
+import type { ResultadoAccion } from "@/lib/forms/resultado";
 
 function requirePermiso() {
   return requirePermisoBase("rrhh", "CREATE");
 }
 
-export async function subirDocumentoNormativo(formData: FormData) {
+export async function subirDocumentoNormativo(formData: FormData): Promise<ResultadoAccion> {
   const tipoDocumentoId = String(formData.get("tipoDocumentoId") ?? "");
-  if (!tipoDocumentoId) throw new Error("Selecciona el tipo de documento.");
+  if (!tipoDocumentoId) return { error: "Selecciona el tipo de documento." };
 
   const check = await requirePermiso();
-  if (!check.ok) throw new Error(check.error);
+  if (!check.ok) return { error: check.error };
 
   const archivo = formData.get("archivo");
-  if (!(archivo instanceof File) || archivo.size === 0) throw new Error("Selecciona un archivo.");
-  if (archivo.size > 10 * 1024 * 1024) throw new Error("El archivo no puede pesar más de 10 MB.");
+  if (!(archivo instanceof File) || archivo.size === 0) return { error: "Selecciona un archivo." };
+  if (archivo.size > 10 * 1024 * 1024) return { error: "El archivo no puede pesar más de 10 MB." };
 
   const supabase = await createClient();
 
@@ -38,7 +39,7 @@ export async function subirDocumentoNormativo(formData: FormData) {
   const { error: uploadError } = await supabase.storage
     .from("documentos-rrhh")
     .upload(path, archivo, { contentType: archivo.type });
-  if (uploadError) throw new Error("No se pudo subir el archivo.");
+  if (uploadError) return { error: "No se pudo subir el archivo." };
 
   const { error } = await supabase.from("documentos_normativos").insert({
     clinica_id: check.usuario.clinica_id,
@@ -48,15 +49,16 @@ export async function subirDocumentoNormativo(formData: FormData) {
     nombre_archivo: archivo.name,
     created_by: check.usuario.id,
   });
-  if (error) throw new Error("No se pudo guardar el documento.");
+  if (error) return { error: "No se pudo guardar el documento." };
 
   revalidatePath("/rrhh/protocolos");
+  return {};
 }
 
-export async function eliminarDocumentoNormativo(id: string) {
+export async function eliminarDocumentoNormativo(id: string): Promise<ResultadoAccion> {
   const check = await requirePermiso();
-  if (!check.ok) throw new Error(check.error);
-  if (!esAdministrador(check.usuario)) throw new Error("Solo un administrador puede eliminar un documento.");
+  if (!check.ok) return { error: check.error };
+  if (!esAdministrador(check.usuario)) return { error: "Solo un administrador puede eliminar un documento." };
 
   const supabase = await createClient();
   const { data: doc } = await supabase
@@ -66,13 +68,14 @@ export async function eliminarDocumentoNormativo(id: string) {
     .maybeSingle();
 
   const { error } = await supabase.from("documentos_normativos").delete().eq("id", id);
-  if (error) throw new Error("No se pudo eliminar el documento.");
+  if (error) return { error: "No se pudo eliminar el documento." };
 
   if (doc?.storage_path) {
     await supabase.storage.from("documentos-rrhh").remove([doc.storage_path]);
   }
 
   revalidatePath("/rrhh/protocolos");
+  return {};
 }
 
 // Última versión por tipo de documento — es lo "vigente"; el historial

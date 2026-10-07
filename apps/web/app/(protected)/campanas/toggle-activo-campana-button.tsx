@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { toggleActivoCampana } from "@/lib/campanas/actions";
 import { Button } from "@/components/ui/button";
+import { exigirExito } from "@/lib/forms/resultado";
 
 export function ToggleActivoCampanaButton({ id, activo }: { id: string; activo: boolean }) {
   const [pending, startTransition] = useTransition();
@@ -12,7 +13,7 @@ export function ToggleActivoCampanaButton({ id, activo }: { id: string; activo: 
     setError(null);
     startTransition(async () => {
       try {
-        await toggleActivoCampana(id, !activo);
+        exigirExito(await toggleActivoCampana(id, !activo));
       } catch (e) {
         setError(e instanceof Error ? e.message : "No se pudo actualizar.");
       }

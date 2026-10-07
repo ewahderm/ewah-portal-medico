@@ -15,9 +15,9 @@ function requirePermiso() {
 // Idempotente: si la cita ya tiene una atención (unique index en
 // atenciones.cita_id), la devuelve en vez de duplicarla — "Atender" se
 // puede pulsar más de una vez sin crear atenciones de sobra.
-export async function crearAtencionDesdeCita(citaId: string): Promise<string> {
+export async function crearAtencionDesdeCita(citaId: string): Promise<{ error: string } | { atencionId: string }> {
   const check = await requirePermiso();
-  if (!check.ok) throw new Error(check.error);
+  if (!check.ok) return { error: check.error };
 
   const supabase = await createClient();
 
@@ -26,14 +26,14 @@ export async function crearAtencionDesdeCita(citaId: string): Promise<string> {
     .select("id")
     .eq("cita_id", citaId)
     .maybeSingle();
-  if (existente) return existente.id;
+  if (existente) return { atencionId: existente.id };
 
   const { data: cita } = await supabase
     .from("citas")
     .select("id, paciente_id, profesional_id, fecha")
     .eq("id", citaId)
     .maybeSingle();
-  if (!cita || !cita.paciente_id) throw new Error("La cita indicada no es válida.");
+  if (!cita || !cita.paciente_id) return { error: "La cita indicada no es válida." };
 
   const { data: atencion, error } = await supabase
     .from("atenciones")
@@ -48,12 +48,12 @@ export async function crearAtencionDesdeCita(citaId: string): Promise<string> {
     .select("id")
     .single();
 
-  if (error || !atencion) throw new Error("No se pudo crear la atención.");
+  if (error || !atencion) return { error: "No se pudo crear la atención." };
 
   await supabase.from("citas").update({ estado: "atendida" }).eq("id", citaId);
   revalidatePath("/citas");
 
-  return atencion.id;
+  return { atencionId: atencion.id };
 }
 
 export type CrearAtencionResultado =

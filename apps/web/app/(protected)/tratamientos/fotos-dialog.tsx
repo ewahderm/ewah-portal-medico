@@ -23,6 +23,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Combobox } from "@/components/ui/combobox";
+import { exigirExito } from "@/lib/forms/resultado";
 
 type Registro = {
   id: string;
@@ -78,7 +79,7 @@ export function FotosDialog({
       try {
         const foto = formData.get("foto");
         if (foto instanceof File) formData.set("foto", await comprimirImagen(foto));
-        await crearRegistroFoto(tratamientoId, etiqueta as "antes" | "despues", formData);
+        exigirExito(await crearRegistroFoto(tratamientoId, etiqueta as "antes" | "despues", formData));
         setObservaciones("");
         cargar();
       } catch (e) {
@@ -93,7 +94,7 @@ export function FotosDialog({
       try {
         const foto = formData.get("foto");
         if (foto instanceof File) formData.set("foto", await comprimirImagen(foto));
-        await completarFotoRegistro(registro.id, tratamientoId, lado, formData);
+        exigirExito(await completarFotoRegistro(registro.id, tratamientoId, lado, formData));
         cargar();
       } catch (e) {
         setError(e instanceof Error ? e.message : "No se pudo subir la foto.");
@@ -110,7 +111,7 @@ export function FotosDialog({
     setError(null);
     startTransition(async () => {
       try {
-        await eliminarFotoTratamiento(registro.id);
+        exigirExito(await eliminarFotoTratamiento(registro.id));
         cargar();
       } catch (e) {
         setError(e instanceof Error ? e.message : "No se pudo eliminar el registro.");

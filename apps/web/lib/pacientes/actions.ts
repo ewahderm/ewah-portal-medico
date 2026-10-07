@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requirePermiso as requirePermisoBase } from "@/lib/auth/requirePermiso";
-import { requireAdminExport } from "@/lib/exportar/acceso";
+import { verificarAdminExport } from "@/lib/exportar/acceso";
 import { leerFilasXlsx } from "@/lib/exportar/xlsx";
 import { COLUMNAS_PACIENTES } from "@/lib/pacientes/exportar";
 import {
@@ -15,6 +15,7 @@ import {
 import type { ActionState } from "@/lib/auth/actions";
 import { valorOpcionalSelect, campoOpcional } from "@/lib/forms/opcional";
 import { nombreCompleto } from "@/lib/pacientes/nombre";
+import type { ResultadoAccion } from "@/lib/forms/resultado";
 
 function requirePermiso(permiso: "CREATE" | "EDIT") {
   return requirePermisoBase("pacientes", permiso);
@@ -196,15 +197,16 @@ export async function crearPacienteRapido(
   return { creado: { id: paciente.id, nombre: nombreCompleto(paciente) } };
 }
 
-export async function toggleActivoPaciente(id: string, activo: boolean) {
+export async function toggleActivoPaciente(id: string, activo: boolean): Promise<ResultadoAccion> {
   const check = await requirePermiso("EDIT");
-  if (!check.ok) throw new Error(check.error);
+  if (!check.ok) return { error: check.error };
 
   const supabase = await createClient();
   const { error } = await supabase.from("pacientes").update({ activo }).eq("id", id);
-  if (error) throw new Error("No se pudo actualizar el estado del paciente.");
+  if (error) return { error: "No se pudo actualizar el estado del paciente." };
 
   revalidatePath("/pacientes");
+  return {};
 }
 
 export type ImportarPacientesResultado =
@@ -216,7 +218,9 @@ export type ImportarPacientesResultado =
 // a propósito: así un duplicado o un dato inválido en una fila no tumba
 // todo el archivo, y el resumen final puede decir exactamente cuál falló.
 export async function importarPacientes(formData: FormData): Promise<ImportarPacientesResultado> {
-  const usuario = await requireAdminExport();
+  const acceso = await verificarAdminExport();
+  if (!acceso.ok) return { error: acceso.error };
+  const usuario = acceso.usuario;
 
   const archivo = formData.get("archivo");
   if (!(archivo instanceof File) || archivo.size === 0) {

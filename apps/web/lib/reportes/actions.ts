@@ -8,12 +8,12 @@ import { createClient } from "@/lib/supabase/server";
 import { accesoAnalitica } from "./acceso";
 import { construirAnaliticaClinica, esRangoFechaValido, type FilaAnalitica, type AnaliticaClinica } from "./analitica";
 
-export async function obtenerAnaliticaClinica(desde: string, hasta: string): Promise<AnaliticaClinica> {
+export async function obtenerAnaliticaClinica(desde: string, hasta: string): Promise<AnaliticaClinica | { error: string }> {
   const check = await accesoAnalitica();
-  if (!check.ok) throw new Error(check.error);
+  if (!check.ok) return { error: check.error };
 
   if (!esRangoFechaValido(desde, hasta)) {
-    throw new Error("Elige un rango válido de hasta 366 días.");
+    return { error: "Elige un rango válido de hasta 366 días." };
   }
 
   const supabase = await createClient();
@@ -23,8 +23,13 @@ export async function obtenerAnaliticaClinica(desde: string, hasta: string): Pro
   });
   if (error) {
     console.error("[reportes] fn_reportes_analitica_clinica", error);
-    throw new Error("No se pudo cargar la analítica de la clínica.");
+    return { error: "No se pudo cargar la analítica de la clínica." };
   }
-  if (!data) throw new Error("La consulta de analítica no devolvió datos.");
-  return construirAnaliticaClinica(data as FilaAnalitica[]);
+  if (!data) return { error: "La consulta de analítica no devolvió datos." };
+  try {
+    return construirAnaliticaClinica(data as FilaAnalitica[]);
+  } catch (e) {
+    console.error("[reportes] construirAnaliticaClinica", e);
+    return { error: "No se pudo cargar la analítica de la clínica." };
+  }
 }

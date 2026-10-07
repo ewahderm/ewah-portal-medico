@@ -10,6 +10,7 @@ import { formatoFecha } from "@/lib/medio-ambiente/fecha-local";
 import { obtenerReporteInvima } from "@/lib/reportes/actions-regulatorios";
 import type { InsumoInvima } from "@/lib/reportes/invima";
 import { ExportarXlsxLink } from "../../_components/exportar-xlsx-link";
+import { exigirExito } from "@/lib/forms/resultado";
 
 export function InvimaReport({ puedeExportar }: { puedeExportar: boolean }) {
   const [filas, setFilas] = useState<InsumoInvima[] | null>(null);
@@ -20,7 +21,7 @@ export function InvimaReport({ puedeExportar }: { puedeExportar: boolean }) {
     setError(null);
     startTransition(async () => {
       try {
-        setFilas(await obtenerReporteInvima());
+        setFilas(exigirExito(await obtenerReporteInvima()));
       } catch (reason) {
         setError(reason instanceof Error ? reason.message : "No se pudo cargar el reporte INVIMA.");
       }

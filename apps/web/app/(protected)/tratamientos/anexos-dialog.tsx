@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dialog";
 import { Combobox } from "@/components/ui/combobox";
 import { UpsellPlan } from "../_components/upsell-plan";
+import { exigirExito } from "@/lib/forms/resultado";
 
 type Anexo = {
   id: string;
@@ -83,7 +84,7 @@ export function AnexosDialog({
         // image/*, un PDF se sube igual que antes.
         const archivo = formData.get("archivo");
         if (archivo instanceof File) formData.set("archivo", await comprimirImagen(archivo));
-        await subirAnexoTratamiento(tratamientoId, categoria, formData);
+        exigirExito(await subirAnexoTratamiento(tratamientoId, categoria, formData));
         setObservaciones("");
         cargar();
       } catch (e) {
@@ -96,7 +97,7 @@ export function AnexosDialog({
     setError(null);
     startTransition(async () => {
       try {
-        await eliminarAnexoTratamiento(id, storagePath);
+        exigirExito(await eliminarAnexoTratamiento(id, storagePath));
         cargar();
       } catch (e) {
         setError(e instanceof Error ? e.message : "No se pudo eliminar el anexo.");

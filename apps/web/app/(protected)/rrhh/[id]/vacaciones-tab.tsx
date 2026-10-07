@@ -30,6 +30,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { exigirExito } from "@/lib/forms/resultado";
 
 type Vacaciones = Awaited<ReturnType<typeof listarVacacionesEmpleado>>[number];
 type Acumulado = Awaited<ReturnType<typeof calcularDiasAcumuladosVacaciones>>;
@@ -43,7 +44,7 @@ function NuevasVacacionesDialog({ empleadoId, onCreado }: { empleadoId: string; 
     setError(null);
     startTransition(async () => {
       try {
-        await crearVacaciones(empleadoId, formData);
+        exigirExito(await crearVacaciones(empleadoId, formData));
         onCreado();
         toast.add({ title: "Vacaciones registradas", type: "success" });
         setOpen(false);
@@ -114,7 +115,7 @@ export function VacacionesTab({ empleadoId, puedeCrear }: { empleadoId: string; 
     }
     setConfirmandoId(null);
     try {
-      await eliminarVacaciones(id, empleadoId);
+      exigirExito(await eliminarVacaciones(id, empleadoId));
       cargar();
       toast.add({ title: "Registro eliminado", type: "success" });
     } catch (e) {

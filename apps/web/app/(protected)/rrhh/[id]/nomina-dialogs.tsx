@@ -35,6 +35,7 @@ import {
 import { Combobox } from "@/components/ui/combobox";
 import { TIPO_PERIODO_NOMINA } from "@/lib/rrhh/constantes";
 import { formatoPorcentaje } from "@/lib/format";
+import { exigirExito } from "@/lib/forms/resultado";
 
 // ============================================================
 // Nómina — desglose editable (compartido entre "generar" y "editar")
@@ -173,7 +174,7 @@ export function GenerarNominaDialog({ empleadoId, onCreado }: { empleadoId: stri
     setError(null);
     startCalculo(async () => {
       try {
-        const resultado = await calcularComprobanteNominaPreview(empleadoId, formData);
+        const resultado = exigirExito(await calcularComprobanteNominaPreview(empleadoId, formData));
         setDesglose(resultado);
       } catch (e) {
         setError(e instanceof Error ? e.message : "No se pudo calcular.");
@@ -185,7 +186,7 @@ export function GenerarNominaDialog({ empleadoId, onCreado }: { empleadoId: stri
     setError(null);
     startGuardar(async () => {
       try {
-        await generarComprobanteNomina(empleadoId, formData);
+        exigirExito(await generarComprobanteNomina(empleadoId, formData));
         onCreado();
         toast.add({ title: "Comprobante guardado como borrador", type: "success" });
         setOpen(false);
@@ -318,7 +319,7 @@ export function EditarNominaDialog({ comprobante, empleadoId, onGuardado }: { co
     setError(null);
     startTransition(async () => {
       try {
-        await editarComprobanteNomina(comprobante.id, empleadoId, formData);
+        exigirExito(await editarComprobanteNomina(comprobante.id, empleadoId, formData));
         onGuardado();
         toast.add({ title: "Borrador actualizado", type: "success" });
         setOpen(false);
@@ -415,7 +416,7 @@ export function GenerarHonorariosDialog({ empleadoId, onCreado }: { empleadoId: 
     setError(null);
     startCalculo(async () => {
       try {
-        const resultado = await calcularComprobanteHonorariosPreview(empleadoId, formData);
+        const resultado = exigirExito(await calcularComprobanteHonorariosPreview(empleadoId, formData));
         setDesglose(resultado);
       } catch (e) {
         setError(e instanceof Error ? e.message : "No se pudo calcular.");
@@ -427,7 +428,7 @@ export function GenerarHonorariosDialog({ empleadoId, onCreado }: { empleadoId: 
     setError(null);
     startGuardar(async () => {
       try {
-        await generarComprobanteHonorarios(empleadoId, formData);
+        exigirExito(await generarComprobanteHonorarios(empleadoId, formData));
         onCreado();
         toast.add({ title: "Comprobante guardado como borrador", type: "success" });
         setOpen(false);
@@ -520,7 +521,7 @@ export function EditarHonorariosDialog({ comprobante, empleadoId, onGuardado }: 
     setError(null);
     startTransition(async () => {
       try {
-        await editarComprobanteHonorarios(comprobante.id, empleadoId, formData);
+        exigirExito(await editarComprobanteHonorarios(comprobante.id, empleadoId, formData));
         onGuardado();
         toast.add({ title: "Borrador actualizado", type: "success" });
         setOpen(false);
@@ -580,8 +581,8 @@ export function AnularComprobanteDialog({
     setError(null);
     startTransition(async () => {
       try {
-        if (esLaboral) await anularComprobanteNomina(id, empleadoId, formData);
-        else await anularComprobanteHonorarios(id, empleadoId, formData);
+        if (esLaboral) exigirExito(await anularComprobanteNomina(id, empleadoId, formData));
+        else exigirExito(await anularComprobanteHonorarios(id, empleadoId, formData));
         onAnulado();
         toast.add({ title: "Comprobante anulado", type: "success" });
         setOpen(false);

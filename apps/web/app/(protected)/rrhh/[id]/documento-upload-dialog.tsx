@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { Combobox } from "@/components/ui/combobox";
 import { toItems, type Opcion } from "@/lib/forms/opciones";
+import { exigirExito } from "@/lib/forms/resultado";
 
 export function DocumentoUploadDialog({
   empleadoId,
@@ -40,7 +41,7 @@ export function DocumentoUploadDialog({
     setError(null);
     startTransition(async () => {
       try {
-        await subirDocumentoEmpleado(empleadoId, formData);
+        exigirExito(await subirDocumentoEmpleado(empleadoId, formData));
         onSubido();
         toast.add({ title: "Documento guardado", type: "success" });
         setOpen(false);
