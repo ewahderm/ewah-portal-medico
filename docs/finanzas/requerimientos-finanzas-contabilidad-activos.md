@@ -1,6 +1,7 @@
 # Requerimientos: Flujo de caja, contabilidad automatizada (PUC) y activos fijos
 
-Fecha: 2026-10-07. Estado: **planeación, sin desarrollo**. Este documento es la base para
+Fecha: 2026-10-07 (decisiones del usuario incorporadas el mismo día, §15). Estado:
+**planeación, sin desarrollo**. Este documento es la base para
 construir el módulo por fases (como Habilitación y SG-SST). Nada de lo aquí descrito existe
 todavía en el código; las tablas y funciones son la especificación que se convertirá en
 migraciones a partir de la **0089** (la 0081 es un hueco: no se reutiliza).
@@ -161,7 +162,16 @@ tasas `numeric(18,6)`. Sin políticas de delete. Las vistas son `security_invoke
   (catálogo `bancos` de RRHH), `ultimos_digitos`, `sede_id` (opcional, cajas por sede),
   `activa`. Semilla al activar el módulo: Efectivo COP y Banco principal.
 - **`medios_pago`** (existente) + columnas: `fin_cuenta_id` (a qué cuenta llega),
-  `es_credito bool` (genera CxC), `es_pasarela bool` + `pasarela` (`bold`).
+  `es_credito bool` (genera CxC), `es_pasarela bool` + `pasarela` (`bold`, u otra),
+  `aplica_a` (`ingresos`, `egresos`, `ambos`).
+- **`fin_tarifas_medio_pago`** (decisión del usuario: lo que cobra Bold u otro medio se
+  **personaliza por medio de pago**, para cobros y para compras): `clinica_id`,
+  `medio_pago_id`, `vigente_desde` (histórico: una tarifa nueva no cambia lo ya liquidado),
+  `porcentaje_comision`, `valor_fijo_comision`, `porcentaje_iva_comision` (19 % por
+  defecto), `porcentaje_retefuente`, `porcentaje_reteiva` (sobre el IVA de la venta),
+  `porcentaje_reteica`, `recargo_internacional`, `dias_habiles_abono` (1 para Bold),
+  `observacion`. Con ella la BD calcula el **neto esperado** de cada cobro y la liquidación
+  compara contra lo que realmente llegó.
 
 ### 4.4 Movimientos (vista administrativa)
 - **`fin_movimientos`**: `clinica_id`, `sede_id`, `fecha date`, `tipo` (`ingreso`, `egreso`,
@@ -244,12 +254,24 @@ tasas `numeric(18,6)`. Sin políticas de delete. Las vistas son `security_invoke
   sale en el flujo de caja, categoría Habilitación & SGSST o mantenimiento),
   `evidencias` (archivos en storage `finanzas/activos/<activo>/…`).
 
-### 4.10 Configuración contable por clínica
-- **`cont_config`**: `clinica_id` pk, `fecha_activacion`, `responsable_iva bool`,
-  `agente_retenedor bool`, `regimen` (`ordinario`, `simple`, `persona_natural`),
-  `grupo_niif` (2/3), `depreciacion_inmediata_50uvt bool`, `moneda_funcional` ('COP'),
-  `reporta_supersalud bool`, `cuenta_ingreso_servicios` (4165 por defecto),
-  `cuenta_ingreso_gravado` (para estética con IVA).
+### 4.10 Configuración tributaria y contable
+Decisión del usuario: **el régimen tributario se configura en "Datos básicos de la clínica"**
+(diálogo existente de Parámetros, `datos-basicos-clinica-dialog.tsx`), no en una pantalla
+aparte del módulo.
+- **`clinicas`** (existente) + columnas editables en Datos básicos: `regimen_tributario`
+  (`ordinario`, `simple`, `persona_natural_no_responsable`, `especial`),
+  `responsable_iva bool`, `agente_retenedor bool`, `autorretenedor bool`,
+  `gran_contribuyente bool`, `dv` (dígito de verificación del NIT), `grupo_niif` (2/3).
+- **`cont_config`** (solo lo contable, en `/contabilidad`): `clinica_id` pk,
+  `fecha_activacion`, `depreciacion_inmediata_50uvt bool`, `moneda_funcional` ('COP'),
+  `cuenta_ingreso_servicios` (4165 por defecto), `cuenta_ingreso_gravado` (estética con IVA).
+- **Reporte a la Supersalud: se determina según la norma, no con una casilla.** Una
+  función `fn_cont_reportes_supersalud_aplicables()` decide qué formatos (FT001, FT002,
+  FT003, FT004…) le aplican a la clínica a partir de lo que ya existe en Habilitación
+  (`hab_perfil_prestador.naturaleza`, `grupo_supersalud`, tipo de prestador; los
+  profesionales independientes quedan fuera mientras la norma no diga lo contrario) y las
+  obligaciones FT00x ya sembradas en `hab_obligaciones_catalogo`. La tabla de reglas queda
+  versionada y marcada "por cotejar" hasta leer la circular vigente.
 
 ---
 
@@ -265,7 +287,7 @@ tarjeta del socio, o 2205/2335 si queda por pagar). Confianza [CONOC] salvo nota
 | Nómina | 5105 Gastos de personal (contrapartida 2505/2510–2525) | 510506 sueldos | gasto (desde nómina aprobada) |
 | Planilla (seguridad social) | 5105 (aportes patronales) / 2370 (retenido al empleado) | 510568–510578 | pago_tercero |
 | Servicios Públicos | 5135 Servicios | 513525 acueducto, 513530 energía, 513535 teléfono/internet | gasto |
-| Prepagada | 5105 (beneficio a empleados) o **1325 CxC socios** si es del socio | 510584 (por confirmar) | gasto (depende de §14) |
+| Prepagada | **5105 Gastos de personal** — los socios son empleados a término indefinido, así que es un beneficio laboral (tercero = el empleado-socio) | 510584 o 510595 (por confirmar) | gasto; marca si es pago no constitutivo de salario (art. 128 CST) para no afectar la base de aportes |
 | Gasolina | 5195 Diversos | 519535 combustibles y lubricantes | gasto |
 | IA & Redes Sociales | 5235 Servicios (ventas) para pauta / 5135 para suscripciones | 523560 publicidad; 513520 procesamiento de datos | gasto |
 | Software & Página WEB | 5135 (SaaS, hosting) / 1635 Licencias si > 1 año | 513520 | gasto o intangible |
@@ -274,8 +296,11 @@ tarjeta del socio, o 2205/2335 si queda por pagar). Confianza [CONOC] salvo nota
 | Contabilidad | 5110 Honorarios | 511030 | gasto |
 | Habilitación & SGSST | 5140 (trámites) / 5110 (asesoría) / 5145 (mantenimiento) | 514015, 511035 | gasto |
 | Compra Activos | 15xx según clase (1516, 1524, 1528, 1532) | — | activo_fijo (abre la hoja de vida) |
-| Cuota Aptos | **Por definir** (§14): 5135 administración P.H. / 15xx anticipo de inmueble / 1325 CxC socio | — | — |
 | Otros Gastos | 5195 Diversos | 519595 | gasto |
+| **Préstamo a socio** (sale plata) | **1325** Cuentas por cobrar a socios | 132505 / 132510 | `prestamo_socio`: crea CxC al socio; no es gasto |
+| **Préstamo de socio** (entra plata) | **2355** Deudas con accionistas o socios | 235505 | `prestamo_socio`: crea CxP al socio; no es ingreso |
+
+"Cuota Aptos" **se elimina** (decisión del usuario).
 
 Cuentas automáticas: ingresos por servicios **4165** (nombre a confirmar; estética gravada
 quizá 4170) · comisiones Bold **5305** (530515) · retenciones que le practican a la clínica
@@ -300,7 +325,7 @@ llamada por trigger after insert en `fin_movimientos`; el cliente nunca manda l�
 | R5 | Tratamiento a crédito o en cuotas | D 1305 (tercero paciente) / C 4165; crea CxC con su plan de cuotas |
 | R6 | Abono de paciente | D cuenta de dinero / C 1305 |
 | R7 | Cobro con Bold (pendiente) | D **cuenta pasarela por liquidar** (1345/1380) / C 4165 (o C 1305 si abona una CxC); estado `pendiente_liquidacion`; fecha esperada = `fn_hab_sumar_dias_habiles(fecha, 1)` |
-| R8 | **Liquidación Bold** | D banco (neto) + D 5305 comisión + D IVA comisión (5305 o 2408) + D 1355 retenciones + D 5305 `diferencia_sin_detalle` / C cuenta pasarela (bruto). Si el usuario solo digita el neto, toda la diferencia va a comisión (lo pedido) con aviso "sin detalle" |
+| R8 | **Liquidación Bold** | D banco (neto) + D 5305 comisión + D IVA comisión (5305 o 2408) + D 1355 retenciones + D 5305 `diferencia_sin_detalle` / C cuenta pasarela (bruto). Comisión, IVA y retenciones se **calculan con la tarifa del medio de pago** vigente en la fecha del cobro; el usuario confirma el neto real y, si no coincide con el esperado, la diferencia queda en `diferencia_sin_detalle` (gasto financiero) con aviso |
 | R9 | Compra en divisa | Igual que R1 con `valor_cop = monto × tasa`; la línea guarda moneda y monto original |
 | R10 | Factura DIAN causada (por pagar) | D categoría (+ IVA según config) / C 2205 o 2335 (tercero proveedor); CxP |
 | R11 | Pago de factura causada | D 2205/2335 / C cuenta de dinero; abono a la CxP |
@@ -310,6 +335,10 @@ llamada por trigger after insert en `fin_movimientos`; el cliente nunca manda l�
 | R15 | Tratamiento anulado o corregido | Reverso del ingreso/CxC; la corrección genera el nuevo |
 | R16 | Transferencia entre cuentas (p. ej. efectivo a banco) | D cuenta destino / C cuenta origen |
 | R17 | Nómina aprobada | Propone la causación (D 5105 / C 2505, 2370…) y el pago; el usuario confirma |
+| R18 | **Préstamo a socio** | D 1325 (tercero socio) / C cuenta de dinero; crea CxC al socio con plan de devolución opcional. Aviso: el art. 35 ET presume un interés mínimo sobre préstamos de la sociedad a sus socios — el contador decide si se causa |
+| R19 | **Préstamo de socio a la clínica** | D cuenta de dinero / C 2355 (tercero socio); crea CxP al socio |
+| R20 | Devolución de un préstamo | Abono a la CxC o CxP correspondiente (como R3/R6) |
+| R21 | Egreso pagado con un medio que cobra comisión (p. ej. tarjeta en una compra) | Si el medio tiene tarifa para egresos, además del gasto se registra la comisión (D 5305 / C cuenta) calculada con `fin_tarifas_medio_pago` |
 
 Validaciones: periodo abierto; categoría activa con cuenta PUC válida; tasa obligatoria y
 TRM sugerida para USD; si la tasa difiere de la TRM en más de un umbral (p. ej. 3 %), pedir
@@ -404,9 +433,14 @@ en SISPRO/PISIS). El diseño deja lista la base:
   (+ proveedor, soporte opcional). Sin palabras contables.
 - **Movimientos**: lista con filtros (fecha, categoría, cuenta, sede), anular con motivo.
 - **Por cobrar / Por pagar**: documentos con saldo, cuotas, registrar abono, recordatorio.
-- **Socios**: cuánto se le debe a cada socio, historial, registrar reembolso.
-- **Bold**: cobros pendientes por día esperado de abono; "Liquidar" con neto (y detalle
-  opcional de comisión, IVA y retenciones, o adjuntar el reporte de Bold).
+- **Socios**: por socio, cuánto le debe la clínica (tarjeta y préstamos del socio) y cuánto
+  le debe él a la clínica (préstamos a socio), historial, registrar reembolso, préstamo o
+  devolución.
+- **Bold**: cobros pendientes por día esperado de abono, con el **neto esperado** según la
+  tarifa del medio; "Liquidar" confirma el neto real (y adjunta el reporte de Bold).
+- **Parámetros → Medios de pago**: por medio, cuenta destino, si es crédito o pasarela y su
+  **tarifa** (comisión %, valor fijo, IVA de la comisión, retenciones, días de abono) con
+  vigencia; un simulador muestra "de $100.000 te llegan $X".
 - **Facturas DIAN**: importar (arrastrar XML/ZIP/Excel), resultado de la carga, bandeja por
   clasificar.
 - **Activos**: inventario por clase/sede con valor en libros, hoja de vida, cronograma de
@@ -426,7 +460,7 @@ en SISPRO/PISIS). El diseño deja lista la base:
 `RegistrarMovimientoDialog` (pasos), `SelectorCategoria` (tarjetas), `SelectorCuenta`,
 `CampoMonedaTasa` (TRM sugerida + justificación), `ImportadorFacturasDian`
 (carga múltiple con subida firmada + tabla de resultados), `BandejaFacturas`,
-`LiquidarBoldDialog`, `AbonoDialog`, `TableroFinanzas` (KPIs + gráficos según la guía de
+`LiquidarBoldDialog`, `TarifaMedioPagoDialog`, `PrestamoSocioDialog`, `AbonoDialog`, `TableroFinanzas` (KPIs + gráficos según la guía de
 visualización), `LibroDiario`, `AsientoManualForm`, `EstadoResultados`, `BalanceGeneral`,
 `CierreMensual`, `HojaVidaActivo`, `CronogramaMantenimiento`, `RegistrarMantenimientoDialog`.
 Mismos patrones de la app: Base UI (Combobox, Dialog, Tabs), toasts, estado congelado tras
@@ -474,9 +508,9 @@ sesiones: hoy la siguiente libre es 0089).
 | Fase | Contenido | Depende de |
 |---|---|---|
 | **F0 · Decisiones** | Respuestas del contador (§14); fijar mapeo de categorías y configuración | — |
-| **F1 · Cimientos** | Módulos `finanzas` y `contabilidad`, plan/permiso, rol Contador; `cont_puc` (semilla), `fin_categorias` + mapeo, `fin_cuentas`, `fin_socios`, `cont_config`, ampliación de `medios_pago` y `proveedores`; pantalla de configuración inicial | F0 |
+| **F1 · Cimientos** | Módulos `finanzas` y `contabilidad`, plan/permiso, rol Contador; `cont_puc` (semilla), `fin_categorias` + mapeo, `fin_cuentas`, `fin_socios`, `cont_config`, régimen tributario en Datos básicos, ampliación de `medios_pago` (con `fin_tarifas_medio_pago`) y `proveedores`; pantalla de configuración inicial | F0 |
 | **F2 · Movimientos y motor de asientos** | `fin_movimientos`, `cont_periodos`, `cont_asientos`/`lineas` con cuadre diferido; R1, R2, R9, R14, R16; vista administrativa "Registrar" e "Inicio"; libro diario básico | F1 |
-| **F3 · Por cobrar, por pagar y socios** | `fin_documentos`, cuotas, `fin_abonos`; R3, R5, R6, R10, R11; pantallas de CxC, CxP y Socios | F2 |
+| **F3 · Por cobrar, por pagar y socios** | `fin_documentos`, cuotas, `fin_abonos`; R3, R5, R6, R10, R11, R18–R20; pantallas de CxC, CxP y Socios (tarjeta y préstamos) | F2 |
 | **F4 · Ingresos desde tratamientos y Bold** | Contabilización automática de tratamientos (R4, R5, R15) desde la fecha de activación + saldos iniciales; R7, R8, `fin_liquidaciones_pasarela`; pantalla Bold | F3 |
 | **F5 · Facturas DIAN** | Parser XML/ZIP/Excel, `fin_facturas_compra`, `fin_importaciones`, bandeja y clasificación | F3 |
 | **F6 · Activos fijos** | `act_activos`, R12, `act_depreciaciones`, hoja de vida (PDF) | F2 |
@@ -492,8 +526,11 @@ Criterios de aceptación transversales:
 4. Otra clínica no ve ni modifica nada; sin permiso de `contabilidad` no se ven asientos.
 5. Un mes cerrado no cambia; reabrirlo queda auditado con motivo.
 6. Importar dos veces la misma factura no la duplica.
-7. Pagar con la tarjeta del socio deja la deuda con ese socio, visible hasta reembolsarla.
-8. La liquidación de Bold deja el banco con el neto y la diferencia como gasto financiero.
+7. Pagar con la tarjeta del socio deja la deuda con ese socio, visible hasta reembolsarla;
+   un préstamo a o de un socio queda como cuenta por cobrar o por pagar, nunca como gasto o
+   ingreso.
+8. La liquidación de Bold deja el banco con el neto y la diferencia como gasto financiero;
+   el neto esperado sale de la tarifa configurada en el medio de pago.
 
 ---
 
@@ -514,6 +551,9 @@ Criterios de aceptación transversales:
 ---
 
 ## 14. Preguntas para el contador / la clínica (bloquean F0)
+
+Respondidas por el usuario (ver §15): 4 (Cuota Aptos), 5 (Prepagada), régimen (1, se
+configura) y Supersalud (2, según la norma). Siguen abiertas las demás.
 
 1. Forma jurídica y régimen (SAS ordinaria, SIMPLE, persona natural); grupo NIIF (2 o 3);
    ¿agente retenedor?
@@ -537,3 +577,19 @@ Criterios de aceptación transversales:
 12. ¿Desde qué fecha arranca la contabilidad en EWAH y con qué saldos iniciales (balance de
     apertura)?
 13. ¿Los gastos se registran por sede? ¿Hay gastos compartidos que deban repartirse?
+
+---
+
+## 15. Decisiones del usuario (2026-10-07)
+
+1. **"Cuota Aptos" se elimina.** En su lugar: movimientos de **préstamo a socio** (D 1325)
+   y **préstamo de socio** (C 2355), con devoluciones como abonos (R18–R20).
+2. **Prepagada = beneficio a los socios, que son empleados a término indefinido**: gasto de
+   personal (5105) con el socio como tercero-empleado; queda por confirmar con el contador si
+   se pacta como pago no constitutivo de salario.
+3. **Régimen tributario configurable en "Datos básicos de la clínica"** (§4.10).
+4. **FT001, FT002… según la norma**: la aplicabilidad la calcula el sistema con el perfil de
+   Habilitación y las obligaciones ya sembradas, no una casilla manual (§4.10).
+5. **Lo que cobra Bold (u otro medio) es personalizable por medio de pago**, para cobros y
+   compras, con vigencia (`fin_tarifas_medio_pago`, R8 y R21). Pendiente: la imagen con la
+   tarifa actual de Bold para sembrar el ejemplo.
