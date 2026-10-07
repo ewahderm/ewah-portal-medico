@@ -21,12 +21,16 @@ select t.ok(
    from clinicas where nombre = 'Clínica A Legal'),
   'el administrador guarda ambos nombres y el código de su clínica'
 );
+-- La clínica ajena no se ve con el rol del administrador A (RLS): se lee como
+-- superusuario y se vuelve al rol de A (el sub del JWT sigue en la sesión).
+reset role;
 select t.ok(
   (select nombre = 'Clínica de prueba perfil 0080'
           and codigo_actividad_economica = '3862101'
    from clinicas where id = '00000000-0000-0000-0000-000000000080'),
   'guardar el perfil de A no altera otra clínica'
 );
+set role authenticated;
 select t.debe_fallar(
   $$select fn_actualizar_perfil_propia_clinica(' ', 'Marca', '3862101')$$,
   'nombre legal'

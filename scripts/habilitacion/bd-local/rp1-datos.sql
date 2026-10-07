@@ -47,12 +47,24 @@ select
   (select id from paises where codigo = 'CO')
 from clinicas c where c.nombre = 'Clinica B';
 
+-- Desde 0045 todo tratamiento cuelga de una atención (atencion_id not null).
+insert into atenciones (id, clinica_id, paciente_id, profesional_id, fecha)
+select a.id::uuid, c.id, a.paciente::uuid, u.id, a.fecha::date
+from (values
+  ('00000000-0000-0000-0000-000000000341', '00000000-0000-0000-0000-000000000321', '2025-01-10', 'Clinica A', 'Admin A'),
+  ('00000000-0000-0000-0000-000000000342', '00000000-0000-0000-0000-000000000322', '2025-02-10', 'Clinica A', 'Admin A'),
+  ('00000000-0000-0000-0000-000000000343', '00000000-0000-0000-0000-000000000321', '2025-02-12', 'Clinica A', 'Admin A'),
+  ('00000000-0000-0000-0000-000000000344', '00000000-0000-0000-0000-000000000323', '2025-01-11', 'Clinica B', 'Admin B')
+) as a(id, paciente, fecha, clinica, usuario)
+join clinicas c on c.nombre = a.clinica
+join usuarios u on u.clinica_id = c.id and u.nombre = a.usuario;
+
 insert into tratamientos (
-  id, clinica_id, paciente_id, tipo_tratamiento_id, profesional_id,
+  id, clinica_id, paciente_id, tipo_tratamiento_id, profesional_id, atencion_id,
   fecha, costo, sede_id, medio_pago_id, created_by
 )
 select
-  '00000000-0000-0000-0000-000000000331', c.id, p.id, tt.id, u.id,
+  '00000000-0000-0000-0000-000000000331', c.id, p.id, tt.id, u.id, '00000000-0000-0000-0000-000000000341',
   '2025-01-10', 400, s.id, mp.id, u.id
 from clinicas c
 join pacientes p on p.id = '00000000-0000-0000-0000-000000000321'
@@ -62,11 +74,11 @@ join sedes s on s.clinica_id = c.id
 join medios_pago mp on mp.id = '00000000-0000-0000-0000-000000000311'
 where c.nombre = 'Clinica A';
 insert into tratamientos (
-  id, clinica_id, paciente_id, tipo_tratamiento_id, profesional_id,
+  id, clinica_id, paciente_id, tipo_tratamiento_id, profesional_id, atencion_id,
   fecha, costo, sede_id, medio_pago_id, created_by
 )
 select
-  '00000000-0000-0000-0000-000000000332', c.id, p.id, tt.id, u.id,
+  '00000000-0000-0000-0000-000000000332', c.id, p.id, tt.id, u.id, '00000000-0000-0000-0000-000000000342',
   '2025-02-10', null, s.id, mp.id, u.id
 from clinicas c
 join pacientes p on p.id = '00000000-0000-0000-0000-000000000322'
@@ -76,12 +88,12 @@ join sedes s on s.clinica_id = c.id
 join medios_pago mp on mp.id = '00000000-0000-0000-0000-000000000311'
 where c.nombre = 'Clinica A';
 insert into tratamientos (
-  id, clinica_id, paciente_id, tipo_tratamiento_id, profesional_id,
+  id, clinica_id, paciente_id, tipo_tratamiento_id, profesional_id, atencion_id,
   fecha, costo, anulado, anulado_motivo, anulado_por, anulado_en,
   sede_id, medio_pago_id, created_by
 )
 select
-  '00000000-0000-0000-0000-000000000333', c.id, p.id, tt.id, u.id,
+  '00000000-0000-0000-0000-000000000333', c.id, p.id, tt.id, u.id, '00000000-0000-0000-0000-000000000343',
   '2025-02-12', 900, true, 'Fixture de prueba', u.id, now(),
   s.id, mp.id, u.id
 from clinicas c
@@ -92,11 +104,11 @@ join sedes s on s.clinica_id = c.id
 join medios_pago mp on mp.id = '00000000-0000-0000-0000-000000000311'
 where c.nombre = 'Clinica A';
 insert into tratamientos (
-  id, clinica_id, paciente_id, tipo_tratamiento_id, profesional_id,
+  id, clinica_id, paciente_id, tipo_tratamiento_id, profesional_id, atencion_id,
   fecha, costo, sede_id, medio_pago_id, created_by
 )
 select
-  '00000000-0000-0000-0000-000000000334', c.id, p.id, tt.id, u.id,
+  '00000000-0000-0000-0000-000000000334', c.id, p.id, tt.id, u.id, '00000000-0000-0000-0000-000000000344',
   '2025-01-11', 2000, s.id, mp.id, u.id
 from clinicas c
 join pacientes p on p.id = '00000000-0000-0000-0000-000000000323'
