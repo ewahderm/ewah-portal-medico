@@ -4,14 +4,12 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Calendar,
-  dateFnsLocalizer,
   Views,
   type View,
   type SlotInfo,
   type EventProps,
 } from "react-big-calendar";
-import { format, parse, startOfWeek, getDay } from "date-fns";
-import { es } from "date-fns/locale";
+import { format } from "date-fns";
 import {
   Clock,
   CircleCheck,
@@ -29,29 +27,10 @@ import { CitaDialog } from "./cita-dialog";
 import { redondearA15 } from "@/lib/citas/horarios";
 import { nombreCompleto, ESTADO_LABEL, type CitaRow } from "./tipos";
 import { colorPorProfesional } from "./colores-profesional";
+import { localizerEs, mensajesCalendario } from "@/components/calendario/calendario-base";
 
-const localizer = dateFnsLocalizer({
-  format,
-  parse,
-  startOfWeek: (date: Date) => startOfWeek(date, { locale: es }),
-  getDay,
-  locales: { es },
-});
-
-const MENSAJES = {
-  today: "Hoy",
-  previous: "Atrás",
-  next: "Siguiente",
-  month: "Mes",
-  week: "Semana",
-  day: "Día",
-  agenda: "Agenda",
-  date: "Fecha",
-  time: "Hora",
-  event: "Cita",
-  noEventsInRange: "No hay citas en este rango.",
-  showMore: (total: number) => `+${total} más`,
-};
+const localizer = localizerEs;
+const MENSAJES = mensajesCalendario({ evento: "Cita", sinEventos: "No hay citas en este rango." });
 
 // Insignia de estado (ícono en círculo) que se dibuja sobre cada evento y
 // se reutiliza tal cual en la leyenda de "Estado" — una sola tabla para no

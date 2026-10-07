@@ -6,6 +6,9 @@ import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { FEATURE_GESTION, MODULO_HABILITACION } from "@/lib/habilitacion/constantes";
 import {
+  DOCUMENTO_CATALOGO_SELECT,
+  OBLIGACION_CATALOGO_SELECT,
+  OCURRENCIA_SELECT,
   FILA_CRITERIO_SELECT,
   PERFIL_SELECT,
   SERVICIO_SEDE_SELECT,
@@ -13,6 +16,14 @@ import {
   type ClinicaRegulatoria,
   type ConteoCriterios,
   type DetalleServicioInput,
+  type DocumentoCatalogo,
+  type DocumentoClinica,
+  type HitoTramite,
+  type NovedadCatalogo,
+  type NovedadReportada,
+  type ObligacionClinica,
+  type Ocurrencia,
+  type SuficienciaRegistro,
   type FilaCriterio,
   type FilaProgreso,
   type PerfilPrestador,
@@ -28,15 +39,19 @@ import {
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 
 // cache(): el layout y la página de cada sección piden lo mismo en el
-// mismo request; así son 3 RPC por request, no 6.
+// mismo request; así son 5 RPC por request, no 10.
 export const getAccesoHabilitacion = cache(async (): Promise<AccesoHabilitacion> => {
   const supabase = await createClient();
-  const [{ data: puedeVer }, { data: puedeEditar }, { data: gestion }] = await Promise.all([
-    supabase.rpc("has_permission", { modulo_code: MODULO_HABILITACION, permiso_code: "VIEW" }),
-    supabase.rpc("has_permission", { modulo_code: MODULO_HABILITACION, permiso_code: "EDIT" }),
-    supabase.rpc("has_entitlement", { modulo_code: MODULO_HABILITACION, feature_code: FEATURE_GESTION }),
-  ]);
-  return { puedeVer: !!puedeVer, puedeEditar: !!puedeEditar, gestion: !!gestion };
+  const permiso = (permiso_code: string) => supabase.rpc("has_permission", { modulo_code: MODULO_HABILITACION, permiso_code });
+  const [{ data: puedeVer }, { data: puedeEditar }, { data: puedeCrear }, { data: puedeAnular }, { data: gestion }] =
+    await Promise.all([
+      permiso("VIEW"),
+      permiso("EDIT"),
+      permiso("CREATE"),
+      permiso("VOID"),
+      supabase.rpc("has_entitlement", { modulo_code: MODULO_HABILITACION, feature_code: FEATURE_GESTION }),
+    ]);
+  return { puedeVer: !!puedeVer, puedeEditar: !!puedeEditar, puedeCrear: !!puedeCrear, puedeAnular: !!puedeAnular, gestion: !!gestion };
 });
 
 export async function getPerfilPrestador(supabase: Supabase): Promise<PerfilPrestador | null> {
@@ -263,4 +278,112 @@ export async function getCriteriosEstandar(
 export async function getUsuariosClinica(supabase: Supabase): Promise<UsuarioClinica[]> {
   const { data } = await supabase.from("usuarios").select("id, nombre").eq("activo", true).order("nombre");
   return (data ?? []) as UsuarioClinica[];
+}
+
+// ============================================================
+// Documentos y trámite (0068, fase F7). `null` = migración sin aplicar.
+// ============================================================
+export async function getDocumentosClinica(
+  supabase: Supabase,
+): Promise<{ catalogo: DocumentoCatalogo[]; renglones: DocumentoClinica[] } | null> {
+  const [catalogo, renglones] = await Promise.all([
+    supabase.from("hab_documentos_catalogo").select(DOCUMENTO_CATALOGO_SELECT).order("orden"),
+    supabase
+      .from("hab_documentos_clinica")
+      .select(
+        "id, documento_catalogo_id, nombre_adicional, sede_id, servicio_habilitado_id, no_aplica, no_aplica_justificacion, observaciones, versiones:hab_documento_versiones(id, documento_id, version, nombre_archivo, mime, tamano_bytes, fecha_expedicion, fecha_vencimiento, es_financiero, created_by, created_at)",
+      )
+      .order("created_at"),
+  ]);
+  if (renglones.error) {
+    if (!["PGRST205", "42P01"].includes(renglones.error.code ?? "")) console.error("[habilitacion] hab_documentos_clinica", renglones.error);
+    return null;
+  }
+  return {
+    catalogo: (catalogo.data ?? []) as unknown as DocumentoCatalogo[],
+    renglones: ((renglones.data ?? []) as unknown as DocumentoClinica[]).map((r) => ({
+      ...r,
+      versiones: [...(r.versiones ?? [])].sort((a, b) => b.version - a.version),
+    })),
+  };
+}
+
+export async function getHitosTramite(supabase: Supabase): Promise<HitoTramite[]> {
+  const { data } = await supabase
+    .from("hab_tramite_hitos")
+    .select("id, tipo, fecha, numero, observacion, hay_incumplimientos_subsanables, subsanar_hasta, nombre_archivo, anulado, anulado_motivo, created_by, created_at")
+    .order("fecha", { ascending: false })
+    .order("created_at", { ascending: false });
+  return (data ?? []) as HitoTramite[];
+}
+
+// Solo devuelve filas a quien tiene EDIT (RLS de 0068: es financiero).
+export async function getSuficiencia(supabase: Supabase): Promise<SuficienciaRegistro[]> {
+  const { data } = await supabase
+    .from("hab_suficiencia_patrimonial")
+    .select("id, fecha_corte, patrimonio_total, capital, obligaciones_mercantiles_360, obligaciones_laborales_360, pasivo_corriente, observacion, anulado, anulado_motivo, created_at")
+    .order("fecha_corte", { ascending: false })
+    .order("created_at", { ascending: false });
+  return ((data ?? []) as SuficienciaRegistro[]).map((r) => ({
+    ...r,
+    patrimonio_total: Number(r.patrimonio_total),
+    capital: Number(r.capital),
+    obligaciones_mercantiles_360: Number(r.obligaciones_mercantiles_360),
+    obligaciones_laborales_360: Number(r.obligaciones_laborales_360),
+    pasivo_corriente: Number(r.pasivo_corriente),
+  }));
+}
+
+// ============================================================
+// Obligaciones y calendario (0069, fase F8). Todos los planes leen (el
+// calendario y las obligaciones se ven en Gratis en solo lectura).
+// ============================================================
+export async function getObligacionesClinica(supabase: Supabase): Promise<ObligacionClinica[] | null> {
+  const { data, error } = await supabase
+    .from("hab_obligaciones_clinica")
+    .select(
+      `id, obligacion_id, aplica_segun_perfil, activa, origen, confirmada, justificacion, fecha_consulta_asesor, dias_aviso, responsable_id, correo_adicional, hab_obligaciones_catalogo(${OBLIGACION_CATALOGO_SELECT})`,
+    );
+  if (error) {
+    if (!["PGRST205", "42P01"].includes(error.code ?? "")) console.error("[habilitacion] hab_obligaciones_clinica", error);
+    return null;
+  }
+  return (data ?? []) as unknown as ObligacionClinica[];
+}
+
+export async function getOcurrencias(supabase: Supabase, desde: string, hasta: string): Promise<Ocurrencia[]> {
+  const { data, error } = await supabase
+    .from("hab_obligacion_ocurrencias")
+    .select(OCURRENCIA_SELECT)
+    .neq("estado", "anulado")
+    .gte("fecha_limite", desde)
+    .lte("fecha_limite", hasta)
+    .order("fecha_limite");
+  if (error) console.error("[habilitacion] hab_obligacion_ocurrencias", error);
+  return (data ?? []) as Ocurrencia[];
+}
+
+// Pendientes con fecha pasada o próxima (para "Lo urgente" y la ruta).
+export async function getOcurrenciasPendientesHasta(supabase: Supabase, hasta: string): Promise<Ocurrencia[]> {
+  const { data } = await supabase
+    .from("hab_obligacion_ocurrencias")
+    .select(OCURRENCIA_SELECT)
+    .eq("estado", "pendiente")
+    .lte("fecha_limite", hasta)
+    .order("fecha_limite");
+  return (data ?? []) as Ocurrencia[];
+}
+
+export async function getNovedades(supabase: Supabase): Promise<{ catalogo: NovedadCatalogo[]; reportadas: NovedadReportada[] }> {
+  const [catalogo, reportadas] = await Promise.all([
+    supabase.from("hab_novedades_catalogo").select("id, codigo, categoria, nombre, definicion_literal, efecto").order("orden"),
+    supabase
+      .from("hab_novedades_reportadas")
+      .select("id, novedad_id, sede_id, servicio_habilitado_id, fecha_reporte, radicado, nombre_archivo, observacion, anulado, motivo_anulacion, created_at")
+      .order("fecha_reporte", { ascending: false }),
+  ]);
+  return {
+    catalogo: (catalogo.data ?? []) as NovedadCatalogo[],
+    reportadas: (reportadas.data ?? []) as NovedadReportada[],
+  };
 }

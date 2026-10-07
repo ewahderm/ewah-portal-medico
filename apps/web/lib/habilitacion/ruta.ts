@@ -61,6 +61,8 @@ export function calcularRuta({
   serviciosSinSede,
   gestion,
   autoevaluacion = null,
+  documentos = null,
+  obligaciones = null,
 }: {
   perfil: Pick<PerfilPrestador, "tipo_prestador" | "estado_reps" | "fecha_vencimiento_reps"> | null;
   sedes: Pick<SedeConServicios, "uso_edificacion" | "servicios">[];
@@ -69,6 +71,10 @@ export function calcularRuta({
   // Indicadores de todas las sedes (fn_hab_progreso_autoevaluacion); null =
   // sin plan o la migración 0066 todavía no está aplicada.
   autoevaluacion?: Pick<Indicadores, "evaluables" | "evaluados" | "noCumple" | "porcentajeCumplimiento"> | null;
+  // Checklist de documentos para radicar (lib/habilitacion/checklist.ts).
+  documentos?: { total: number; listos: number; vencidos: number } | null;
+  // Ocurrencias pendientes: vencidas y por vencer (≤ 7 días). null = sin datos.
+  obligaciones?: { vencidas: number; proximas: number; activas: number } | null;
 }): PasoRuta[] {
   const perfilOk = perfilCompleto(perfil);
   const servicios = sedes.flatMap((s) => s.servicios);
@@ -104,6 +110,23 @@ export function calcularRuta({
           };
         }
         return { ...base, estado: "completo", detalle: `${totalServicios} servicio${totalServicios === 1 ? "" : "s"} declarado${totalServicios === 1 ? "" : "s"}.` };
+      case "documentos": {
+        if (!perfilOk) return { ...base, estado: "bloqueado", detalle: "Primero completa tu perfil." };
+        if (!gestion) return { ...base, estado: "requiere_pro", detalle: "Disponible en el plan Pro." };
+        const d = documentos;
+        if (!d) return { ...base, estado: "proximamente", detalle: "Disponible pronto." };
+        if (d.vencidos > 0) return { ...base, estado: "alerta", detalle: `${d.vencidos} vencido(s) · ${d.listos} de ${d.total} listos para radicar.` };
+        if (d.total > 0 && d.listos === d.total) return { ...base, estado: "completo", detalle: `Los ${d.total} documentos para radicar están listos.` };
+        return { ...base, estado: d.listos > 0 ? "en_curso" : "pendiente", detalle: `${d.listos} de ${d.total} listos para radicar.` };
+      }
+      case "obligaciones": {
+        if (!perfilOk) return { ...base, estado: "bloqueado", detalle: "Primero completa tu perfil." };
+        const o = obligaciones;
+        if (!o) return { ...base, estado: "proximamente", detalle: "Disponible pronto." };
+        if (o.vencidas > 0) return { ...base, estado: "alerta", detalle: `${o.vencidas} vencida(s) sin presentar.` };
+        if (o.proximas > 0) return { ...base, estado: "en_curso", detalle: `${o.proximas} vence(n) en los próximos 7 días.` };
+        return { ...base, estado: "completo", detalle: `${o.activas} obligación(es) al día.` };
+      }
       case "autoevaluacion": {
         if (!perfilOk) return { ...base, estado: "bloqueado", detalle: "Primero completa tu perfil." };
         if (!gestion) return { ...base, estado: "requiere_pro", detalle: "Disponible en el plan Pro." };

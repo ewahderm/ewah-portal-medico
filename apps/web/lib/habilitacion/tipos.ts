@@ -18,6 +18,8 @@ import type {
 export type AccesoHabilitacion = {
   puedeVer: boolean;
   puedeEditar: boolean;
+  puedeCrear: boolean;
+  puedeAnular: boolean;
   gestion: boolean;
 };
 

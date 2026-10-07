@@ -125,7 +125,7 @@ describe("calcularRuta", () => {
     const r = calcularRuta({ perfil: null, sedes: [], serviciosSinSede: 0, gestion: true });
     expect(r[0].estado).toBe("pendiente");
     expect(r[1].estado).toBe("bloqueado");
-    expect(r[2].estado).toBe("proximamente");
+    expect(r[2].estado).toBe("bloqueado");
     expect(r[5].estado).toBe("actual");
   });
   it("paso 4 (autoevaluación) según el avance real", () => {
@@ -140,6 +140,18 @@ describe("calcularRuta", () => {
     expect(paso4({ ...base, evaluados: 10, noCumple: 2 })).toMatchObject({ estado: "alerta", detalle: "2 no cumplen · 10 de 391 criterios evaluados." });
     expect(paso4({ ...base, evaluados: 391, porcentajeCumplimiento: 100 })).toMatchObject({ estado: "completo", detalle: "Todo evaluado · 100 % de cumplimiento." });
     expect(calcularRuta({ perfil: null, sedes: [], serviciosSinSede: 0, gestion: true, autoevaluacion: base })[3].estado).toBe("bloqueado");
+  });
+  it("paso 3 (documentos) y paso 5 (obligaciones)", () => {
+    const ruta = (p: Partial<Parameters<typeof calcularRuta>[0]>) => calcularRuta({ perfil, sedes: [], serviciosSinSede: 0, gestion: true, ...p });
+    expect(ruta({ documentos: { total: 20, listos: 0, vencidos: 0 } })[2].estado).toBe("pendiente");
+    expect(ruta({ documentos: { total: 20, listos: 5, vencidos: 1 } })[2]).toMatchObject({ estado: "alerta" });
+    expect(ruta({ documentos: { total: 20, listos: 20, vencidos: 0 } })[2].estado).toBe("completo");
+    expect(ruta({ gestion: false, documentos: null })[2].estado).toBe("requiere_pro");
+    expect(ruta({ obligaciones: { vencidas: 2, proximas: 0, activas: 9 } })[4].estado).toBe("alerta");
+    expect(ruta({ obligaciones: { vencidas: 0, proximas: 1, activas: 9 } })[4].estado).toBe("en_curso");
+    expect(ruta({ obligaciones: { vencidas: 0, proximas: 0, activas: 9 } })[4].estado).toBe("completo");
+    // Las obligaciones se ven en todos los planes (calendario de lectura en Gratis).
+    expect(ruta({ gestion: false, obligaciones: { vencidas: 0, proximas: 0, activas: 3 } })[4].estado).toBe("completo");
   });
   it("sumarDias sin zona horaria", () => {
     expect(sumarDias("2026-12-20", 30)).toBe("2027-01-19");

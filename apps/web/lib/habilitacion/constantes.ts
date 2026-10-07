@@ -147,9 +147,9 @@ export const DESCRIPCION_GRUPO: Record<GrupoSupersalud, string> = {
 export const PASOS_RUTA = [
   { numero: 1, clave: "perfil", titulo: "Perfil del prestador", pregunta: "¿Qué tipo de prestador soy y ante quién respondo?", href: "/habilitacion/perfil" },
   { numero: 2, clave: "sedes", titulo: "Sedes y servicios", pregunta: "¿Qué voy a prestar y dónde?", href: "/habilitacion/sedes" },
-  { numero: 3, clave: "documentos", titulo: "Documentos de inscripción", pregunta: "¿Qué tengo que radicar ante la secretaría?", href: null },
+  { numero: 3, clave: "documentos", titulo: "Documentos de inscripción", pregunta: "¿Qué tengo que radicar ante la secretaría?", href: "/habilitacion/documentos" },
   { numero: 4, clave: "autoevaluacion", titulo: "Autoevaluación", pregunta: "¿Cumplo cada criterio?", href: "/habilitacion/autoevaluacion" },
-  { numero: 5, clave: "obligaciones", titulo: "Obligaciones y calendario", pregunta: "¿Qué tengo que presentar y cuándo?", href: null },
+  { numero: 5, clave: "obligaciones", titulo: "Obligaciones y calendario", pregunta: "¿Qué tengo que presentar y cuándo?", href: "/habilitacion/calendario" },
   { numero: 6, clave: "tablero", titulo: "Tablero", pregunta: "¿Cómo voy y qué es urgente?", href: "/habilitacion" },
 ] as const;
 export type ClavePaso = (typeof PASOS_RUTA)[number]["clave"];
@@ -160,10 +160,10 @@ export const SECCIONES_HABILITACION = [
   { href: "/habilitacion", label: "Resumen", gestion: false, disponible: true },
   { href: "/habilitacion/perfil", label: "Perfil", gestion: false, disponible: true },
   { href: "/habilitacion/sedes", label: "Sedes y servicios", gestion: true, disponible: true },
-  { href: "/habilitacion/documentos", label: "Documentos", gestion: true, disponible: false },
+  { href: "/habilitacion/documentos", label: "Documentos", gestion: true, disponible: true },
   { href: "/habilitacion/autoevaluacion", label: "Autoevaluación", gestion: true, disponible: true },
-  { href: "/habilitacion/calendario", label: "Calendario", gestion: false, disponible: false },
-  { href: "/habilitacion/obligaciones", label: "Obligaciones", gestion: false, disponible: false },
+  { href: "/habilitacion/calendario", label: "Calendario", gestion: false, disponible: true },
+  { href: "/habilitacion/obligaciones", label: "Obligaciones", gestion: false, disponible: true },
 ] as const;
 
 // ============================================================
@@ -232,6 +232,20 @@ export const URL_PDF_RES3100 = "https://www.minsalud.gov.co/sites/rid/Lists/Bibl
 
 // URL firmada de evidencia: 60 s (contenido sensible, §1.5).
 export const SEGUNDOS_URL_FIRMADA = 60;
+
+// Trámite ante la secretaría (hab_tramite_hitos.tipo, 0068).
+export const TIPOS_HITO = [
+  { value: "radicado", label: "Radiqué la solicitud", ayuda: "Entregaste el formulario y los soportes en la secretaría." },
+  { value: "devuelto_inconsistencias", label: "Me la devolvieron por inconsistencias" },
+  { value: "codigo_asignado", label: "Me asignaron código de prestador" },
+  { value: "visita_previa_programada", label: "Programaron la visita previa" },
+  { value: "visita_realizada", label: "Se hizo la visita de verificación" },
+  { value: "subsanacion_radicada", label: "Radiqué la subsanación" },
+  { value: "constancia_expedida", label: "Me expidieron la constancia de habilitación" },
+  { value: "distintivo", label: "Recibí el distintivo" },
+  { value: "visita_certificacion", label: "Visita de certificación" },
+] as const;
+export type TipoHito = (typeof TIPOS_HITO)[number]["value"];
 
 // Vencimiento del REPS: ámbar desde 90 días, rojo desde 30 (§5.6).
 export const UMBRALES_VENCIMIENTO_REPS = { ambar: 90, rojo: 30 } as const;
