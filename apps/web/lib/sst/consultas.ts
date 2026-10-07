@@ -260,3 +260,88 @@ export async function getPeligros(supabase: Supabase): Promise<PeligroSst[]> {
   if (error) console.error("[sst] getPeligros", error);
   return (data ?? []) as PeligroSst[];
 }
+
+// ============================================================
+// F6 · Capacitación, EPP y evaluaciones médicas
+// ============================================================
+export type EstadoPersona = {
+  empleado_id: string;
+  nombre: string;
+  cargo_id: string | null;
+  cargo_nombre: string | null;
+  periodicidad_meses: number | null;
+  ultimo_examen: string | null;
+  ultimo_examen_tipo: string | null;
+  proximo_examen: string | null;
+  vacunas_vencidas: number;
+  vacunas_por_vencer: number;
+  ultima_entrega_epp: string | null;
+  capacitaciones_anio: number;
+};
+
+export async function getEstadoPersonas(supabase: Supabase): Promise<EstadoPersona[] | null> {
+  const { data, error } = await supabase.rpc("fn_sst_estado_personas");
+  if (error) {
+    console.error("[sst] fn_sst_estado_personas", error);
+    return null;
+  }
+  return (data ?? []) as EstadoPersona[];
+}
+
+export type CapacitacionSst = {
+  id: string;
+  tema: string;
+  tipo: string;
+  fecha: string;
+  duracion_horas: number | null;
+  facilitador: string | null;
+  modalidad: string;
+  estado: "programada" | "realizada" | "cancelada";
+  motivo_cancelacion: string | null;
+  soporte_nombre_archivo: string | null;
+  sst_capacitacion_asistentes: { empleado_id: string }[];
+};
+
+export async function getCapacitaciones(supabase: Supabase, anio: number): Promise<CapacitacionSst[]> {
+  const { data, error } = await supabase
+    .from("sst_capacitaciones")
+    .select("id, tema, tipo, fecha, duracion_horas, facilitador, modalidad, estado, motivo_cancelacion, soporte_nombre_archivo, sst_capacitacion_asistentes(empleado_id)")
+    .gte("fecha", `${anio}-01-01`)
+    .lte("fecha", `${anio}-12-31`)
+    .order("fecha");
+  if (error) console.error("[sst] getCapacitaciones", error);
+  return (data ?? []) as CapacitacionSst[];
+}
+
+export type EntregaEpp = {
+  id: string;
+  empleado_id: string;
+  fecha: string;
+  elementos: { elemento: string; cantidad: number }[];
+  capacitado_uso: boolean;
+  observacion: string | null;
+  soporte_nombre_archivo: string | null;
+  anulado: boolean;
+  anulado_motivo: string | null;
+};
+
+export async function getEntregasEpp(supabase: Supabase): Promise<EntregaEpp[]> {
+  const { data, error } = await supabase
+    .from("sst_epp_entregas")
+    .select("id, empleado_id, fecha, elementos, capacitado_uso, observacion, soporte_nombre_archivo, anulado, anulado_motivo")
+    .order("fecha", { ascending: false })
+    .limit(200);
+  if (error) console.error("[sst] getEntregasEpp", error);
+  return (data ?? []) as EntregaEpp[];
+}
+
+export async function getProfesiograma(supabase: Supabase): Promise<{ cargos: { id: string; nombre: string }[]; periodicidad: Record<string, number> }> {
+  const [cargos, filas] = await Promise.all([
+    supabase.from("cargos").select("id, nombre").eq("activo", true).order("orden"),
+    supabase.from("sst_examenes_cargo").select("cargo_id, periodicidad_meses"),
+  ]);
+  return {
+    cargos: (cargos.data ?? []) as { id: string; nombre: string }[],
+    periodicidad: Object.fromEntries(((filas.data ?? []) as { cargo_id: string; periodicidad_meses: number }[]).map((f) => [f.cargo_id, f.periodicidad_meses])),
+  };
+}

@@ -17,7 +17,7 @@ export const SECCIONES_SST = [
   { href: "/sst/eventos", label: "Incidentes y accidentes", disponible: true },
   { href: "/sst/documentos", label: "Documentos", disponible: true },
   { href: "/sst/peligros", label: "Peligros", disponible: true },
-  { href: "/sst/personas", label: "Capacitación y EPP", disponible: false },
+  { href: "/sst/personas", label: "Capacitación y EPP", disponible: true },
   { href: "/sst/comites", label: "Comités y plan", disponible: false },
   { href: "/sst/estandares", label: "Estándares", disponible: false },
 ] as const;
