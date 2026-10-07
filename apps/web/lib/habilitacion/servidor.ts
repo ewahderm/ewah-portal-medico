@@ -114,11 +114,21 @@ export async function verificarArchivoSubido(
   }
   return {
     path,
-    nombre: nombre.trim().slice(0, 255) || `archivo.${tipo.extension}`,
+    nombre: nombreSeguro(nombre) || `archivo.${tipo.extension}`,
     mime: tipo.mime,
     tamano: bytes.length,
     sha256: await sha256Hex(bytes),
   };
+}
+
+// El nombre original solo se muestra y se usa como nombre de descarga
+// (Content-Disposition): sin caracteres de control, comillas ni barras
+// (F11). La ruta en Storage nunca sale de él.
+export function nombreSeguro(nombre: string): string {
+  return nombre
+    .replace(/[\u0000-\u001f\u007f"\\/]/g, "_")
+    .trim()
+    .slice(0, 255);
 }
 
 // URL firmada de 60 s; quien llama ya leyó la fila con RLS.

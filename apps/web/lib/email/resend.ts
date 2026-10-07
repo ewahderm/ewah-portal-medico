@@ -33,9 +33,13 @@ export const REMITENTE_CORREO =
 // comentario arriba); lo único que cambia por clínica es el nombre visible
 // antes de "<...>" — así cada clínica se ve como ella misma ante su
 // paciente aunque el correo salga técnicamente del mismo buzón.
+// El nombre lo escribe el administrador de la clínica: sin comillas,
+// ángulos, comas ni saltos de línea un nombre raro no rompe el encabezado
+// From (el envío fallaría) ni se hace pasar por otra dirección.
 export function construirRemitente(nombreComercial?: string | null): string {
-  if (!nombreComercial) return REMITENTE_CORREO;
+  const limpio = (nombreComercial ?? "").replace(/["<>,;\r\n\\]/g, " ").replace(/\s+/g, " ").trim().slice(0, 80);
+  if (!limpio) return REMITENTE_CORREO;
   const match = REMITENTE_CORREO.match(/<([^>]+)>/);
   const email = match ? match[1] : REMITENTE_CORREO;
-  return `${nombreComercial} <${email}>`;
+  return `"${limpio}" <${email}>`;
 }

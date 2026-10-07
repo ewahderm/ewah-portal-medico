@@ -45,9 +45,13 @@ await paso("TH.1: usar como evidencia", async () => {
 await cerrar();
 await paso("TH.1: Cumple directo (ya tiene evidencia)", async () => {
   await page.waitForTimeout(800);
+  const guardado = page.waitForResponse((r) => r.request().method() === "POST" && r.url().includes("/habilitacion/autoevaluacion"));
   await tarjeta("11.1.TH.1").getByRole("button", { name: "Cumple", exact: true }).click();
   await page.locator("article[aria-label='Criterio 11.1.TH.1: Cumple']").waitFor();
   if (await page.getByRole("heading", { name: /agrega la evidencia/ }).isVisible()) throw new Error("pidió evidencia");
+  // El estado es optimista: se espera a que el guardado termine antes de
+  // navegar (si no, el navegador aborta el POST y la consola lo registra).
+  await guardado;
 });
 
 await paso("MD.4.8: neveras 30/30 días y sugerencia", async () => {
