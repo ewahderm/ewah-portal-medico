@@ -55,3 +55,7 @@ yarn-error.log*
 next-env.d.ts
 
 .vercel
+
+# Copias temporales de los recorridos de navegador (los versionados viven
+# en scripts/habilitacion/supabase-local/ y scripts/sgsst/)
+apps/web/recorrido-*.mjs
