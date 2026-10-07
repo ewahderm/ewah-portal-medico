@@ -6,6 +6,7 @@ import {
   MegaphoneIcon,
   LeafIcon,
   BriefcaseIcon,
+  ShieldCheckIcon,
   type LucideIcon,
 } from "lucide-react";
 
@@ -89,5 +90,14 @@ export const REGISTRO_MODULOS: ModuloRegistro[] = [
     descripcion: "Empleados, documentación, nómina y honorarios.",
     href: "/rrhh",
     icono: BriefcaseIcon,
+  },
+  // Activo en todos los planes (es_administrativo, 0061): la tarjeta nunca
+  // muestra "Pro"; el upsell de la parte de gestión ocurre dentro del módulo.
+  {
+    codigo: "habilitacion",
+    nombre: "Habilitación",
+    descripcion: "Inscripción REPS, autoevaluación y calendario regulatorio.",
+    href: "/habilitacion",
+    icono: ShieldCheckIcon,
   },
 ];

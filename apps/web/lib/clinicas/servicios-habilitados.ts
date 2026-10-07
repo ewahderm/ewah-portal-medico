@@ -7,6 +7,10 @@ import {
   SERVICIO_HABILITADO_SELECT,
   type ServicioHabilitado,
 } from "@/lib/clinicas/servicios-habilitados-tipos";
+import {
+  insertarServicioHabilitado,
+  mensajeErrorServicio as mensajeError,
+} from "@/lib/clinicas/servicios-habilitados-db";
 
 // Lista de servicios habilitados ante REPS (0055, por sede desde 0061) —
 // cada fila persiste de inmediato (igual que activarCups/desactivarCups),
@@ -26,16 +30,6 @@ async function requireAdmin() {
   return usuario;
 }
 
-// 23505 = el unique (clínica, sede, práctica) de 0061; P0001 = el trigger
-// fn_hab_misma_clinica (sede de otra clínica), cuyo mensaje ya es para el
-// usuario. Cualquier otro error se oculta tras un mensaje genérico.
-function mensajeError(error: { code?: string; message: string }, generico: string) {
-  if (error.code === "23505") return "Ese servicio ya está registrado en esa sede.";
-  if (error.code === "P0001") return error.message;
-  console.error(error);
-  return generico;
-}
-
 export async function agregarServicioHabilitado(
   practicaMedicaId: string,
   sedeId: string | null,
@@ -45,22 +39,19 @@ export async function agregarServicioHabilitado(
   if (!practicaMedicaId) throw new Error("Selecciona un servicio.");
 
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("clinica_servicios_habilitados")
-    .insert({
-      clinica_id: usuario.clinica_id,
-      practica_medica_id: practicaMedicaId,
-      sede_id: sedeId || null,
-      codigo_habilitacion: codigoHabilitacion?.trim() || null,
-      created_by: usuario.id,
-      updated_by: usuario.id,
-    })
-    .select(SERVICIO_HABILITADO_SELECT)
-    .single();
-  if (error) throw new Error(mensajeError(error, "No se pudo agregar el servicio habilitado."));
+  const { data, error } = await insertarServicioHabilitado<ServicioHabilitado>(
+    supabase,
+    usuario,
+    { practicaMedicaId, sedeId, codigoHabilitacion },
+    SERVICIO_HABILITADO_SELECT,
+  );
+  if (error || !data) {
+    throw new Error(error ? mensajeError(error, "No se pudo agregar el servicio habilitado.") : "No se pudo agregar el servicio habilitado.");
+  }
 
   revalidatePath("/parametros");
-  return data as unknown as ServicioHabilitado;
+  revalidatePath("/habilitacion", "layout");
+  return data;
 }
 
 export async function actualizarCodigoServicioHabilitado(id: string, codigoHabilitacion: string | null) {
@@ -75,6 +66,7 @@ export async function actualizarCodigoServicioHabilitado(id: string, codigoHabil
   if (error) throw new Error(mensajeError(error, "No se pudo actualizar el código."));
 
   revalidatePath("/parametros");
+  revalidatePath("/habilitacion", "layout");
 }
 
 // Asignar o cambiar la sede de una fila ya creada (p. ej. las creadas antes
@@ -91,6 +83,7 @@ export async function actualizarSedeServicioHabilitado(id: string, sedeId: strin
   if (error) throw new Error(mensajeError(error, "No se pudo cambiar la sede."));
 
   revalidatePath("/parametros");
+  revalidatePath("/habilitacion", "layout");
 }
 
 export async function eliminarServicioHabilitado(id: string) {
@@ -105,4 +98,5 @@ export async function eliminarServicioHabilitado(id: string) {
   if (error) throw new Error(mensajeError(error, "No se pudo eliminar el servicio habilitado."));
 
   revalidatePath("/parametros");
+  revalidatePath("/habilitacion", "layout");
 }
