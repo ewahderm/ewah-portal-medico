@@ -7,7 +7,7 @@
 //   Incidencia de EL        = casos nuevos de EL / promedio de trabajadores × 100.000
 //   Ausentismo              = días de ausencia por incapacidad / días programados × 100
 //
-// Bases (0086): el ausentismo usa la MISMA base en numerador y denominador:
+// Bases (0087): el ausentismo usa la MISMA base en numerador y denominador:
 // días HÁBILES (lunes a viernes sin festivos). dias_ausencia cuenta solo los
 // días hábiles cubiertos por cada incapacidad dentro del mes y
 // dias_programados = trabajadores × días hábiles del mes, así que no pasa de

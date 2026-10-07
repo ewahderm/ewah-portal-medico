@@ -78,7 +78,7 @@ export async function guardarCapacitacion(input: {
     facilitador: textoOpcional(input.facilitador)?.slice(0, 200) ?? null,
     modalidad: input.modalidad,
     // Siempre "programada" aquí: pasa a "realizada" dentro de la misma
-    // transacción que guarda la asistencia (fn_sst_guardar_asistencia, 0086).
+    // transacción que guarda la asistencia (fn_sst_guardar_asistencia, 0087).
     // Si la asistencia falla queda programada y se puede reintentar.
     estado: "programada",
     ...(soporte ? { soporte_storage_path: soporte.path, soporte_nombre_archivo: soporte.nombre } : {}),

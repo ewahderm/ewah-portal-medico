@@ -23,7 +23,7 @@ export async function prepararSubidaSst(
   if (!check.ok) return { error: check.error };
   // Todo lo que se registra después con archivo es del plan Pro (gestion)
   // salvo el informe de la investigación de un evento, que es del plan
-  // Gratis. Misma regla que la política de Storage sst_storage_insert (0086):
+  // Gratis. Misma regla que la política de Storage sst_storage_insert (0087):
   // sin esto un plan Gratis subiría archivos huérfanos.
   if (area !== "investigaciones") {
     const plan = await requireEntitlement("sst", "gestion");

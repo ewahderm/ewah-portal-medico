@@ -1,7 +1,7 @@
 -- Pruebas de perfil de clínica (0080): backfill, validación, atomicidad y aislamiento.
 -- La actividad económica vive en clinicas.codigo_actividad_economica; la
 -- columna vieja sst_perfil.codigo_actividad se borra en una migración
--- pendiente (scripts/habilitacion/pendientes/0085_*), no aquí.
+-- pendiente (scripts/habilitacion/pendientes/0088_*), no aquí.
 begin;
 select t.ok(
   (select codigo_actividad_economica = '3862101'
@@ -21,8 +21,7 @@ select t.ok(
    from clinicas where nombre = 'Clínica A Legal'),
   'el administrador guarda ambos nombres y el código de su clínica'
 );
--- La clínica ajena no se ve con el rol del administrador A (RLS): se lee como
--- superusuario y se vuelve al rol de A (el sub del JWT sigue en la sesión).
+-- Como superusuario: la RLS de clinicas oculta a A la fila de la otra clínica.
 reset role;
 select t.ok(
   (select nombre = 'Clínica de prueba perfil 0080'
@@ -30,7 +29,7 @@ select t.ok(
    from clinicas where id = '00000000-0000-0000-0000-000000000080'),
   'guardar el perfil de A no altera otra clínica'
 );
-set role authenticated;
+select t.como('00000000-0000-0000-0000-00000000000a'); set role authenticated;
 select t.debe_fallar(
   $$select fn_actualizar_perfil_propia_clinica(' ', 'Marca', '3862101')$$,
   'nombre legal'

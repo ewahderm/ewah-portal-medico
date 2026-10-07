@@ -34,7 +34,7 @@ export type InsumosTablero = {
   registroAnual: { fecha: string } | null;
 };
 
-// Un reporte por destino, como las alertas del cron (0086): ARL y EPS en todo
+// Un reporte por destino, como las alertas del cron (0087): ARL y EPS en todo
 // accidente o enfermedad laboral; MinTrabajo solo si es grave o mortal. Mismo
 // criterio que pendientesEvento (plazos.ts); el incidente no se reporta.
 function reportesPendientes(e: InsumosTablero["eventos"][number]): { clave: "arl" | "eps" | "mintrabajo"; destino: string }[] {
