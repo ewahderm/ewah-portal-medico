@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/table";
 import { ProveedorDialog } from "./proveedor-dialog";
 import type { Opcion } from "@/lib/forms/opciones";
+import { exigirExito } from "@/lib/forms/resultado";
 
 export type ProveedorRow = {
   id: string;
@@ -48,7 +49,7 @@ export function ProveedoresTable({
     setError(null);
     startTransition(async () => {
       try {
-        await toggleProveedor(id, next);
+        exigirExito(await toggleProveedor(id, next));
       } catch (e) {
         setEstados((prev) => new Map(prev).set(id, !next));
         setError(e instanceof Error ? e.message : "No se pudo actualizar.");

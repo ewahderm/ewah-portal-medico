@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requirePermiso as requirePermisoBase } from "@/lib/auth/requirePermiso";
 import { getCurrentUsuario } from "@/lib/auth/session";
 import { normalizarBusqueda } from "@/lib/texto";
+import type { ResultadoAccion } from "@/lib/forms/resultado";
 
 function requirePermiso(permiso: "EDIT") {
   return requirePermisoBase("parametros", permiso);
@@ -56,22 +57,23 @@ export async function buscarCups(query: string): Promise<CupsResultado[]> {
   return (resultados ?? []).map((r) => ({ ...r, activoClinica: activosSet.has(r.id) }));
 }
 
-export async function activarCups(cupsId: string) {
+export async function activarCups(cupsId: string): Promise<ResultadoAccion> {
   const check = await requirePermiso("EDIT");
-  if (!check.ok) throw new Error(check.error);
+  if (!check.ok) return { error: check.error };
 
   const supabase = await createClient();
   const { error } = await supabase
     .from("clinica_cups")
     .insert({ clinica_id: check.usuario.clinica_id, cups_id: cupsId, created_by: check.usuario.id });
-  if (error && error.code !== "23505") throw new Error("No se pudo activar el CUPS.");
+  if (error && error.code !== "23505") return { error: "No se pudo activar el CUPS." };
 
   revalidatePath("/parametros");
+  return {};
 }
 
-export async function desactivarCups(cupsId: string) {
+export async function desactivarCups(cupsId: string): Promise<ResultadoAccion> {
   const check = await requirePermiso("EDIT");
-  if (!check.ok) throw new Error(check.error);
+  if (!check.ok) return { error: check.error };
 
   const supabase = await createClient();
   const { error } = await supabase
@@ -79,7 +81,8 @@ export async function desactivarCups(cupsId: string) {
     .delete()
     .eq("clinica_id", check.usuario.clinica_id)
     .eq("cups_id", cupsId);
-  if (error) throw new Error("No se pudo desactivar el CUPS.");
+  if (error) return { error: "No se pudo desactivar el CUPS." };
 
   revalidatePath("/parametros");
+  return {};
 }

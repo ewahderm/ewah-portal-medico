@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/table";
 import { NeveraDialog } from "./nevera-dialog";
 import type { Opcion } from "@/lib/forms/opciones";
+import { exigirExito } from "@/lib/forms/resultado";
 
 export type NeveraRow = {
   id: string;
@@ -43,7 +44,7 @@ export function NeverasTable({
     setError(null);
     startTransition(async () => {
       try {
-        await toggleNevera(id, next);
+        exigirExito(await toggleNevera(id, next));
       } catch (e) {
         setEstados((prev) => new Map(prev).set(id, !next));
         setError(e instanceof Error ? e.message : "No se pudo actualizar.");

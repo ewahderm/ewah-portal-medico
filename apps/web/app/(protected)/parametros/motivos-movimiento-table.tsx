@@ -15,6 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { MotivoMovimientoDialog } from "./motivo-movimiento-dialog";
+import { exigirExito } from "@/lib/forms/resultado";
 
 export type MotivoMovimientoRow = {
   id: string;
@@ -40,7 +41,7 @@ export function MotivosMovimientoTable({
     setError(null);
     startTransition(async () => {
       try {
-        await toggleMotivoMovimiento(id, next);
+        exigirExito(await toggleMotivoMovimiento(id, next));
       } catch (e) {
         setEstados((prev) => new Map(prev).set(id, !next));
         setError(e instanceof Error ? e.message : "No se pudo actualizar.");

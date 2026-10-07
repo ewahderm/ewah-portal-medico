@@ -3,11 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requirePermiso as requirePermisoBase } from "@/lib/auth/requirePermiso";
-import { requireAdminExport } from "@/lib/exportar/acceso";
+import { verificarAdminExport } from "@/lib/exportar/acceso";
 import { leerFilasXlsx } from "@/lib/exportar/xlsx";
 import { COLUMNAS_CATALOGO } from "./exportar";
 import { getCatalogo } from "./registry";
 import type { ActionState } from "@/lib/auth/actions";
+import type { ResultadoAccion } from "@/lib/forms/resultado";
 
 function requirePermiso(permiso: "CREATE" | "EDIT" | "DELETE") {
   return requirePermisoBase("parametros", permiso);
@@ -42,19 +43,20 @@ export async function crearValorCatalogo(
   return null;
 }
 
-export async function toggleValorCatalogo(tabla: string, id: string, activo: boolean) {
+export async function toggleValorCatalogo(tabla: string, id: string, activo: boolean): Promise<ResultadoAccion> {
   const catalogo = getCatalogo(tabla);
-  if (!catalogo) throw new Error("Catálogo inválido.");
-  if (catalogo.esGlobal) throw new Error("Este catálogo lo administra EWAH Tech.");
+  if (!catalogo) return { error: "Catálogo inválido." };
+  if (catalogo.esGlobal) return { error: "Este catálogo lo administra EWAH Tech." };
 
   const check = await requirePermiso("EDIT");
-  if (!check.ok) throw new Error(check.error);
+  if (!check.ok) return { error: check.error };
 
   const supabase = await createClient();
   const { error } = await supabase.from(tabla).update({ activo }).eq("id", id);
-  if (error) throw new Error("No se pudo actualizar el valor.");
+  if (error) return { error: "No se pudo actualizar el valor." };
 
   revalidatePath("/parametros");
+  return {};
 }
 
 export type ImportarCatalogoResultado =
@@ -70,7 +72,9 @@ export async function importarCatalogo(
   tabla: string,
   formData: FormData,
 ): Promise<ImportarCatalogoResultado> {
-  const usuario = await requireAdminExport();
+  const acceso = await verificarAdminExport();
+  if (!acceso.ok) return { error: acceso.error };
+  const usuario = acceso.usuario;
 
   const catalogo = getCatalogo(tabla);
   if (!catalogo) return { error: "Catálogo inválido." };

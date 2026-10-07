@@ -19,6 +19,7 @@ import {
   describirCodigosPorSede,
   type CodigoPorSede,
 } from "@/lib/clinicas/servicios-habilitados-tipos";
+import { exigirExito } from "@/lib/forms/resultado";
 
 type CupsOpcion = { id: string; codigo: string; descripcion: string };
 
@@ -56,7 +57,7 @@ export function TiposTratamientoTable({
     setError(null);
     startTransition(async () => {
       try {
-        await toggleTipoTratamiento(id, next);
+        exigirExito(await toggleTipoTratamiento(id, next));
       } catch (e) {
         setEstados((prev) => new Map(prev).set(id, !next));
         setError(e instanceof Error ? e.message : "No se pudo actualizar.");
