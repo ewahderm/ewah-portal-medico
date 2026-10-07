@@ -3,6 +3,9 @@
 
 import type {
   CampoCaracteristica,
+  CodigoEstandar,
+  EstadoEvaluacion,
+  EstadoPlanMejora,
   EstadoReps,
   EstadoServicio,
   GrupoSupersalud,
@@ -150,4 +153,113 @@ export type PreviewCriterios = {
   agrega: number | null;
   totalSede: number | null;
   totalSedeEvaluables: number | null;
+};
+
+// ============================================================
+// Autoevaluación (F5, 0066)
+// ============================================================
+
+// Fila de fn_hab_tablero_criterios: SOLO las columnas que pinta la pantalla
+// (la RPC devuelve 42; con todas, el tablero de EWAH pesa ~590 KB).
+export type FilaCriterio = {
+  criterio_id: string;
+  codigo: string;
+  numero: string;
+  nivel: number;
+  padre_id: string | null;
+  texto_literal: string;
+  pagina: number | null;
+  confianza: string;
+  nota_vigencia: string | null;
+  vigente_hasta: string | null;
+  es_encabezado: boolean;
+  autorresuelto: boolean;
+  origen: "directo" | "transversal" | "remision";
+  remitido_desde_codigo: string | null;
+  en_cierre_temporal: boolean;
+  servicio_clave: string;
+  servicio_nombre: string;
+  servicio_orden: number;
+  estandar_codigo: CodigoEstandar;
+  bloque_id: string;
+  bloque_encabezado: string | null;
+  evaluacion_id: string | null;
+  estado: EstadoEvaluacion | null;
+  justificacion: string | null;
+  observacion: string | null;
+  fecha_verificacion: string | null;
+  evaluado_por: string | null;
+  responsable_id: string | null;
+  fecha_objetivo: string | null;
+  evidencias_activas: number;
+  reverificar: boolean;
+  planes_abiertos: number;
+};
+
+export const FILA_CRITERIO_SELECT =
+  "criterio_id, codigo, numero, nivel, padre_id, texto_literal, pagina, confianza, nota_vigencia, vigente_hasta, es_encabezado, autorresuelto, origen, remitido_desde_codigo, en_cierre_temporal, servicio_clave, servicio_nombre, servicio_orden, estandar_codigo, bloque_id, bloque_encabezado, evaluacion_id, estado, justificacion, observacion, fecha_verificacion, evaluado_por, responsable_id, fecha_objetivo, evidencias_activas, reverificar, planes_abiertos";
+
+// Fila de fn_hab_progreso_autoevaluacion (sede × servicio × estándar).
+export type FilaProgreso = {
+  sede_id: string;
+  servicio_norma_id: string;
+  servicio_clave: string;
+  estandar_codigo: CodigoEstandar;
+  total: number;
+  encabezados: number;
+  autorresueltos: number;
+  evaluables: number;
+  cumple: number;
+  no_cumple: number;
+  no_aplica: number;
+  sin_evaluar: number;
+  reverificar: number;
+  asignados_a_mi: number;
+  planes_abiertos: number;
+};
+
+export type UsuarioClinica = { id: string; nombre: string };
+
+export type Evidencia = {
+  id: string;
+  tipo: "archivo" | "nota" | "enlace";
+  descripcion: string;
+  nombre_archivo: string | null;
+  mime: string | null;
+  tamano_bytes: number | null;
+  url: string | null;
+  created_at: string;
+  created_by: string;
+  retirada_en: string | null;
+  retiro_motivo: string | null;
+};
+
+export type EvaluacionHistorial = {
+  id: string;
+  estado: EstadoEvaluacion;
+  justificacion: string | null;
+  observacion: string | null;
+  fecha_verificacion: string;
+  evaluado_por: string;
+  created_at: string;
+};
+
+export type PlanMejora = {
+  id: string;
+  evaluacion_id: string;
+  accion: string;
+  responsable_id: string;
+  fecha_compromiso: string;
+  estado: EstadoPlanMejora;
+  cierre_nombre_archivo: string | null;
+  cierre_observacion: string | null;
+  fecha_cierre: string | null;
+  created_at: string;
+};
+
+// Lo que abre el panel de detalle de un criterio.
+export type DetalleCriterio = {
+  evidencias: Evidencia[];
+  historial: EvaluacionHistorial[];
+  planes: PlanMejora[];
 };

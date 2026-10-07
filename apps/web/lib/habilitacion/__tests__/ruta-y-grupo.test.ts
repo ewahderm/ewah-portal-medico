@@ -7,6 +7,7 @@ import {
   fechaLegible,
   nivelVencimientoReps,
   sugerirVencimientoReps,
+  sumarDias,
 } from "@/lib/habilitacion/ruta";
 import type { RespuestasGrupo, ServicioSede } from "@/lib/habilitacion/tipos";
 
@@ -126,6 +127,23 @@ describe("calcularRuta", () => {
     expect(r[1].estado).toBe("bloqueado");
     expect(r[2].estado).toBe("proximamente");
     expect(r[5].estado).toBe("actual");
+  });
+  it("paso 4 (autoevaluación) según el avance real", () => {
+    const paso4 = (a: Parameters<typeof calcularRuta>[0]["autoevaluacion"], gestion = true) =>
+      calcularRuta({ perfil, sedes: [], serviciosSinSede: 0, gestion, autoevaluacion: a })[3];
+    const base = { evaluables: 391, evaluados: 0, noCumple: 0, porcentajeCumplimiento: 0 };
+    expect(paso4(null).estado).toBe("proximamente");
+    expect(paso4(base, false).estado).toBe("requiere_pro");
+    expect(paso4({ ...base, evaluables: 0 }).estado).toBe("bloqueado");
+    expect(paso4(base)).toMatchObject({ estado: "pendiente", detalle: "0 de 391 criterios evaluados." });
+    expect(paso4({ ...base, evaluados: 10 }).estado).toBe("en_curso");
+    expect(paso4({ ...base, evaluados: 10, noCumple: 2 })).toMatchObject({ estado: "alerta", detalle: "2 no cumplen · 10 de 391 criterios evaluados." });
+    expect(paso4({ ...base, evaluados: 391, porcentajeCumplimiento: 100 })).toMatchObject({ estado: "completo", detalle: "Todo evaluado · 100 % de cumplimiento." });
+    expect(calcularRuta({ perfil: null, sedes: [], serviciosSinSede: 0, gestion: true, autoevaluacion: base })[3].estado).toBe("bloqueado");
+  });
+  it("sumarDias sin zona horaria", () => {
+    expect(sumarDias("2026-12-20", 30)).toBe("2027-01-19");
+    expect(sumarDias("2028-02-28", 1)).toBe("2028-02-29");
   });
   it("inscrito sin vencimiento: perfil en curso", () => {
     const r = calcularRuta({ perfil: { ...perfil, fecha_vencimiento_reps: null }, sedes: [], serviciosSinSede: 0, gestion: true });

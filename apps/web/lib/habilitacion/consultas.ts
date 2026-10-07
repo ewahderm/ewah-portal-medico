@@ -6,12 +6,15 @@ import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { FEATURE_GESTION, MODULO_HABILITACION } from "@/lib/habilitacion/constantes";
 import {
+  FILA_CRITERIO_SELECT,
   PERFIL_SELECT,
   SERVICIO_SEDE_SELECT,
   type AccesoHabilitacion,
   type ClinicaRegulatoria,
   type ConteoCriterios,
   type DetalleServicioInput,
+  type FilaCriterio,
+  type FilaProgreso,
   type PerfilPrestador,
   type PracticaConNumerales,
   type SedeConServicios,
@@ -19,6 +22,7 @@ import {
   type ServicioNormaOpcion,
   type ServicioSede,
   type TipoPrestadorCatalogo,
+  type UsuarioClinica,
 } from "@/lib/habilitacion/tipos";
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
@@ -220,4 +224,43 @@ export function aContextoServicio(s: DetalleServicioInput | ServicioSede): Conte
     telemedicina_categorias: "telemedicinaCategorias" in s ? s.telemedicinaCategorias : s.telemedicina_categorias,
     telemedicina_roles: "telemedicinaRoles" in s ? s.telemedicinaRoles : s.telemedicina_roles,
   };
+}
+
+// ============================================================
+// Autoevaluación (0066, fase F5). `null` = la migración todavía no está
+// aplicada: la pantalla lo dice en vez de fallar.
+// ============================================================
+
+// Contadores por sede × servicio × estándar, sin textos (pestañas,
+// cabecera, selector de sede y paso 4 de la ruta). Sin sede = todas.
+export async function getProgresoAutoevaluacion(supabase: Supabase, sedeId?: string): Promise<FilaProgreso[] | null> {
+  const { data, error } = await supabase.rpc("fn_hab_progreso_autoevaluacion", sedeId ? { p_sede_id: sedeId } : {});
+  if (error) {
+    if (!motorNoExiste(error)) console.error("[habilitacion] fn_hab_progreso_autoevaluacion", error);
+    return null;
+  }
+  return (data ?? []) as FilaProgreso[];
+}
+
+// Un estándar a la vez (≤ ~250 filas en 11.1 IN + servicios), solo las
+// columnas que pinta la tarjeta.
+export async function getCriteriosEstandar(
+  supabase: Supabase,
+  sedeId: string,
+  estandar: string,
+): Promise<FilaCriterio[] | null> {
+  const { data, error } = await supabase
+    .rpc("fn_hab_tablero_criterios", { p_sede_id: sedeId, p_estandar: estandar })
+    .select(FILA_CRITERIO_SELECT);
+  if (error) {
+    if (!motorNoExiste(error)) console.error("[habilitacion] fn_hab_tablero_criterios", error);
+    return null;
+  }
+  return (data ?? []) as unknown as FilaCriterio[];
+}
+
+// Responsables posibles (HU-4.4 AC1): usuarios activos de la clínica.
+export async function getUsuariosClinica(supabase: Supabase): Promise<UsuarioClinica[]> {
+  const { data } = await supabase.from("usuarios").select("id, nombre").eq("activo", true).order("nombre");
+  return (data ?? []) as UsuarioClinica[];
 }

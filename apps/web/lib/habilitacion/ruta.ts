@@ -6,6 +6,7 @@ import {
   UMBRALES_VENCIMIENTO_REPS,
   type ClavePaso,
 } from "@/lib/habilitacion/constantes";
+import type { Indicadores } from "@/lib/habilitacion/estado-criterio";
 import type { PerfilPrestador, SedeConServicios, ServicioSede } from "@/lib/habilitacion/tipos";
 
 export type EstadoPaso =
@@ -59,11 +60,15 @@ export function calcularRuta({
   sedes,
   serviciosSinSede,
   gestion,
+  autoevaluacion = null,
 }: {
   perfil: Pick<PerfilPrestador, "tipo_prestador" | "estado_reps" | "fecha_vencimiento_reps"> | null;
   sedes: Pick<SedeConServicios, "uso_edificacion" | "servicios">[];
   serviciosSinSede: number;
   gestion: boolean;
+  // Indicadores de todas las sedes (fn_hab_progreso_autoevaluacion); null =
+  // sin plan o la migración 0066 todavía no está aplicada.
+  autoevaluacion?: Pick<Indicadores, "evaluables" | "evaluados" | "noCumple" | "porcentajeCumplimiento"> | null;
 }): PasoRuta[] {
   const perfilOk = perfilCompleto(perfil);
   const servicios = sedes.flatMap((s) => s.servicios);
@@ -99,6 +104,25 @@ export function calcularRuta({
           };
         }
         return { ...base, estado: "completo", detalle: `${totalServicios} servicio${totalServicios === 1 ? "" : "s"} declarado${totalServicios === 1 ? "" : "s"}.` };
+      case "autoevaluacion": {
+        if (!perfilOk) return { ...base, estado: "bloqueado", detalle: "Primero completa tu perfil." };
+        if (!gestion) return { ...base, estado: "requiere_pro", detalle: "Disponible en el plan Pro." };
+        const a = autoevaluacion;
+        if (!a) return { ...base, estado: "proximamente", detalle: "Disponible pronto." };
+        if (a.evaluables === 0) return { ...base, estado: "bloqueado", detalle: "Primero declara los servicios de cada sede." };
+        const avance = `${a.evaluados} de ${a.evaluables} criterios evaluados`;
+        if (a.noCumple > 0) {
+          return { ...base, estado: "alerta", detalle: `${a.noCumple} no cumple${a.noCumple === 1 ? "" : "n"} · ${avance}.` };
+        }
+        if (a.evaluados === a.evaluables) {
+          return {
+            ...base,
+            estado: "completo",
+            detalle: `Todo evaluado${a.porcentajeCumplimiento !== null ? ` · ${a.porcentajeCumplimiento} % de cumplimiento` : ""}.`,
+          };
+        }
+        return { ...base, estado: a.evaluados > 0 ? "en_curso" : "pendiente", detalle: `${avance}.` };
+      }
       case "tablero":
         return { ...base, estado: "actual", detalle: "Estás aquí." };
       default:
@@ -135,6 +159,12 @@ export function sugerirVencimientoReps(fechaInscripcion: string): string {
   const ultimoDia = new Date(Date.UTC(anio, Number(m), 0)).getUTCDate();
   const dia = Math.min(Number(d), ultimoDia);
   return `${anio}-${m}-${String(dia).padStart(2, "0")}`;
+}
+
+// "2026-10-06" + 30 → "2026-11-05", sin zona horaria.
+export function sumarDias(fecha: string, dias: number): string {
+  const [a, m, d] = fecha.slice(0, 10).split("-").map(Number);
+  return new Date(Date.UTC(a, m - 1, d + dias)).toISOString().slice(0, 10);
 }
 
 // "2026-10-06" → "6 oct 2026" sin zona horaria.

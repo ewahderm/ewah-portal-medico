@@ -148,7 +148,7 @@ export const PASOS_RUTA = [
   { numero: 1, clave: "perfil", titulo: "Perfil del prestador", pregunta: "¿Qué tipo de prestador soy y ante quién respondo?", href: "/habilitacion/perfil" },
   { numero: 2, clave: "sedes", titulo: "Sedes y servicios", pregunta: "¿Qué voy a prestar y dónde?", href: "/habilitacion/sedes" },
   { numero: 3, clave: "documentos", titulo: "Documentos de inscripción", pregunta: "¿Qué tengo que radicar ante la secretaría?", href: null },
-  { numero: 4, clave: "autoevaluacion", titulo: "Autoevaluación", pregunta: "¿Cumplo cada criterio?", href: null },
+  { numero: 4, clave: "autoevaluacion", titulo: "Autoevaluación", pregunta: "¿Cumplo cada criterio?", href: "/habilitacion/autoevaluacion" },
   { numero: 5, clave: "obligaciones", titulo: "Obligaciones y calendario", pregunta: "¿Qué tengo que presentar y cuándo?", href: null },
   { numero: 6, clave: "tablero", titulo: "Tablero", pregunta: "¿Cómo voy y qué es urgente?", href: "/habilitacion" },
 ] as const;
@@ -161,10 +161,61 @@ export const SECCIONES_HABILITACION = [
   { href: "/habilitacion/perfil", label: "Perfil", gestion: false, disponible: true },
   { href: "/habilitacion/sedes", label: "Sedes y servicios", gestion: true, disponible: true },
   { href: "/habilitacion/documentos", label: "Documentos", gestion: true, disponible: false },
-  { href: "/habilitacion/autoevaluacion", label: "Autoevaluación", gestion: true, disponible: false },
+  { href: "/habilitacion/autoevaluacion", label: "Autoevaluación", gestion: true, disponible: true },
   { href: "/habilitacion/calendario", label: "Calendario", gestion: false, disponible: false },
   { href: "/habilitacion/obligaciones", label: "Obligaciones", gestion: false, disponible: false },
 ] as const;
+
+// ============================================================
+// Autoevaluación (F5, HU-4.1 a HU-4.5). Replican los checks de 0066.
+// ============================================================
+export const ESTADOS_EVALUACION = [
+  { value: "cumple", label: "Cumple" },
+  { value: "no_cumple", label: "No cumple" },
+  { value: "no_aplica", label: "No aplica" },
+  { value: "pendiente", label: "Pendiente" },
+] as const satisfies Opciones<string>;
+export type EstadoEvaluacion = (typeof ESTADOS_EVALUACION)[number]["value"];
+
+// Orden de la norma (hab_estandares.orden). Las etiquetas cortas son para
+// las pestañas en móvil; el nombre completo viene de la BD.
+export const ESTANDARES = [
+  { value: "talento_humano", label: "Talento humano", sigla: "TH" },
+  { value: "infraestructura", label: "Infraestructura", sigla: "IN" },
+  { value: "dotacion", label: "Dotación", sigla: "DO" },
+  { value: "medicamentos_dispositivos_insumos", label: "Medicamentos y dispositivos", sigla: "MD" },
+  { value: "procesos_prioritarios", label: "Procesos prioritarios", sigla: "PP" },
+  { value: "historia_clinica_registros", label: "Historia clínica", sigla: "HC" },
+  { value: "interdependencia", label: "Interdependencia", sigla: "IT" },
+] as const satisfies readonly { value: string; label: string; sigla: string }[];
+export type CodigoEstandar = (typeof ESTANDARES)[number]["value"];
+
+export const ESTADOS_PLAN_MEJORA = [
+  { value: "abierta", label: "Abierta" },
+  { value: "en_curso", label: "En curso" },
+  { value: "cerrada", label: "Cerrada" },
+] as const satisfies Opciones<string>;
+export type EstadoPlanMejora = (typeof ESTADOS_PLAN_MEJORA)[number]["value"];
+
+// Límites de texto (§3.1) — los mismos checks de 0066.
+export const MAX_JUSTIFICACION = 2000;
+export const MAX_OBSERVACION = 4000;
+export const MIN_JUSTIFICACION_NO_APLICA = 10;
+export const MIN_MOTIVO_RETIRO = 10;
+
+// Archivos del bucket `habilitacion` (§1.5): 10 MB como RRHH; el tipo se
+// decide por la FIRMA del archivo (lib/habilitacion/archivos.ts), no por el
+// nombre ni por lo que diga el navegador.
+export const MAX_ARCHIVO_BYTES = 10 * 1024 * 1024;
+export const FORMATOS_ARCHIVO = "PDF, JPG, PNG, WEBP, Word (.docx) o Excel (.xlsx)";
+export const ACCEPT_ARCHIVO = ".pdf,.jpg,.jpeg,.png,.webp,.docx,.xlsx";
+
+// PDF oficial de la norma (hab_normas.url_fuente); la página del criterio
+// se abre con #page=N.
+export const URL_PDF_RES3100 = "https://www.minsalud.gov.co/sites/rid/Lists/BibliotecaDigital/RIDE/DE/DIJ/resolucion-3100-de-2019.pdf";
+
+// URL firmada de evidencia: 60 s (contenido sensible, §1.5).
+export const SEGUNDOS_URL_FIRMADA = 60;
 
 // Vencimiento del REPS: ámbar desde 90 días, rojo desde 30 (§5.6).
 export const UMBRALES_VENCIMIENTO_REPS = { ambar: 90, rojo: 30 } as const;

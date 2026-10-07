@@ -16,8 +16,10 @@ import {
   getAccesoHabilitacion,
   getPerfilPrestador,
   getSedesConServicios,
+  getProgresoAutoevaluacion,
   hoyColombia,
 } from "@/lib/habilitacion/consultas";
+import { indicadoresDeProgreso } from "@/lib/habilitacion/estado-criterio";
 import {
   calcularRuta,
   diasHasta,
@@ -46,9 +48,10 @@ export default async function HabilitacionResumenPage() {
   }
 
   const supabase = await createClient();
-  const [perfil, { sedes, serviciosSinSede }] = await Promise.all([
+  const [perfil, { sedes, serviciosSinSede }, progreso] = await Promise.all([
     getPerfilPrestador(supabase),
     getSedesConServicios(supabase),
+    acceso.gestion ? getProgresoAutoevaluacion(supabase) : Promise.resolve(null),
   ]);
 
   // Criterios por sede (motor SQL, 0065) — solo con gestión: es la parte de
@@ -61,7 +64,13 @@ export default async function HabilitacionResumenPage() {
   const totalCriterios = conteos.reduce((a, c) => a + (c.total ?? 0), 0);
   const totalEvaluables = conteos.reduce((a, c) => a + (c.evaluables ?? 0), 0);
 
-  const pasos = calcularRuta({ perfil, sedes, serviciosSinSede: serviciosSinSede.length, gestion: acceso.gestion });
+  const pasos = calcularRuta({
+    perfil,
+    sedes,
+    serviciosSinSede: serviciosSinSede.length,
+    gestion: acceso.gestion,
+    autoevaluacion: progreso ? indicadoresDeProgreso(progreso) : null,
+  });
   const todosServicios = [...sedes.flatMap((s) => s.servicios), ...serviciosSinSede];
   const incompletos = todosServicios.filter((s) => faltanteServicio(s) !== null).length;
 
