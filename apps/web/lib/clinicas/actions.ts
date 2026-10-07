@@ -89,11 +89,12 @@ export async function actualizarDatosBasicosClinica(formData: FormData): Promise
   if (nombreComercial && nombreComercial.length > 200) {
     return { error: "El nombre comercial no puede superar 200 caracteres." };
   }
-  // Se quitan espacios, puntos o guiones que vengan al copiarlo del
-  // certificado de la ARL (mismo criterio que tenía el perfil SG-SST).
+  // Se quitan espacios, puntos o guiones que vengan al copiarlo del RUT.
   const codigoActividad = campoOpcional(formData, "codigoActividadEconomica")?.replace(/\D/g, "") || null;
-  if (codigoActividad && !/^[1-5]\d{6}$/.test(codigoActividad)) {
-    return { error: "La actividad económica tiene 7 dígitos y empieza por la clase de riesgo (1 a 5). Cópiala de tu afiliación a la ARL." };
+  // CIIU del RUT (4 dígitos); también se acepta el código de 7 dígitos de la
+  // ARL (el primero es la clase de riesgo, 1 a 5) por los que ya se guardaron.
+  if (codigoActividad && !/^(\d{4}|[1-5]\d{6})$/.test(codigoActividad)) {
+    return { error: "La actividad económica es el código CIIU de 4 dígitos de tu RUT (por ejemplo 8621)." };
   }
 
   const supabase = await createClient();

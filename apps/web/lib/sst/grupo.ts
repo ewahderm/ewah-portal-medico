@@ -105,7 +105,7 @@ export function diagnosticar(e: EntradaGrupo): Diagnostico {
       ...base,
       grupo: "sin_calcular",
       estandares: null,
-      motivo: "Falta la clase de riesgo: escribe el código de actividad económica de tu afiliación a la ARL (Dec. 768 de 2022).",
+      motivo: "Falta la clase de riesgo: elige el nivel de riesgo ARL en Parámetros > Datos básicos o asígnalo a los cargos (Dec. 768 de 2022).",
       responsable: null,
     };
   }

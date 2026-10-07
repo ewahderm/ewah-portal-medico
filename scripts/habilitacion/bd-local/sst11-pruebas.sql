@@ -9,7 +9,7 @@ select t.ok(
   'el código de actividad anterior se conserva al migrar al perfil de clínica'
 );
 select t.debe_fallar(
-  $$update clinicas set codigo_actividad_economica = '8621' where id = '00000000-0000-0000-0000-000000000080'$$,
+  $$update clinicas set codigo_actividad_economica = '86212' where id = '00000000-0000-0000-0000-000000000080'$$,
   'check'
 );
 
@@ -32,7 +32,7 @@ select t.debe_fallar(
   'nombre legal'
 );
 select t.debe_fallar(
-  $$select fn_actualizar_perfil_propia_clinica('Nombre válido', null, '8621')$$,
+  $$select fn_actualizar_perfil_propia_clinica('Nombre válido', null, '86212')$$,
   'actividad económica'
 );
 

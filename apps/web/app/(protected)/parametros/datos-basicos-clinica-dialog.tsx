@@ -175,20 +175,21 @@ export function DatosBasicosClinicaDialog({
               </p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="codigoActividadEconomica">Actividad económica</Label>
+              <Label htmlFor="codigoActividadEconomica">Actividad económica (RUT)</Label>
               <Input
                 id="codigoActividadEconomica"
                 name="codigoActividadEconomica"
                 inputMode="numeric"
-                // Sin pattern a propósito: se puede pegar "3 862101" o
-                // "3.862.101" tal como viene en el certificado; el servidor
-                // deja solo los dígitos y valida los 7 (lib/clinicas/actions.ts).
-                maxLength={15}
+                // Sin pattern a propósito: se puede pegar con espacios o
+                // puntos; el servidor deja solo los dígitos y valida
+                // (lib/clinicas/actions.ts).
+                maxLength={12}
                 defaultValue={clinica.codigoActividadEconomica ?? ""}
-                placeholder="Ej.: 3862101"
+                placeholder="Ej.: 8621"
               />
               <p className="text-xs text-muted-foreground">
-                Código de 7 dígitos del certificado de afiliación a la ARL; el primero indica la clase de riesgo.
+                Código CIIU de 4 dígitos de la casilla 46 del RUT. La clase de riesgo para SG-SST sale del nivel de
+                riesgo ARL de abajo.
               </p>
             </div>
           </div>
