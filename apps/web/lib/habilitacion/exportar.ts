@@ -256,7 +256,7 @@ export async function construirPdfAutoevaluacion(d: DatosExportacion): Promise<U
     });
   }
   if (a.servicios_no_aptos.length > 0) {
-    escribir("Al cerrar se confirmó que los servicios con incumplimientos no se podían declarar en el REPS.", { color: COLOR_SUAVE });
+    escribir("Al cerrar se confirmó que los servicios con incumplimientos o criterios sin evaluar no se podían declarar en el REPS.", { color: COLOR_SUAVE });
   }
   y -= 8;
 

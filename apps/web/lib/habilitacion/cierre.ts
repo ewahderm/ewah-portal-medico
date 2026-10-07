@@ -1,7 +1,8 @@
 "use server";
 
 // Cierre de la autoevaluación (F10, HU-4.6). La foto la arma la BD
-// (fn_hab_cerrar_autoevaluacion, 0070): conjunto de criterios, estados
+// (fn_hab_cerrar_autoevaluacion, 0070; 0086 suma los servicios sin evaluar a los
+// que exigen confirmar): conjunto de criterios, estados
 // derivados, evidencias y resumen. Aquí solo se valida la forma de lo que
 // escribe el usuario (nombre, motivo, fechas) y se traducen los errores.
 
@@ -83,8 +84,9 @@ export async function registrarFechaDeclaracionReps(id: string, fecha: string): 
 }
 
 // Una foto equivocada no se borra: se anula con un motivo (queda en el
-// historial tachada). La ocurrencia del REPS que haya marcado se anula
-// aparte en Obligaciones si hace falta.
+// historial tachada). La ocurrencia del REPS que esa foto hubiera marcado
+// como presentada se reabre sola (trigger de 0071: se anula y nace una
+// pendiente del mismo periodo).
 export async function anularAutoevaluacion(id: string, motivo: string): Promise<Resultado> {
   if (!esUuid(id)) return { error: "Autoevaluación inválida." };
   const texto = motivo.trim();

@@ -124,3 +124,15 @@ update hab_autoevaluaciones set anulado = true, anulado_motivo = 'Se cerró con 
 select t.ok(estado = 'anulado', 'H4: la ocurrencia probada solo con la autoevaluación queda anulada') from hab_obligacion_ocurrencias where id = :'oc';
 select t.ok(count(*) = 1, 'H4: y nace la pendiente del mismo periodo') from hab_obligacion_ocurrencias where reemplaza_id = :'oc' and estado = 'pendiente';
 reset role;
+
+-- 0086 · "hoy" en hora de Colombia: ninguna función del motor usa current_date (UTC),
+--        y el resultado no depende de la zona horaria de la sesión.
+select t.ok(count(*) = 0, '0086 · aplicabilidad, tablero y progreso sin current_date: ' || coalesce(string_agg(p.proname, ', '), '')) from pg_proc p where p.proname in ('fn_hab_criterio_aplica', 'fn_hab_tablero_criterios', 'fn_hab_progreso_autoevaluacion', 'fn_hab_estados_declaracion') and pg_get_functiondef(p.oid) ~* 'current_date';
+select t.como('00000000-0000-0000-0000-00000000000a'); set role authenticated;
+set timezone = 'Pacific/Kiritimati';
+select count(*) as n_k from fn_hab_tablero_criterios(:SA) \gset
+set timezone = 'Pacific/Pago_Pago';
+select count(*) as n_p from fn_hab_tablero_criterios(:SA) \gset
+reset timezone;
+select t.ok(:n_k = :n_p and :n_k > 0, '0086 · el tablero no cambia con la zona horaria de la sesión');
+reset role;

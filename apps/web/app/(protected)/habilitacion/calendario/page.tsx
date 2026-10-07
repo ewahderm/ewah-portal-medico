@@ -9,7 +9,7 @@ import {
   getPerfilPrestador,
   hoyColombia,
 } from "@/lib/habilitacion/consultas";
-import { perfilCompleto, sumarDias } from "@/lib/habilitacion/ruta";
+import { aniosSinFestivos, perfilCompleto, sumarDias } from "@/lib/habilitacion/ruta";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,7 +25,7 @@ export default async function CalendarioPage({
 }: {
   searchParams: Promise<{ [k: string]: string | string[] | undefined }>;
 }) {
-  await requireUsuario();
+  const usuario = await requireUsuario();
   const acceso = await getAccesoHabilitacion();
   if (!acceso.puedeVer) {
     return (
@@ -44,11 +44,24 @@ export default async function CalendarioPage({
   const hasta = vista === "agenda" ? sumarDias(fecha, 90) : sumarDias(`${fecha.slice(0, 7)}-01`, 45);
 
   const supabase = await createClient();
-  const [perfil, config, ocurrencias] = await Promise.all([
+  const [perfil, config, ocurrencias, { data: clinicaPais }] = await Promise.all([
     getPerfilPrestador(supabase),
     getObligacionesClinica(supabase),
     getOcurrencias(supabase, desde, hasta),
+    supabase.from("clinicas").select("pais_operacion_id").eq("id", usuario.clinica_id).maybeSingle(),
   ]);
+  // Festivos sembrados solo hasta cierto año: si el rango visible no tiene ninguno,
+  // "día no hábil" cuenta solo fines de semana y las fechas pueden engañar.
+  let aniosSinFestivosVisibles: number[] = [];
+  if (clinicaPais?.pais_operacion_id) {
+    const { data: festivos } = await supabase
+      .from("festivos")
+      .select("fecha")
+      .eq("pais_id", clinicaPais.pais_operacion_id)
+      .gte("fecha", `${desde.slice(0, 4)}-01-01`)
+      .lte("fecha", `${hasta.slice(0, 4)}-12-31`);
+    aniosSinFestivosVisibles = aniosSinFestivos(desde, hasta, (festivos ?? []).map((f) => f.fecha as string));
+  }
 
   if (config === null) {
     return (
@@ -105,7 +118,18 @@ export default async function CalendarioPage({
   }
 
   return (
-    <CalendarioObligaciones
+    <div className="space-y-3">
+      {aniosSinFestivosVisibles.length > 0 ? (
+        <Alert>
+          <TriangleAlertIcon />
+          <AlertDescription>
+            Los festivos de {aniosSinFestivosVisibles.join(" y ")} aún no están cargados: los días no hábiles de ese periodo solo
+            cuentan sábados y domingos, así que una fecha límite podría caer en un festivo sin avisarlo. Confirma las fechas con la
+            entidad.
+          </AlertDescription>
+        </Alert>
+      ) : null}
+      <CalendarioObligaciones
       fecha={fecha}
       vista={vista}
       hoy={hoy}
@@ -113,6 +137,7 @@ export default async function CalendarioPage({
       ocurrencias={ocurrencias}
       otros={otros}
       permisos={{ presentar: acceso.gestion && acceso.puedeEditar, anular: acceso.gestion && acceso.puedeAnular }}
-    />
+      />
+    </div>
   );
 }

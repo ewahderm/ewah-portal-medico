@@ -50,6 +50,11 @@ export function ResumenFuente({ resumen, compacto }: { resumen: ResumenEvidencia
         </span>
       </div>
       <p className="text-xs text-muted-foreground">{resumen.detalle}</p>
+      {resumen.fuente === "rrhh_talento_humano" && resumen.filas_visibles === false ? (
+        <p className="text-xs text-muted-foreground">
+          El detalle por persona está en RRHH y solo lo ve quien tiene permiso en ese módulo.
+        </p>
+      ) : null}
       {!compacto && resumen.filas && resumen.filas.length > 0 ? (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[22rem] text-xs">

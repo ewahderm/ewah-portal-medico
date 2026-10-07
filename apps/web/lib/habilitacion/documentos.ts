@@ -156,11 +156,14 @@ export async function quitarNoAplicaDocumento(documentoId: string): Promise<Resu
   const check = await requireHabilitacion("EDIT", { gestion: true });
   if (!check.ok) return { error: check.error };
   const supabase = await createClient();
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("hab_documentos_clinica")
     .update({ no_aplica: false, no_aplica_justificacion: null, updated_by: check.usuario.id })
-    .eq("id", documentoId);
+    .eq("id", documentoId)
+    .select("id");
   if (error) return { error: mensajeError("quitarNoAplicaDocumento", error, "No se pudo guardar.") };
+  // RLS filtra en silencio: 0 filas = el documento no existe o no es de tu clínica.
+  if (!data || data.length === 0) return { error: "No se encontró el documento (o no tienes acceso)." };
   revalidar();
   return {};
 }

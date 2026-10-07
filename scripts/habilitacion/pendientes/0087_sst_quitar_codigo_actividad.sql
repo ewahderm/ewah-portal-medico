@@ -1,5 +1,5 @@
 -- ============================================================
--- 0085 · SG-SST · Quitar sst_perfil.codigo_actividad (PENDIENTE)
+-- 0087 · SG-SST · Quitar sst_perfil.codigo_actividad (PENDIENTE)
 -- ============================================================
 -- NO va en supabase/migrations todavía. Se aplica SOLO DESPUÉS de que el
 -- código nuevo de la app (que lee la actividad económica desde

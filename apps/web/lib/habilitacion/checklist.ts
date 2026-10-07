@@ -67,6 +67,8 @@ export function armarChecklist(
   ctx: ContextoDocumentos,
   fechaPlaneadaRadicacion: string | null,
   hoy: string,
+  // Las versiones de documentos financieros solo las lee quien tiene EDIT (RLS 0068).
+  puedeVerFinanciero = true,
 ): ItemChecklist[] {
   const porClave = new Map(renglones.filter((r) => r.documento_catalogo_id).map((r) => [claveRenglon(r.documento_catalogo_id, r.sede_id, r.servicio_habilitado_id), r]));
   const porCatalogo = new Map(catalogo.map((c) => [c.id, c]));
@@ -86,7 +88,10 @@ export function armarChecklist(
       catalogo: catalogoDoc,
       renglon,
       vigente,
-      estado: estadoDocumento(catalogoDoc, renglon, vigente, fechaPlaneadaRadicacion, hoy),
+      estado:
+        !puedeVerFinanciero && catalogoDoc?.es_financiero && !vigente && !renglon?.no_aplica
+          ? { estado: "sin_permiso", detalle: "Documento financiero: solo lo ve quien tiene permiso de edición en Habilitación." }
+          : estadoDocumento(catalogoDoc, renglon, vigente, fechaPlaneadaRadicacion, hoy),
       ...extra,
     };
   };
@@ -135,7 +140,10 @@ export function armarChecklist(
 // Paso 3 de la ruta: documentos para radicar listos (cargados vigentes o
 // marcados "No aplica") sobre los que pide la norma.
 export function resumenChecklist(items: ItemChecklist[]) {
-  const radicar = items.filter((i) => (i.aplica === "si" || i.aplica === "por_confirmar") && i.catalogo?.seccion === "radicar");
+  // Los "sin permiso" no se pueden juzgar: no cuentan ni como listos ni como faltantes.
+  const radicar = items.filter(
+    (i) => (i.aplica === "si" || i.aplica === "por_confirmar") && i.catalogo?.seccion === "radicar" && i.estado.estado !== "sin_permiso",
+  );
   const listos = radicar.filter((i) => ["cargado", "por_vencer", "no_aplica"].includes(i.estado.estado)).length;
   const vencidos = items.filter((i) => i.aplica !== "ya_no_aplica" && i.estado.estado === "vencido").length;
   const porVencer = items.filter((i) => i.aplica !== "ya_no_aplica" && i.estado.estado === "por_vencer").length;

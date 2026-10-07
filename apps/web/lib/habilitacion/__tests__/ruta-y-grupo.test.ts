@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { parsePesos, pesosAUvt, sugerirGrupoSupersalud } from "@/lib/habilitacion/grupo-supersalud";
 import {
+  aniosSinFestivos,
   calcularRuta,
   diasHasta,
   faltanteServicio,
@@ -176,5 +177,17 @@ describe("calcularRuta", () => {
     expect(
       calcularRuta({ perfil, sedes: [{ uso_edificacion: "mixto", servicios: [servicio()] }], serviciosSinSede: 0, gestion: true })[1].estado,
     ).toBe("completo");
+  });
+});
+
+describe("aniosSinFestivos (aviso del calendario)", () => {
+  it("lista los años del rango sin ningún festivo cargado", () => {
+    expect(aniosSinFestivos("2028-12-20", "2029-02-15", ["2028-12-25", "2028-01-01"])).toEqual([2029]);
+  });
+  it("vacío si todos los años del rango tienen festivos", () => {
+    expect(aniosSinFestivos("2026-10-01", "2026-12-31", ["2026-12-25"])).toEqual([]);
+  });
+  it("sin festivos cargados, todos los años del rango", () => {
+    expect(aniosSinFestivos("2029-12-01", "2030-01-31", [])).toEqual([2029, 2030]);
   });
 });

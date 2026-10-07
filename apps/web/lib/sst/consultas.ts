@@ -39,9 +39,15 @@ export type PerfilSst = {
 export const PERFIL_SST_SELECT =
   "modo, otros_trabajadores, otros_trabajadores_detalle, excluye_contratistas, justificacion_exclusion, responsable_nombre, responsable_formacion, responsable_licencia, responsable_licencia_vence, responsable_curso_50h, updated_at";
 
-export async function getPerfilSst(supabase: Supabase): Promise<PerfilSst | null> {
-  const { data } = await supabase.from("sst_perfil").select(PERFIL_SST_SELECT).maybeSingle();
-  return (data as PerfilSst | null) ?? null;
+// error = la lectura falló (distinto de "aún no hay perfil"): la pantalla
+// debe decirlo en vez de mostrar un perfil vacío con un diagnóstico falso.
+export async function getPerfilSst(supabase: Supabase): Promise<{ perfil: PerfilSst | null; error: boolean }> {
+  const { data, error } = await supabase.from("sst_perfil").select(PERFIL_SST_SELECT).maybeSingle();
+  if (error) {
+    console.error("[sst] getPerfilSst", error);
+    return { perfil: null, error: true };
+  }
+  return { perfil: (data as PerfilSst | null) ?? null, error: false };
 }
 
 export type ConteoTrabajadores = {
@@ -116,9 +122,14 @@ export async function getEventos(supabase: Supabase, filtros: { tipo?: string; e
   return (data ?? []) as unknown as EventoSst[];
 }
 
-export async function getEvento(supabase: Supabase, id: string): Promise<EventoSst | null> {
-  const { data } = await supabase.from("accidentes_trabajo").select(EVENTO_SELECT).eq("id", id).maybeSingle();
-  return (data as unknown as EventoSst | null) ?? null;
+// error = la lectura falló (no es lo mismo que "el evento no existe").
+export async function getEvento(supabase: Supabase, id: string): Promise<{ evento: EventoSst | null; error: boolean }> {
+  const { data, error } = await supabase.from("accidentes_trabajo").select(EVENTO_SELECT).eq("id", id).maybeSingle();
+  if (error) {
+    console.error("[sst] getEvento", error);
+    return { evento: null, error: true };
+  }
+  return { evento: (data as unknown as EventoSst | null) ?? null, error: false };
 }
 
 export type Investigacion = {
@@ -136,11 +147,12 @@ export type Investigacion = {
 };
 
 export async function getInvestigacion(supabase: Supabase, accidenteId: string): Promise<Investigacion | null> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("sst_investigaciones")
     .select("id, fecha_inicio, equipo, descripcion, metodologia, causas_inmediatas, causas_basicas, conclusiones, estado, fecha_cierre, informe_nombre_archivo")
     .eq("accidente_id", accidenteId)
     .maybeSingle();
+  if (error) console.error("[sst] getInvestigacion", error);
   return (data as Investigacion | null) ?? null;
 }
 
@@ -427,20 +439,58 @@ export type ItemAutoevaluacion = {
 };
 
 export async function getAutoevaluaciones(supabase: Supabase): Promise<AutoevaluacionResumen[]> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("sst_autoevaluaciones")
     .select("id, anio, grupo, estado, puntaje, nivel, fecha_cierre")
     .order("anio", { ascending: false });
+  if (error) console.error("[sst] getAutoevaluaciones", error);
   return ((data ?? []) as AutoevaluacionResumen[]).map((a) => ({ ...a, puntaje: a.puntaje === null ? null : Number(a.puntaje) }));
 }
 
+type FilaItem = {
+  id: string;
+  estado: ItemAutoevaluacion["estado"];
+  justificacion: string | null;
+  observacion: string | null;
+  updated_at: string;
+  estandar_codigo: string;
+  snap_ciclo: ItemAutoevaluacion["estandar"]["ciclo"];
+  snap_componente: string;
+  snap_nombre: string;
+  snap_descripcion: string;
+  snap_peso: number | string;
+  snap_orden: number;
+  snap_verificado: boolean;
+};
+
+// Lee la FOTO del estándar que se guardó al iniciar la autoevaluación (0086),
+// no el catálogo vivo: una autoevaluación cerrada no cambia aunque el
+// catálogo se corrija después. (La abierta también usa su foto: el puntaje
+// que calcula la BD al cerrar usa esos mismos pesos.)
 export async function getItemsAutoevaluacion(supabase: Supabase, autoevaluacionId: string): Promise<ItemAutoevaluacion[]> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("sst_autoevaluacion_items")
-    .select("id, estado, justificacion, observacion, updated_at, estandar:sst_estandares(codigo, ciclo, componente, nombre, descripcion, peso, orden, verificado)")
+    .select("id, estado, justificacion, observacion, updated_at, estandar_codigo, snap_ciclo, snap_componente, snap_nombre, snap_descripcion, snap_peso, snap_orden, snap_verificado")
     .eq("autoevaluacion_id", autoevaluacionId);
-  return ((data ?? []) as unknown as ItemAutoevaluacion[])
-    .map((i) => ({ ...i, estandar: { ...i.estandar, peso: Number(i.estandar.peso) } }))
+  if (error) console.error("[sst] getItemsAutoevaluacion", error);
+  return ((data ?? []) as unknown as FilaItem[])
+    .map((i) => ({
+      id: i.id,
+      estado: i.estado,
+      justificacion: i.justificacion,
+      observacion: i.observacion,
+      updated_at: i.updated_at,
+      estandar: {
+        codigo: i.estandar_codigo,
+        ciclo: i.snap_ciclo,
+        componente: i.snap_componente,
+        nombre: i.snap_nombre,
+        descripcion: i.snap_descripcion,
+        peso: Number(i.snap_peso),
+        orden: i.snap_orden,
+        verificado: i.snap_verificado,
+      },
+    }))
     .sort((a, b) => a.estandar.orden - b.estandar.orden);
 }
 
@@ -459,7 +509,7 @@ export async function getInsumosTablero(
   const [eventos, acciones, personas, plan, autoevaluacion, comites, registro] = await Promise.all([
     supabase
       .from("accidentes_trabajo")
-      .select("id, fecha, tipo_evento, reportado_arl, fecha_limite_reporte, fecha_limite_investigacion, sst_investigaciones(estado)")
+      .select("id, fecha, tipo_evento, gravedad, reportado_arl, reportado_eps, reportado_mintrabajo, fecha_limite_reporte, fecha_limite_investigacion, cerrado, sst_investigaciones(estado)")
       .gte("fecha", desde(90))
       .order("fecha"),
     gestion ? supabase.from("sst_acciones").select("fecha_compromiso, estado").neq("estado", "cerrada") : vacio,
@@ -469,6 +519,7 @@ export async function getInsumosTablero(
     gestion ? supabase.from("sst_comites").select("tipo, fecha_fin") : vacio,
     gestion ? supabase.from("sst_fechas_anuales").select("fecha_limite_registro").eq("anio", anio).maybeSingle() : { data: null },
   ]);
+  if (eventos.error) console.error("[sst] getInsumosTablero eventos", eventos.error);
   type FilaEvento = Omit<InsumosTablero["eventos"][number], "investigacion_cerrada"> & {
     sst_investigaciones: { estado: string } | { estado: string }[] | null;
   };
@@ -481,6 +532,8 @@ export async function getInsumosTablero(
         ...e,
         // Los reportes de más de 60 días ya no se listan (mismo corte del cron).
         reportado_arl: e.reportado_arl || e.fecha < desde(60),
+        reportado_eps: e.reportado_eps || e.fecha < desde(60),
+        reportado_mintrabajo: e.reportado_mintrabajo || e.fecha < desde(60),
         investigacion_cerrada: (Array.isArray(inv) ? inv : inv ? [inv] : []).some((i) => i.estado === "cerrada"),
       })),
     acciones: (acciones.data ?? []) as InsumosTablero["acciones"],

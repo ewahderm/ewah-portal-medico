@@ -7,7 +7,11 @@ columna) solo se aplica cuando el código nuevo ya está desplegado.
 
 | Archivo | Qué hace | Cuándo aplicarla |
 | --- | --- | --- |
-| `0085_sst_quitar_codigo_actividad.sql` | Repite el backfill `sst_perfil.codigo_actividad` → `clinicas.codigo_actividad_economica` (solo donde la clínica está en null) y borra la columna vieja. | Después de desplegar el código que lee la actividad económica desde Parámetros (migración 0080). |
+| `0087_sst_quitar_codigo_actividad.sql` | Repite el backfill `sst_perfil.codigo_actividad` → `clinicas.codigo_actividad_economica` (solo donde la clínica está en null) y borra la columna vieja. | Después de desplegar el código que lee la actividad económica desde Parámetros (migración 0080). |
+
+Numeración: el 0085 ya lo ocupa `0085_habilitacion_correcciones.sql` y el 0086
+`0086_sst_correcciones.sql` (ambos en `supabase/migrations/`), por eso este paso
+pasó a ser el 0087. Si al aplicarlo ese número ya está tomado, usa el siguiente libre.
 
 Cómo aplicarla: copiarla a `supabase/migrations/` con el siguiente número
 libre, correr `scripts/habilitacion/bd-local/probar.sh` y luego

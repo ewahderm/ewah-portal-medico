@@ -14,8 +14,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Combobox } from "@/components/ui/combobox";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { BarraProgreso } from "../../habilitacion/autoevaluacion/barra-progreso";
 import { PlanAccion } from "../_components/plan-accion";
@@ -23,12 +21,6 @@ import { PlanAccion } from "../_components/plan-accion";
 type Grupo = "7" | "21" | "60";
 type Usuario = { id: string; nombre: string };
 type Filtro = "todos" | "pendiente" | "no_cumple";
-
-const GRUPOS: { value: Grupo; label: string }[] = [
-  { value: "7", label: "7 estándares (hasta 10 trabajadores, riesgo I a III)" },
-  { value: "21", label: "21 estándares (11 a 50 trabajadores, riesgo I a III)" },
-  { value: "60", label: "60 estándares (más de 50 trabajadores o riesgo IV y V)" },
-];
 
 const OPCIONES: { value: Exclude<EstadoItem, "pendiente">; label: string }[] = [
   { value: "cumple", label: "Cumple" },
@@ -109,15 +101,14 @@ function SelectorAnio({ anio, anioActual, historial }: { anio: number; anioActua
 
 function Iniciar({ anio, grupoSugerido, motivoGrupo, puedeCrear }: { anio: number; grupoSugerido: Grupo | null; motivoGrupo: string | null; puedeCrear: boolean }) {
   const router = useRouter();
-  const [grupo, setGrupo] = useState<Grupo | null>(grupoSugerido);
   const [pendiente, setPendiente] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function iniciar() {
-    if (!grupo) return;
+    if (!grupoSugerido) return;
     setPendiente(true);
     setError(null);
-    const r = await iniciarAutoevaluacion(anio, grupo);
+    const r = await iniciarAutoevaluacion(anio);
     setPendiente(false);
     if (r.error) return setError(r.error);
     toast.add({ title: `Autoevaluación ${anio} iniciada`, type: "success" });
@@ -142,24 +133,21 @@ function Iniciar({ anio, grupoSugerido, motivoGrupo, puedeCrear }: { anio: numbe
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           ) : null}
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-            <div className="flex-1 space-y-1">
-              <Label htmlFor="grupoEstandares">Grupo de estándares</Label>
-              <Combobox
-                id="grupoEstandares"
-                items={GRUPOS}
-                value={grupo}
-                onValueChange={(v) => setGrupo((v as Grupo | null) ?? null)}
-                placeholder="Elige el grupo"
-              />
-            </div>
-            <Button onClick={iniciar} disabled={!grupo || pendiente}>
-              {pendiente ? "Iniciando…" : "Iniciar autoevaluación"}
-            </Button>
-          </div>
-          {grupoSugerido && grupo && grupo !== grupoSugerido ? (
-            <p className="text-xs text-amber-700">El diagnóstico indica {grupoSugerido} estándares. Elige otro grupo solo si estás seguro.</p>
-          ) : null}
+          {grupoSugerido ? (
+            <p className="text-sm">
+              Te corresponden <span className="font-medium">{grupoSugerido} estándares</span>. El grupo lo define el número de trabajadores y la clase
+              de riesgo; no se puede elegir uno menor.
+            </p>
+          ) : (
+            <Alert>
+              <AlertDescription>
+                Aún no podemos saber qué grupo te corresponde. Completa el diagnóstico (trabajadores y clase de riesgo) y vuelve.
+              </AlertDescription>
+            </Alert>
+          )}
+          <Button onClick={iniciar} disabled={!grupoSugerido || pendiente}>
+            {pendiente ? "Iniciando…" : "Iniciar autoevaluación"}
+          </Button>
         </>
       ) : (
         <p className="text-sm text-muted-foreground">No tienes permiso para iniciarla.</p>

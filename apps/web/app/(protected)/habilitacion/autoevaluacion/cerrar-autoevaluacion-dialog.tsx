@@ -19,8 +19,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { EstadoDeclaracionBadge } from "../_components/estado-declaracion-badge";
 
 // HU-4.6: cerrar = guardar una foto que ya no cambia. Antes de cerrar se
-// muestra el estado de cada servicio; si alguno tiene un "No cumple" no se
-// puede declarar en el REPS y el cierre exige confirmar que se sabe (AC3).
+// muestra el estado de cada servicio; si alguno tiene un "No cumple" o criterios
+// pendientes no se puede declarar en el REPS y el cierre exige confirmar que se sabe (AC2/AC3).
 export function CerrarAutoevaluacionBoton() {
   const [abierto, setAbierto] = useState(false);
   return (
@@ -62,6 +62,8 @@ function CerrarAutoevaluacionDialog({ onCerrar }: { onCerrar: () => void }) {
 
   const noAptos = (servicios ?? []).filter((s) => s.estado === "con_incumplimientos");
   const sinEvaluar = (servicios ?? []).filter((s) => s.estado === "sin_evaluar");
+  // HU-4.6 AC2: "No cumple" O pendientes avisan y exigen confirmación explícita.
+  const requiereConfirmar = noAptos.length + sinEvaluar.length > 0;
 
   async function cerrar(e: React.FormEvent) {
     e.preventDefault();
@@ -140,24 +142,30 @@ function CerrarAutoevaluacionDialog({ onCerrar }: { onCerrar: () => void }) {
             )}
           </div>
 
-          {sinEvaluar.length > 0 ? (
-            <p className="text-xs text-muted-foreground">
-              {sinEvaluar.length} servicio{sinEvaluar.length === 1 ? "" : "s"} con criterios sin evaluar: en la foto quedan como
-              «Pendiente».
-            </p>
-          ) : null}
-
-          {noAptos.length > 0 ? (
+          {requiereConfirmar ? (
             <Alert variant="destructive">
               <TriangleAlertIcon />
               <AlertDescription className="space-y-2">
-                <p>
-                  {noAptos.length === 1 ? "Este servicio no se puede declarar" : `Estos ${noAptos.length} servicios no se pueden declarar`} en
-                  el REPS: la norma no admite cumplimiento parcial y tienen al menos un «No cumple».
-                </p>
+                {noAptos.length > 0 ? (
+                  <p>
+                    {noAptos.length === 1 ? "Este servicio no se puede declarar" : `Estos ${noAptos.length} servicios no se pueden declarar`} en
+                    el REPS: la norma no admite cumplimiento parcial y tienen al menos un «No cumple».
+                  </p>
+                ) : null}
+                {sinEvaluar.length > 0 ? (
+                  <p>
+                    {sinEvaluar.length === 1 ? "Este servicio tiene" : `Estos ${sinEvaluar.length} servicios tienen`} criterios sin evaluar: en la foto
+                    quedan como «Pendiente» y tampoco se pueden declarar hasta evaluarlos.
+                  </p>
+                ) : null}
                 <label className="flex items-start gap-2 font-medium">
                   <Checkbox checked={confirmo} onCheckedChange={(v) => setConfirmo(!!v)} />
-                  <span>Entiendo que {noAptos.length === 1 ? "ese servicio queda" : "esos servicios quedan"} como «{etiquetaDe(ESTADOS_DECLARACION, "con_incumplimientos")}» y cierro igual.</span>
+                  <span>
+                    Entiendo que {noAptos.length + sinEvaluar.length === 1 ? "ese servicio queda" : "esos servicios quedan"} sin poder declararse
+                    {noAptos.length > 0 ? ` («${etiquetaDe(ESTADOS_DECLARACION, "con_incumplimientos")}»)` : ""}
+                    {noAptos.length > 0 && sinEvaluar.length > 0 ? " o " : ""}
+                    {sinEvaluar.length > 0 ? ` («${etiquetaDe(ESTADOS_DECLARACION, "sin_evaluar")}»)` : ""} y cierro igual.
+                  </span>
                 </label>
               </AlertDescription>
             </Alert>
@@ -171,7 +179,7 @@ function CerrarAutoevaluacionDialog({ onCerrar }: { onCerrar: () => void }) {
               <Button type="button" variant="outline" onClick={onCerrar} disabled={pendiente}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={pendiente || servicios === null || servicios.length === 0 || (noAptos.length > 0 && !confirmo)}>
+              <Button type="submit" disabled={pendiente || servicios === null || servicios.length === 0 || (requiereConfirmar && !confirmo)}>
                 {pendiente ? "Cerrando…" : "Cerrar y guardar la foto"}
               </Button>
             </div>

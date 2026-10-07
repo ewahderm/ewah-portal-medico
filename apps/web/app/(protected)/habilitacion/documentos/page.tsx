@@ -90,6 +90,7 @@ export default async function DocumentosPage() {
     contextoDocumentos(perfil, personaJuridica, sedes),
     perfil?.fecha_planeada_radicacion ?? null,
     hoy,
+    acceso.puedeEditar,
   );
   const resumen = resumenChecklist(items);
   const nombres = Object.fromEntries(usuarios.map((u) => [u.id, u.nombre]));
