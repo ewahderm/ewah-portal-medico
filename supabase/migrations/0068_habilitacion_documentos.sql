@@ -22,7 +22,7 @@
 -- Decisiones respecto al diseño (por escrito):
 --   - Las funciones de inmutabilidad y de "solo anular" llevan nombre
 --     propio de F7 (fn_hab_doc_version_inmutable, fn_hab_tramite_solo_anular)
---     y se crean SIN "or replace": F5 (0066) y F8 (0068) se construyen en
+--     y se crean SIN "or replace": F5 (0066) y F8 (0069) se construyeron en
 --     paralelo y podrían definir las genéricas fn_hab_inmutable /
 --     fn_hab_solo_anular con otro cuerpo; así ninguna fase pisa en silencio
 --     la función de otra. Consolidarlas es tarea de F11.
@@ -32,7 +32,7 @@
 --     y un renglón solo existe cuando hay algo que guardar. Un GET nunca
 --     escribe.
 --   - Subsanación tras la visita (HU-3.4 AC2): la tabla de obligaciones es
---     de F8 (0068). Aquí el hito guarda `subsanar_hasta` = fecha del acta +
+--     de F8 (0069). Aquí el hito guarda `subsanar_hasta` = fecha del acta +
 --     8 días hábiles (calculado en BD con `festivos`) y F8 crea la
 --     ocurrencia `subsanacion-visita` a partir de esa columna (trigger after
 --     insert sobre hab_tramite_hitos, ver comentario en §4).
@@ -348,7 +348,7 @@ create trigger hab_documento_versiones_documento_misma_clinica
 -- y quien solo tiene CREATE no lo tiene por RLS; además debe ver versiones
 -- financieras ajenas a su permiso para no repetir un número. No eleva nada
 -- más: solo lee el padre y el máximo de versión, y fija columnas de NEW.
-create function fn_hab_version_siguiente()
+create function fn_hab_doc_version_siguiente()
 returns trigger
 language plpgsql
 security definer
@@ -391,7 +391,7 @@ $$;
 
 create trigger hab_documento_versiones_siguiente
   before insert on hab_documento_versiones
-  for each row execute function fn_hab_version_siguiente();
+  for each row execute function fn_hab_doc_version_siguiente();
 
 -- Append-only real. El único DELETE admitido es la cascada al borrar la
 -- clínica entera (la fila de clinicas ya no existe en ese punto); un DELETE
@@ -609,7 +609,7 @@ create policy "hab_tramite_hitos_update" on hab_tramite_hitos
 --   visita_realizada con subsanables → subsanar_hasta (trigger). PARA F8:
 --     crear la ocurrencia `subsanacion-visita` con límite = subsanar_hasta
 --     desde un trigger AFTER INSERT sobre hab_tramite_hitos (y anularla si
---     el hito se anula). No se crea aquí porque la tabla es de 0068.
+--     el hito se anula). No se crea aquí porque la tabla es de 0069.
 create function fn_hab_registrar_hito(
   p_id uuid,
   p_tipo text,

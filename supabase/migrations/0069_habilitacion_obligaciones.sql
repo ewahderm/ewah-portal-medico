@@ -508,8 +508,8 @@ create policy "hab_obligacion_ocurrencias_update" on hab_obligacion_ocurrencias
 -- ============================================================
 -- 5. hab_alertas_enviadas — idempotencia de avisos (lo usa F9)
 -- ============================================================
--- Se crea aquí (0068 es la migración reservada para "obligaciones +
--- alertas", §7) para que F9 no necesite migración. Solo el service role
+-- Se crea aquí (la migración de "obligaciones + alertas", §7) para que F9
+-- no necesite migración. Solo el service role
 -- escribe; sin fn_auditoria (es un log).
 create table hab_alertas_enviadas (
   id uuid primary key default gen_random_uuid(),
@@ -989,6 +989,54 @@ $$;
 
 revoke all on function fn_hab_anular_novedad(uuid, text) from public, anon;
 grant execute on function fn_hab_anular_novedad(uuid, text) to authenticated;
+
+-- ============================================================
+-- 10b. Subsanación tras la visita (HU-3.4 AC2, pendiente de F7 / 0068)
+-- ============================================================
+-- Un hito `visita_realizada` con incumplimientos subsanables trae
+-- `subsanar_hasta` (fecha del acta + 8 días hábiles, calculada en 0068).
+-- Aquí nace la ocurrencia `subsanacion-visita` con esa fecha; si el hito se
+-- anula, la ocurrencia pendiente se anula con él. security definer: el
+-- origen `subsanacion_visita` generado por el sistema no lo puede insertar
+-- un usuario por RLS; solo se dispara con un hito de la propia clínica.
+create or replace function fn_hab_tg_hito_subsanacion()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_obligacion uuid;
+begin
+  select id into v_obligacion from hab_obligaciones_catalogo where codigo = 'subsanacion-visita';
+  if v_obligacion is null then
+    return null;
+  end if;
+
+  if tg_op = 'INSERT' and new.subsanar_hasta is not null then
+    insert into hab_obligacion_ocurrencias
+      (clinica_id, obligacion_id, origen, clave_periodo, periodo_corte, etiqueta_periodo, fecha_limite, generada_por)
+    values
+      (new.clinica_id, v_obligacion, 'subsanacion_visita', 'subsanacion-' || new.id::text, new.fecha,
+       'visita del ' || to_char(new.fecha, 'DD-MM-YYYY') || ' (8 días hábiles)', new.subsanar_hasta, 'sistema')
+    on conflict (clinica_id, obligacion_id, clave_periodo) where (estado <> 'anulado') do nothing;
+  elsif tg_op = 'UPDATE' and new.anulado and not old.anulado then
+    update hab_obligacion_ocurrencias
+    set estado = 'anulado',
+        motivo_anulacion = 'Se anuló el hito de visita que la originó: ' || new.anulado_motivo,
+        anulado_por = auth.uid()
+    where clinica_id = new.clinica_id and obligacion_id = v_obligacion
+      and clave_periodo = 'subsanacion-' || new.id::text and estado = 'pendiente';
+  end if;
+  return null;
+end;
+$$;
+
+revoke all on function fn_hab_tg_hito_subsanacion() from public, anon, authenticated;
+
+create trigger hab_tramite_hitos_subsanacion
+  after insert or update of anulado on hab_tramite_hitos
+  for each row execute function fn_hab_tg_hito_subsanacion();
 
 -- ============================================================
 -- 11. Backfill: perfiles que ya existan reciben su configuración y fechas
