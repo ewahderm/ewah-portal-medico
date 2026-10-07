@@ -41,6 +41,12 @@ export type AnaliticaClinica = {
   paises: (ValorPorGrupo & { codigoIso: string | null })[];
 };
 
+// Días máximos de un reporte, contando el primero y el último (10 años). Debe
+// coincidir con el límite de fn_reportes_analitica_clinica (0088): la tendencia
+// agrupa por mes, así que el costo no crece con los años.
+export const MAX_DIAS_REPORTE = 3653;
+export const TEXTO_RANGO_INVALIDO = "Elige un rango de fechas válido, de hasta 10 años.";
+
 export function esRangoFechaValido(desde: string, hasta: string): boolean {
   const fechaValida = (valor: string) => {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(valor)) return null;
@@ -51,7 +57,7 @@ export function esRangoFechaValido(desde: string, hasta: string): boolean {
   };
   const inicio = fechaValida(desde);
   const fin = fechaValida(hasta);
-  return inicio !== null && fin !== null && inicio <= fin && fin - inicio <= 365 * 24 * 60 * 60 * 1000;
+  return inicio !== null && fin !== null && inicio <= fin && fin - inicio <= (MAX_DIAS_REPORTE - 1) * 24 * 60 * 60 * 1000;
 }
 
 function numeroValido(valor: number | string, campo: string, permitirNegativo = false): number {

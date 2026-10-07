@@ -4,7 +4,7 @@
 // al inicio: una acción del servidor es un endpoint público y no puede
 // confiar en que la pantalla haya ocultado la pestaña.
 
-import { esRangoFechaValido } from "./analitica";
+import { esRangoFechaValido, TEXTO_RANGO_INVALIDO } from "./analitica";
 import { accesoInvima, accesoNomina } from "./acceso";
 import { cargarComisionesNomina, cargarReporteInvima } from "./consultas-regulatorias";
 import type { InsumoInvima } from "./invima";
@@ -25,7 +25,7 @@ export async function obtenerComisionesNomina(desde: string, hasta: string): Pro
   const check = await accesoNomina();
   if (!check.ok) return { error: check.error };
   if (!esRangoFechaValido(desde, hasta)) {
-    return { error: "Elige un rango válido de hasta 366 días." };
+    return { error: TEXTO_RANGO_INVALIDO };
   }
   try {
     const filas = await cargarComisionesNomina(check.usuario.clinica_id, desde, hasta);

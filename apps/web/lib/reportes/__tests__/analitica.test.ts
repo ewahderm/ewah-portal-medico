@@ -15,11 +15,16 @@ const fila = (overrides: Partial<FilaAnalitica>): FilaAnalitica => ({
 });
 
 describe("agregados de analítica clínica", () => {
-  it("valida rangos ISO inclusivos de hasta 366 días", () => {
+  it("valida rangos ISO inclusivos de hasta 10 años (3.653 días)", () => {
     expect(esRangoFechaValido("2024-02-29", "2025-02-28")).toBe(true);
     expect(esRangoFechaValido("2024-02-30", "2025-02-28")).toBe(false);
     expect(esRangoFechaValido("2025-02-02", "2025-02-01")).toBe(false);
-    expect(esRangoFechaValido("2024-01-01", "2025-01-02")).toBe(false);
+    // Varios años seguidos ya no se rechazan (antes el tope era 366 días).
+    expect(esRangoFechaValido("2024-01-01", "2025-01-02")).toBe(true);
+    expect(esRangoFechaValido("2022-01-01", "2026-10-07")).toBe(true);
+    // El límite exacto: 3.653 días contando el primero y el último.
+    expect(esRangoFechaValido("2015-01-02", "2025-01-01")).toBe(true);
+    expect(esRangoFechaValido("2015-01-01", "2025-01-01")).toBe(false);
   });
 
   it("ordena tendencias y grupos, conserva el país desconocido y entrega los mismos totales para mapa y lista", () => {

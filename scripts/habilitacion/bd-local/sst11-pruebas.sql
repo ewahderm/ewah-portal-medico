@@ -1,7 +1,7 @@
 -- Pruebas de perfil de clínica (0080): backfill, validación, atomicidad y aislamiento.
 -- La actividad económica vive en clinicas.codigo_actividad_economica; la
 -- columna vieja sst_perfil.codigo_actividad se borra en una migración
--- pendiente (scripts/habilitacion/pendientes/0088_*), no aquí.
+-- pendiente (scripts/habilitacion/pendientes/0089_*), no aquí.
 begin;
 select t.ok(
   (select codigo_actividad_economica = '3862101'

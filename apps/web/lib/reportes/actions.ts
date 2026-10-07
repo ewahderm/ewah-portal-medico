@@ -6,14 +6,20 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { accesoAnalitica } from "./acceso";
-import { construirAnaliticaClinica, esRangoFechaValido, type FilaAnalitica, type AnaliticaClinica } from "./analitica";
+import {
+  construirAnaliticaClinica,
+  esRangoFechaValido,
+  TEXTO_RANGO_INVALIDO,
+  type FilaAnalitica,
+  type AnaliticaClinica,
+} from "./analitica";
 
 export async function obtenerAnaliticaClinica(desde: string, hasta: string): Promise<AnaliticaClinica | { error: string }> {
   const check = await accesoAnalitica();
   if (!check.ok) return { error: check.error };
 
   if (!esRangoFechaValido(desde, hasta)) {
-    return { error: "Elige un rango válido de hasta 366 días." };
+    return { error: TEXTO_RANGO_INVALIDO };
   }
 
   const supabase = await createClient();

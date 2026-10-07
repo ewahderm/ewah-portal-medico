@@ -43,9 +43,26 @@ select t.debe_fallar(
   $$select * from fn_reportes_analitica_clinica('2025-02-01', '2025-01-01')$$,
   'rango de fechas'
 );
+-- 0088: varios años seguidos sí se pueden consultar y los totales no cambian
+-- por ensanchar el rango (los tratamientos de la fixture son de 2025).
+select t.ok(
+  (select sum(cantidad) from fn_reportes_analitica_clinica('2020-01-01', '2026-10-07') where dimension = 'resumen')
+  = (select sum(cantidad) from fn_reportes_analitica_clinica('2025-01-01', '2025-02-28') where dimension = 'resumen'),
+  'un rango de varios años devuelve los mismos totales cuando los datos caben en el rango corto'
+);
+select t.ok(
+  (select count(*) from fn_reportes_analitica_clinica('2016-01-02', '2026-01-01') where dimension = 'mes') >= 100,
+  'la tendencia de 10 años trae una fila por mes'
+);
+-- Tope exacto: 3.653 días con el primero y el último; un día más se rechaza.
+-- Si el límite no se aceptara, la función lanzaría y esta consulta abortaría.
+select t.ok(
+  (select count(*) from fn_reportes_analitica_clinica('2015-01-02', '2025-01-01')) >= 0,
+  'el límite exacto de 10 años se acepta'
+);
 select t.debe_fallar(
-  $$select * from fn_reportes_analitica_clinica('2024-01-01', '2025-01-02')$$,
-  '366 días'
+  $$select * from fn_reportes_analitica_clinica('2015-01-01', '2025-01-01')$$,
+  '10 años'
 );
 
 reset role; select t.como('00000000-0000-0000-0000-00000000000b'); set role authenticated;

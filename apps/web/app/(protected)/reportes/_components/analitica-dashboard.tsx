@@ -359,7 +359,7 @@ export function AnaliticaDashboard({ fechaInicial, fechaFinal, initialData }: Pr
       >
         <div>
           <p className="text-sm font-medium">Periodo de análisis</p>
-          <p className="text-xs text-muted-foreground">Hasta 366 días, incluidos el primero y el último</p>
+          <p className="text-xs text-muted-foreground">Hasta 10 años, incluidos el primer y el último día</p>
         </div>
         <div className="grid grid-cols-2 gap-3 sm:w-auto">
           <div className="space-y-1">
