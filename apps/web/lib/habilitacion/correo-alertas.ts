@@ -6,10 +6,11 @@ import { escapeHtml } from "@/lib/texto";
 import { UMBRALES_SEMAFORO } from "@/lib/habilitacion/semaforo";
 
 export type ObjetoAlerta = "ocurrencia" | "documento_version" | "plan_mejora" | "extintor" | "grupo";
+// Los de SG-SST (0079) son texto libre: "accion", "licencia:2027-03-01"…
 
 // Una fila de fn_hab_alertas_pendientes.
 export type ItemAlerta = {
-  objeto_tipo: ObjetoAlerta;
+  objeto_tipo: ObjetoAlerta | (string & {});
   objeto_id: string;
   umbrales: number[];
   fecha: string;
@@ -73,24 +74,35 @@ function fechaLarga(iso: string): string {
   );
 }
 
-export function asuntoAlertas(items: ItemAlerta[]): string {
+export function asuntoAlertas(items: Pick<ItemAlerta, "dias">[], area = "Habilitación"): string {
   const rojos = items.filter((i) => semaforoDeDias(i.dias) === "rojo").length;
   return rojos > 0
-    ? `Habilitación: ${rojos} pendiente${rojos === 1 ? "" : "s"} urgente${rojos === 1 ? "" : "s"}`
-    : `Habilitación: ${items.length} fecha${items.length === 1 ? "" : "s"} por atender`;
+    ? `${area}: ${rojos} pendiente${rojos === 1 ? "" : "s"} urgente${rojos === 1 ? "" : "s"}`
+    : `${area}: ${items.length} fecha${items.length === 1 ? "" : "s"} por atender`;
 }
+
+// Textos del correo que cambian según el módulo (Habilitación o SG-SST).
+export type TextosCorreo = { intro: string; nota: string; pie: string };
+
+const TEXTOS_HABILITACION: TextosCorreo = {
+  intro: "Fechas de habilitación de",
+  nota: "EWAH no radica nada ante las entidades: te recuerda las fechas. Las fechas límite son las de la norma y no se corren por festivos.",
+  pie: "Te avisamos una sola vez por cada plazo (días antes configurados en Habilitación → Obligaciones).",
+};
 
 export function construirHtmlAlertasHabilitacion({
   nombreClinica,
   items,
   baseUrl,
   externo = false,
+  textos = TEXTOS_HABILITACION,
 }: {
   nombreClinica: string;
   items: ItemAlerta[];
   baseUrl: string;
   // Contador externo: sin enlaces a EWAH (no tiene cuenta).
   externo?: boolean;
+  textos?: TextosCorreo;
 }): string {
   const base = baseUrl.replace(/\/$/, "");
   const grupos = agruparPorSemaforo(items)
@@ -138,16 +150,16 @@ export function construirHtmlAlertasHabilitacion({
       </div>
       <div style="padding: 24px;">
         <p style="font-size: 15px; color: #0D1825; margin: 0 0 6px;">
-          Fechas de habilitación de <strong>${escapeHtml(nombreClinica)}</strong> que necesitan tu atención:
+          ${escapeHtml(textos.intro)} <strong>${escapeHtml(nombreClinica)}</strong> que necesitan tu atención:
         </p>
         <p style="font-size: 12px; color: #64748b; margin: 0 0 20px;">
-          EWAH no radica nada ante las entidades: te recuerda las fechas. Las fechas límite son las de la norma y no se corren por festivos.
+          ${escapeHtml(textos.nota)}
         </p>
         ${grupos}
       </div>
       <div style="padding: 16px 24px; background-color: #f4f7f9; border-top: 1px solid #e2e8f0;">
         <p style="font-size: 12px; color: #94a3b8; margin: 0;">
-          ${externo ? `Recibes este aviso porque ${escapeHtml(nombreClinica)} te registró como contacto de esta obligación.` : `Te avisamos una sola vez por cada plazo (días antes configurados en Habilitación → Obligaciones).`}
+          ${externo ? `Recibes este aviso porque ${escapeHtml(nombreClinica)} te registró como contacto de esta obligación.` : escapeHtml(textos.pie)}
         </p>
       </div>
     </div>

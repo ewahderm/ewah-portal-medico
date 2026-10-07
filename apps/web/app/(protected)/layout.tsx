@@ -48,6 +48,15 @@ async function contarUrgentesHabilitacion(supabase: Awaited<ReturnType<typeof cr
   return error || typeof data !== "number" ? 0 : data;
 }
 
+// Insignia de SG-SST (F8): accidentes por reportar, investigaciones y
+// acciones vencidas, solo con sst/VIEW. Mismo criterio de errores.
+async function contarUrgentesSst(supabase: Awaited<ReturnType<typeof createClient>>): Promise<number> {
+  const { data: puedeVer } = await supabase.rpc("has_permission", { modulo_code: "sst", permiso_code: "VIEW" });
+  if (!puedeVer) return 0;
+  const { data, error } = await supabase.rpc("fn_sst_conteo_urgentes");
+  return error || typeof data !== "number" ? 0 : data;
+}
+
 export default async function ProtectedLayout({
   children,
 }: {
@@ -59,12 +68,15 @@ export default async function ProtectedLayout({
   // sesión (no el admin) — es la bandera cross-tenant del equipo de EWAH
   // Tech, nunca asignable desde ninguna pantalla de la app.
   const supabaseSesion = await createClient();
-  const [{ data: esSuperAdmin }, urgentesHabilitacion] = await Promise.all([
+  const [{ data: esSuperAdmin }, urgentesHabilitacion, urgentesSst] = await Promise.all([
     supabaseSesion.rpc("es_super_admin"),
     contarUrgentesHabilitacion(supabaseSesion),
+    contarUrgentesSst(supabaseSesion),
   ]);
   const navGroups = NAV_GROUPS.map((grupo) =>
-    grupo.label === "Administración"
+    grupo.label === "Operación"
+      ? { ...grupo, items: grupo.items.map((item) => (item.href === "/sst" && urgentesSst > 0 ? { ...item, badge: urgentesSst } : item)) }
+      : grupo.label === "Administración"
       ? {
           ...grupo,
           items: [

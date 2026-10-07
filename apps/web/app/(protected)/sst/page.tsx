@@ -1,9 +1,11 @@
 import Link from "next/link";
-import { HardHatIcon, TriangleAlertIcon, UsersRoundIcon, ShieldAlertIcon, ClipboardListIcon, type LucideIcon } from "lucide-react";
+import { CircleCheckIcon, ChevronRightIcon, HardHatIcon, TriangleAlertIcon, UsersRoundIcon, ShieldAlertIcon, ClipboardListIcon, type LucideIcon } from "lucide-react";
 import { cn } from "cn";
 import { createClient } from "@/lib/supabase/server";
 import { requireUsuario } from "@/lib/auth/session";
-import { getAccesoSst } from "@/lib/sst/consultas";
+import { getAccesoSst, getInsumosTablero } from "@/lib/sst/consultas";
+import { pendientesSst, type Pendiente } from "@/lib/sst/tablero";
+import { hoyColombia } from "@/lib/habilitacion/consultas";
 import { getDiagnostico } from "@/lib/sst/diagnostico";
 import type { Diagnostico } from "@/lib/sst/grupo";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -18,6 +20,7 @@ const FUENTE: Record<NonNullable<Diagnostico["fuenteClase"]>, string> = {
 
 // F1 del SG-SST: las dos variables que deciden qué estándares mínimos te
 // aplican (número de trabajadores y clase de riesgo) y lo que eso implica.
+// F8: arriba, los pendientes con fecha (mismos plazos que las alertas).
 export default async function SstPage() {
   await requireUsuario();
   const acceso = await getAccesoSst();
@@ -31,6 +34,14 @@ export default async function SstPage() {
 
   const supabase = await createClient();
   const { perfil, conteo, d } = await getDiagnostico(supabase);
+  const pendientes = pendientesSst(
+    await getInsumosTablero(supabase, {
+      hoy: hoyColombia(),
+      gestion: acceso.gestion,
+      modo: perfil?.modo ?? "empleador",
+      licenciaVence: perfil?.responsable_licencia_vence ?? null,
+    }),
+  );
 
   return (
     <div className="space-y-6">
@@ -41,6 +52,7 @@ export default async function SstPage() {
         </Alert>
       ) : (
         <>
+          <Pendientes items={pendientes} gestion={acceso.gestion} />
           <Card className={cn(d.grupo === "sin_calcular" && "border-amber-300")}>
             <CardHeader>
               <CardTitle className="text-base font-semibold">Qué te exige la norma</CardTitle>
@@ -128,7 +140,8 @@ export default async function SstPage() {
               </ul>
               <p className="text-xs text-muted-foreground">
                 Los umbrales salen de la Res. 0312 de 2019 (7 estándares hasta 10 trabajadores con riesgo I a III; 21 de 11 a 50;
-                60 con más de 50 o con riesgo IV o V). Estamos cotejando cada estándar con el texto oficial antes de cargarlos.
+                60 con más de 50 o con riesgo IV o V). Los textos de cada estándar son orientativos mientras los cotejamos con el texto
+                oficial.
               </p>
             </CardContent>
           </Card>
@@ -147,6 +160,47 @@ export default async function SstPage() {
         </>
       )}
     </div>
+  );
+}
+
+const TONO: Record<Pendiente["tono"], string> = {
+  rojo: "bg-destructive",
+  ambar: "bg-amber-500",
+  info: "bg-primary",
+};
+
+function Pendientes({ items, gestion }: { items: Pendiente[]; gestion: boolean }) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base font-semibold">Pendientes</CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Lo que vence o ya venció. Te avisamos también por correo{gestion ? "" : " (en el plan Gratis, solo los reportes e investigaciones de eventos)"}.
+        </p>
+      </CardHeader>
+      <CardContent>
+        {items.length === 0 ? (
+          <p className="flex items-center gap-2 text-sm text-muted-foreground">
+            <CircleCheckIcon className="size-4 text-emerald-600" /> Nada pendiente por ahora.
+          </p>
+        ) : (
+          <ul className="divide-y rounded-lg border">
+            {items.map((p) => (
+              <li key={p.clave}>
+                <Link href={p.href} className="flex items-center gap-3 p-3 transition-colors hover:bg-muted">
+                  <span className={cn("size-2.5 shrink-0 rounded-full", TONO[p.tono])} aria-hidden />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-medium">{p.titulo}</span>
+                    <span className="block text-xs text-muted-foreground">{p.detalle}</span>
+                  </span>
+                  <ChevronRightIcon className="size-4 shrink-0 text-muted-foreground" />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

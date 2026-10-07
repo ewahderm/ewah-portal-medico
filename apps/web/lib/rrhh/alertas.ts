@@ -6,20 +6,6 @@ import { escapeHtml } from "@/lib/texto";
 
 const VENTANA_DIAS = 30;
 
-// Aproximación de días hábiles (lunes-viernes) — suficiente para una
-// alerta ("¿ya venció o está por vencer el plazo de la ARL?"), no un
-// cálculo legal exacto de festivos colombianos.
-function sumarDiasHabiles(fechaIso: string, dias: number): Date {
-  const fecha = new Date(`${fechaIso}T00:00:00`);
-  let restantes = dias;
-  while (restantes > 0) {
-    fecha.setDate(fecha.getDate() + 1);
-    const diaSemana = fecha.getDay();
-    if (diaSemana !== 0 && diaSemana !== 6) restantes--;
-  }
-  return fecha;
-}
-
 type Alerta = { tipo: string; descripcion: string; urgente: boolean };
 
 function construirHtmlAlertas(nombreClinica: string, alertas: Alerta[]): string {
@@ -62,16 +48,14 @@ function construirHtmlAlertas(nombreClinica: string, alertas: Alerta[]): string 
 }
 
 /**
- * Revisa, por clínica: vacunas vencidas/por vencer, contratos a término
- * fijo próximos a vencer, y accidentes laborales sin reportar a la ARL
- * cerca de o fuera del plazo legal de 2 días hábiles (Decreto 1072/2015).
+ * Revisa, por clínica: vacunas vencidas/por vencer y contratos a término
+ * fijo próximos a vencer. El plazo de reporte de accidentes a la ARL lo
+ * avisa SG-SST (lib/sst/alertas.ts, con festivos y una vez por plazo).
  * Un correo diario por clínica al/los administrador(es), nunca lanza
  * (mismo criterio que enviarRecordatoriosCitasManana).
  *
- * No incluye exámenes ocupacionales periódicos: el esquema no guarda una
- * periodicidad ni una "próxima fecha" esperada por examen, solo el
- * historial de los ya realizados — agregarlo exigiría definir primero esa
- * regla de negocio, fuera de alcance de esta ronda.
+ * Los exámenes ocupacionales periódicos también los avisa SG-SST (según
+ * la periodicidad del profesiograma).
  */
 export async function enviarAlertasRrhh(): Promise<{ clinicas: number; enviados: number; fallidos: number }> {
   const cliente = getResendClient();
@@ -84,7 +68,7 @@ export async function enviarAlertasRrhh(): Promise<{ clinicas: number; enviados:
   const hoy = format(new Date(), "yyyy-MM-dd");
   const limite = format(addDays(new Date(), VENTANA_DIAS), "yyyy-MM-dd");
 
-  const [vacunasRes, contratosRes, accidentesRes, adminsRes] = await Promise.all([
+  const [vacunasRes, contratosRes, adminsRes] = await Promise.all([
     admin
       .from("documentos_empleado")
       .select("fecha_vencimiento, nombre_personalizado, tipo_vacuna_id, empleados!inner(id, nombre, clinica_id, activo), tipos_vacuna(nombre)")
@@ -99,11 +83,6 @@ export async function enviarAlertasRrhh(): Promise<{ clinicas: number; enviados:
       .not("fecha_fin_contrato", "is", null)
       .gte("fecha_fin_contrato", hoy)
       .lte("fecha_fin_contrato", limite),
-    admin
-      .from("accidentes_trabajo")
-      .select("id, fecha, clinica_id, empleados(nombre)")
-      .eq("reportado_arl", false)
-      .gte("fecha", format(addDays(new Date(), -10), "yyyy-MM-dd")),
     admin
       .from("usuarios")
       .select("email, clinica_id, roles!inner(nivel)")
@@ -139,17 +118,6 @@ export async function enviarAlertasRrhh(): Promise<{ clinicas: number; enviados:
       tipo: "Contrato por vencer",
       descripcion: `${c.nombre} — contrato termina el ${c.fecha_fin_contrato}`,
       urgente: false,
-    });
-  }
-
-  for (const a of accidentesRes.data ?? []) {
-    const plazo = sumarDiasHabiles(a.fecha, 2);
-    const vencido = plazo < new Date();
-    const nombreEmpleado = (a.empleados as unknown as { nombre: string } | null)?.nombre ?? "—";
-    entrada(a.clinica_id, "").alertas.push({
-      tipo: vencido ? "Plazo ARL vencido" : "Plazo ARL por vencer",
-      descripcion: `${nombreEmpleado} — accidente del ${a.fecha}, reportar a la ARL antes del ${format(plazo, "yyyy-MM-dd")}`,
-      urgente: vencido,
     });
   }
 

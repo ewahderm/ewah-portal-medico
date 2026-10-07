@@ -3,6 +3,7 @@
 
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
+import type { InsumosTablero } from "@/lib/sst/tablero";
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 
@@ -442,4 +443,53 @@ export async function getItemsAutoevaluacion(supabase: Supabase, autoevaluacionI
   return ((data ?? []) as unknown as ItemAutoevaluacion[])
     .map((i) => ({ ...i, estandar: { ...i.estandar, peso: Number(i.estandar.peso) } }))
     .sort((a, b) => a.estandar.orden - b.estandar.orden);
+}
+
+// ---------- F8: tablero de pendientes ----------
+
+export async function getInsumosTablero(
+  supabase: Supabase,
+  { hoy, gestion, modo, licenciaVence }: { hoy: string; gestion: boolean; modo: "empleador" | "independiente"; licenciaVence: string | null },
+): Promise<InsumosTablero> {
+  const anio = Number(hoy.slice(0, 4));
+  const desde = (dias: number) => {
+    const [a, m, d] = hoy.split("-").map(Number);
+    return new Date(Date.UTC(a, m - 1, d - dias)).toISOString().slice(0, 10);
+  };
+  const vacio = { data: [] as never[] };
+  const [eventos, acciones, personas, plan, autoevaluacion, comites, registro] = await Promise.all([
+    supabase
+      .from("accidentes_trabajo")
+      .select("id, fecha, tipo_evento, reportado_arl, fecha_limite_reporte, fecha_limite_investigacion, sst_investigaciones(estado)")
+      .gte("fecha", desde(90))
+      .order("fecha"),
+    gestion ? supabase.from("sst_acciones").select("fecha_compromiso, estado").neq("estado", "cerrada") : vacio,
+    gestion ? getEstadoPersonas(supabase) : null,
+    gestion ? supabase.from("sst_plan_actividades").select("anio, mes").eq("estado", "pendiente").gte("anio", anio - 1) : vacio,
+    gestion ? supabase.from("sst_autoevaluaciones").select("estado").eq("anio", anio).maybeSingle() : { data: null },
+    gestion ? supabase.from("sst_comites").select("tipo, fecha_fin") : vacio,
+    gestion ? supabase.from("sst_fechas_anuales").select("fecha_limite_registro").eq("anio", anio).maybeSingle() : { data: null },
+  ]);
+  type FilaEvento = Omit<InsumosTablero["eventos"][number], "investigacion_cerrada"> & {
+    sst_investigaciones: { estado: string } | { estado: string }[] | null;
+  };
+  return {
+    hoy,
+    gestion,
+    modo,
+    eventos: ((eventos.data ?? []) as FilaEvento[])
+      .map(({ sst_investigaciones: inv, ...e }) => ({
+        ...e,
+        // Los reportes de más de 60 días ya no se listan (mismo corte del cron).
+        reportado_arl: e.reportado_arl || e.fecha < desde(60),
+        investigacion_cerrada: (Array.isArray(inv) ? inv : inv ? [inv] : []).some((i) => i.estado === "cerrada"),
+      })),
+    acciones: (acciones.data ?? []) as InsumosTablero["acciones"],
+    examenes: (personas ?? []).map((p) => ({ nombre: p.nombre, proximo_examen: p.proximo_examen })),
+    planPendientes: (plan.data ?? []) as InsumosTablero["planPendientes"],
+    autoevaluacionAnio: (autoevaluacion.data as InsumosTablero["autoevaluacionAnio"]) ?? null,
+    licenciaVence,
+    comites: (comites.data ?? []) as InsumosTablero["comites"],
+    registroAnual: registro.data ? { fecha: (registro.data as { fecha_limite_registro: string }).fecha_limite_registro } : null,
+  };
 }

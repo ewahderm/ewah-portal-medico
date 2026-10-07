@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { enviarAlertasRrhh } from "@/lib/rrhh/alertas";
 import { enviarAlertasHabilitacion } from "@/lib/habilitacion/alertas";
+import { enviarAlertasSst } from "@/lib/sst/alertas";
 
-// Un solo cron diario (7:00 Bogotá) para las alertas de RRHH y de
-// Habilitación: el plan Hobby de Vercel admite pocos cron jobs, y las dos
-// funciones ya viven separadas en lib/ (§4.4). En secuencia, y cada una
-// nunca lanza: si una falla, la otra igual corre.
+// Un solo cron diario (7:00 Bogotá) para las alertas de RRHH, Habilitación
+// y SG-SST: el plan Hobby de Vercel admite pocos cron jobs, y las dos
+// funciones ya viven separadas en lib/ (§4.4). En secuencia, y ninguna
+// lanza: si una falla, las demás igual corren.
 // Mismo patrón que /api/cron/recordatorio-citas: Vercel agrega
 // `Authorization: Bearer <CRON_SECRET>` en cada invocación programada.
 export const maxDuration = 60;
@@ -18,5 +19,6 @@ export async function GET(request: NextRequest) {
 
   const rrhh = await enviarAlertasRrhh();
   const habilitacion = await enviarAlertasHabilitacion();
-  return NextResponse.json({ rrhh, habilitacion });
+  const sst = await enviarAlertasSst();
+  return NextResponse.json({ rrhh, habilitacion, sst });
 }
