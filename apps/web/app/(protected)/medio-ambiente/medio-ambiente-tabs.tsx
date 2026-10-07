@@ -1,12 +1,13 @@
 "use client";
 
-import { ThermometerIcon, SnowflakeIcon, Trash2Icon, FlameIcon, SparklesIcon } from "lucide-react";
+import { ThermometerIcon, SnowflakeIcon, Trash2Icon, FlameIcon, SparklesIcon, ChartNoAxesColumnIncreasingIcon } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TemperaturaConsultorioTab } from "./temperatura-consultorio-tab";
 import { TemperaturaNeveraTab } from "./temperatura-nevera-tab";
 import { ResiduosTab } from "./residuos-tab";
 import { ExtintoresTab } from "./extintores-tab";
 import { LimpiezaTab } from "./limpieza-tab";
+import { ReportePgirasaTab } from "./reporte-pgirasa-tab";
 import type { Opcion } from "@/lib/forms/opciones";
 
 type Consultorio = { id: string; nombre: string; sede_id: string };
@@ -43,6 +44,9 @@ export function MedioAmbienteTabs({
         <TabsTrigger value="residuos">
           <Trash2Icon /> Residuos
         </TabsTrigger>
+        <TabsTrigger value="pgirasa">
+          <ChartNoAxesColumnIncreasingIcon /> Reporte PGIRASA
+        </TabsTrigger>
         <TabsTrigger value="extintores">
           <FlameIcon /> Extintores
         </TabsTrigger>
@@ -61,6 +65,10 @@ export function MedioAmbienteTabs({
 
       <TabsContent value="residuos" className="pt-4">
         <ResiduosTab sedes={sedes} empleados={empleados} puedeCrear={puedeCrear} />
+      </TabsContent>
+
+      <TabsContent value="pgirasa" className="pt-4">
+        <ReportePgirasaTab sedes={sedes} puedeEditar={puedeEditar} />
       </TabsContent>
 
       <TabsContent value="extintores" className="pt-4">

@@ -138,7 +138,6 @@ export default async function SuscripcionPage() {
                   <PencilIcon /> Editar
                 </Button>
               }
-              nombreLegal={clinica?.nombre ?? ""}
               nombreComercial={clinica?.nombre_comercial ?? null}
               correoNotificaciones={clinica?.correo_notificaciones ?? null}
               telefonoContacto={clinica?.telefono_contacto ?? null}

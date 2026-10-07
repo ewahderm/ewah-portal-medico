@@ -58,7 +58,7 @@ export default async function MedioAmbientePage() {
             <h1 className="text-2xl font-semibold">Medio Ambiente</h1>
             <p className="text-sm text-muted-foreground">
               Registros de cumplimiento normativo: temperatura y humedad, cadena de frío,
-              residuos, extintores y limpieza. Ningún registro guardado se puede borrar ni
+              residuos (con su Reporte PGIRASA por sede), extintores y limpieza. Ningún registro guardado se puede borrar ni
               editar — son evidencia ante una auditoría o visita de habilitación.
             </p>
           </div>

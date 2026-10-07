@@ -24,7 +24,6 @@ export const getAccesoSst = cache(async (): Promise<AccesoSst> => {
 
 export type PerfilSst = {
   modo: "empleador" | "independiente";
-  codigo_actividad: string | null;
   otros_trabajadores: number;
   otros_trabajadores_detalle: string | null;
   excluye_contratistas: boolean;
@@ -38,7 +37,7 @@ export type PerfilSst = {
 };
 
 export const PERFIL_SST_SELECT =
-  "modo, codigo_actividad, otros_trabajadores, otros_trabajadores_detalle, excluye_contratistas, justificacion_exclusion, responsable_nombre, responsable_formacion, responsable_licencia, responsable_licencia_vence, responsable_curso_50h, updated_at";
+  "modo, otros_trabajadores, otros_trabajadores_detalle, excluye_contratistas, justificacion_exclusion, responsable_nombre, responsable_formacion, responsable_licencia, responsable_licencia_vence, responsable_curso_50h, updated_at";
 
 export async function getPerfilSst(supabase: Supabase): Promise<PerfilSst | null> {
   const { data } = await supabase.from("sst_perfil").select(PERFIL_SST_SELECT).maybeSingle();

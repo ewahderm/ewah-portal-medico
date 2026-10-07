@@ -1,0 +1,2 @@
+-- Sin datos adicionales: la fixture legada se inserta justo antes de 0080
+-- en probar.sh para verificar el backfill de la migración.

@@ -1,0 +1,22 @@
+World map asset attribution and license
+
+Asset: world-countries.json
+Data: Natural Earth 1:110m Admin 0 – Countries, distributed as GeoJSON.
+Source repository: https://github.com/nvkelso/natural-earth-vector
+Pinned source file:
+https://github.com/nvkelso/natural-earth-vector/blob/9380cca83db5f9aef52d5e762765100745f84b27/geojson/ne_110m_admin_0_countries.geojson
+Raw download:
+https://raw.githubusercontent.com/nvkelso/natural-earth-vector/9380cca83db5f9aef52d5e762765100745f84b27/geojson/ne_110m_admin_0_countries.geojson
+
+Natural Earth states that its vector and raster map data are in the public
+domain and may be used in any manner; attribution is not required. Its terms
+of use: https://www.naturalearthdata.com/about/terms-of-use/
+The Natural Earth Vector repository README also describes Natural Earth as
+public-domain map data: https://github.com/nvkelso/natural-earth-vector
+
+Optional suggested credit: “Made with Natural Earth.”
+
+The client asset retains only feature names, available ISO-2 codes, and
+geometries. ISO_A2_EH is preferred, with ISO_A2 as fallback. The two source
+features without a valid ISO-2 code (N. Cyprus and Somaliland) have no iso2
+property; no codes have been inferred.

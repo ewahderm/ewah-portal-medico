@@ -5,9 +5,24 @@ import { createClient } from "@/lib/supabase/server";
 import { requirePermiso as requirePermisoBase } from "@/lib/auth/requirePermiso";
 import { campoOpcional, valorOpcionalSelect } from "@/lib/forms/opcional";
 import { rangoPagina, esRangoFueraDeLimite } from "@/lib/pagination";
-import { esTipoResiduoValido, esAreaLimpiezaValida, esJornadaValida } from "./constantes";
+import { esTipoResiduoNuevoValido, esAreaLimpiezaValida, esJornadaValida } from "./constantes";
+import {
+  construirReportePgirasa,
+  type FilaReportePgirasa,
+  type ReportePgirasa,
+} from "./calculo-pgirasa";
 
 export type MedioAmbienteActionState = { error?: string } | null;
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const MES_AAAA_MM = /^(19|20|21)\d{2}-(0[1-9]|1[0-2])$/;
+
+// P0001 = `raise exception` de las funciones y triggers PGIRASA (0082/0083):
+// sus mensajes están escritos para el usuario. Cualquier otro error es
+// interno y no se muestra tal cual.
+function esMensajeDeNegocio(error: { code?: string }): boolean {
+  return error.code === "P0001";
+}
 
 function requirePermiso(permiso: "VIEW" | "CREATE" | "EDIT") {
   return requirePermisoBase("medio_ambiente", permiso);
@@ -203,7 +218,9 @@ export async function crearResiduo(
   if (!sedeId || !tipoResiduo || !fecha || !jornada || pesoKg === null) {
     return { error: "Sede, tipo de residuo, fecha, jornada y peso son obligatorios." };
   }
-  if (!esTipoResiduoValido(tipoResiduo)) {
+  // El "quimico" histórico solo se muestra en registros viejos: un pesaje
+  // nuevo debe elegir la característica química concreta.
+  if (!esTipoResiduoNuevoValido(tipoResiduo)) {
     return { error: "Elige un tipo de residuo válido." };
   }
   if (!esJornadaValida(jornada)) {
@@ -211,6 +228,9 @@ export async function crearResiduo(
   }
   if (pesoKg <= 0) {
     return { error: "El peso debe ser mayor que cero." };
+  }
+  if (!Number.isFinite(pesoKg) || pesoKg > 99999.999) {
+    return { error: "El peso debe ser un número válido de hasta 99.999,999 kg." };
   }
 
   const check = await requirePermiso("CREATE");
@@ -230,7 +250,11 @@ export async function crearResiduo(
     created_by: check.usuario.id,
   });
 
-  if (error) return { error: "No se pudo guardar el registro." };
+  if (error) {
+    if (esMensajeDeNegocio(error)) return { error: error.message };
+    console.error("[medio-ambiente] crearResiduo", error);
+    return { error: "No se pudo guardar el registro." };
+  }
 
   revalidatePath("/medio-ambiente");
   return null;
@@ -267,6 +291,91 @@ export async function listarResiduos(filtros: {
   }
 
   return { registros: data ?? [], total: count ?? 0, pagina: paginaPedida };
+}
+
+export async function confirmarCeroResiduo(
+  _prevState: MedioAmbienteActionState,
+  formData: FormData,
+): Promise<MedioAmbienteActionState> {
+  const sedeId = String(formData.get("sedeId") ?? "");
+  const mes = String(formData.get("mes") ?? "");
+  if (!UUID.test(sedeId) || !MES_AAAA_MM.test(mes)) {
+    return { error: "Selecciona una sede y un mes válido." };
+  }
+
+  const check = await requirePermiso("CREATE");
+  if (!check.ok) return { error: check.error };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("fn_confirmar_cero_pgirasa", {
+    p_sede_id: sedeId,
+    p_mes: `${mes}-01`,
+  });
+  if (error) {
+    if (esMensajeDeNegocio(error)) return { error: error.message };
+    console.error("[medio-ambiente] fn_confirmar_cero_pgirasa", error);
+    return { error: "No se pudo confirmar el mes sin residuos peligrosos." };
+  }
+
+  revalidatePath("/medio-ambiente");
+  return null;
+}
+
+export async function revocarCeroResiduo(
+  _prevState: MedioAmbienteActionState,
+  formData: FormData,
+): Promise<MedioAmbienteActionState> {
+  const id = String(formData.get("id") ?? "");
+  const motivo = String(formData.get("motivo") ?? "").trim();
+  if (!UUID.test(id)) {
+    return { error: "La confirmación seleccionada no es válida." };
+  }
+  if (motivo.length < 5 || motivo.length > 500) {
+    return { error: "Indica el motivo de corrección (entre 5 y 500 caracteres)." };
+  }
+
+  const check = await requirePermiso("EDIT");
+  if (!check.ok) return { error: check.error };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("fn_revocar_cero_pgirasa", {
+    p_id: id,
+    p_motivo: motivo,
+  });
+  if (error) {
+    if (esMensajeDeNegocio(error)) return { error: error.message };
+    console.error("[medio-ambiente] fn_revocar_cero_pgirasa", error);
+    return { error: "No se pudo corregir la confirmación." };
+  }
+
+  revalidatePath("/medio-ambiente");
+  return null;
+}
+
+export async function obtenerReportePgirasa(sedeId: string, mes: string): Promise<ReportePgirasa> {
+  if (!UUID.test(sedeId)) {
+    throw new Error("Selecciona una sede válida.");
+  }
+  if (!MES_AAAA_MM.test(mes)) {
+    throw new Error("Selecciona un mes válido.");
+  }
+
+  const check = await requirePermiso("VIEW");
+  if (!check.ok) throw new Error(check.error);
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("fn_pgirasa_reporte_sede", {
+    p_sede_id: sedeId,
+    p_mes: `${mes}-01`,
+  });
+  if (error) {
+    if (esMensajeDeNegocio(error)) throw new Error(error.message);
+    console.error("[medio-ambiente] fn_pgirasa_reporte_sede", error);
+    throw new Error("No se pudo cargar el consolidado PGIRASA.");
+  }
+  if (!data) throw new Error("La consulta del consolidado PGIRASA no devolvió datos.");
+
+  return construirReportePgirasa(mes, data as FilaReportePgirasa[]);
 }
 
 // ============================================================

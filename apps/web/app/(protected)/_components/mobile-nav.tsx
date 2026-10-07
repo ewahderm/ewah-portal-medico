@@ -11,7 +11,7 @@ import { Dialog, DialogPortal, DialogOverlay, DialogClose, DialogTrigger } from 
 
 import { NavBadge, type NavItem } from "./nav-group";
 
-type NavGroup = { label: string; items: NavItem[] };
+type NavGroup = { label: string; items: NavItem[]; direct?: boolean };
 
 // Mismo <Dialog> que el resto de la app (overlay + cierre solo por X, nunca
 // click-afuera/Escape — ver components/ui/dialog.tsx), pero con un Popup
@@ -36,7 +36,7 @@ export function MobileNav({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger
         render={
-          <Button variant="ghost" size="icon" className="relative md:hidden" aria-label="Abrir menú">
+          <Button variant="ghost" size="icon" className="relative xl:hidden" aria-label="Abrir menú">
             <MenuIcon />
             {totalBadges > 0 ? <NavBadge n={totalBadges} className="absolute -top-1 -right-1" /> : null}
           </Button>
@@ -66,16 +66,20 @@ export function MobileNav({
           <nav className="flex flex-1 flex-col gap-4 overflow-y-auto">
             {groups.map((grupo) => (
               <div key={grupo.label} className="flex flex-col gap-1">
-                <p className="px-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                  {grupo.label}
-                </p>
+                {grupo.direct ? null : (
+                  <p className="px-3 py-1 text-sm font-semibold text-foreground">
+                    {grupo.label}
+                  </p>
+                )}
                 {grupo.items.map((item) => (
                   <Link
                     key={item.href}
                     href={item.href}
+                    transitionTypes={["module-switch"]}
                     onClick={() => setOpen(false)}
+                    aria-current={pathname.startsWith(item.href) ? "page" : undefined}
                     className={cn(
-                      "flex items-center justify-between gap-2 rounded-lg px-3 py-2.5 font-medium text-muted-foreground hover:bg-muted hover:text-foreground",
+                      "flex items-center justify-between gap-2 rounded-lg px-3 py-2.5 font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground motion-reduce:transition-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
                       pathname.startsWith(item.href) && "bg-muted text-foreground",
                     )}
                   >

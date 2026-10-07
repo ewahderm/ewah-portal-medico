@@ -5,7 +5,7 @@ import { SearchIcon, XIcon } from "lucide-react";
 import { listarResiduos } from "@/lib/medio-ambiente/actions";
 import { formatoFechaHoraJornada } from "@/lib/medio-ambiente/fecha-local";
 import { totalPaginas as calcularTotalPaginas } from "@/lib/pagination";
-import { TIPOS_RESIDUO, infoResiduo, badgeVarianteCaneca } from "@/lib/medio-ambiente/constantes";
+import { TIPOS_RESIDUO, infoResiduo, estiloBadgeCaneca, etiquetaOpcionResiduo, TIPO_RESIDUO_LEGADO } from "@/lib/medio-ambiente/constantes";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,6 +22,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { NuevoResiduoDialog } from "./nuevo-residuo-dialog";
+import { ConfirmarCeroResiduoDialog } from "./confirmar-cero-residuo-dialog";
 import type { Opcion } from "@/lib/forms/opciones";
 
 const TODOS = "__todos__";
@@ -30,7 +31,7 @@ const ITEMS_TIPO_RESIDUO = [
   { value: TODOS, label: "Todos" },
   ...TIPOS_RESIDUO.map((t) => ({
     value: t.value,
-    label: `${t.caneca === "roja" ? "Roja" : t.caneca === "blanca" ? "Blanca" : "Negra"} — ${t.label}`,
+    label: etiquetaOpcionResiduo(t),
   })),
 ];
 
@@ -144,7 +145,10 @@ export function ResiduosTab({
             Registros {total > 0 ? `(${total})` : ""}
           </CardTitle>
           {puedeCrear ? (
-            <NuevoResiduoDialog sedes={sedes} empleados={empleados} onCreado={() => buscar()} />
+            <div className="flex flex-wrap gap-2">
+              <NuevoResiduoDialog sedes={sedes} empleados={empleados} onCreado={() => buscar()} />
+              <ConfirmarCeroResiduoDialog sedes={sedes} onConfirmado={() => buscar()} />
+            </div>
           ) : null}
         </CardHeader>
         <CardContent>
@@ -172,8 +176,8 @@ export function ResiduosTab({
                     <TableCell className="text-muted-foreground">{r.sedes?.nombre ?? "—"}</TableCell>
                     <TableCell>
                       {info ? (
-                        <Badge variant={badgeVarianteCaneca(info.caneca)}>
-                          {info.caneca === "roja" ? "Roja" : info.caneca === "blanca" ? "Blanca" : "Negra"}
+                        <Badge {...(info.caneca ? estiloBadgeCaneca(info.caneca) : { variant: "destructive" as const })}>
+                          {info.caneca ? `Caneca ${info.caneca}` : info.value === TIPO_RESIDUO_LEGADO ? "Peligroso · sin clasificar" : "Peligroso"}
                         </Badge>
                       ) : (
                         "—"

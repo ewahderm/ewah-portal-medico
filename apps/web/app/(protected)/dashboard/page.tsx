@@ -43,7 +43,8 @@ export default async function DashboardPage() {
               <Link
                 key={modulo.codigo}
                 href={modulo.href}
-                className="relative block cursor-pointer space-y-3 rounded-xl border p-6 transition hover:border-primary/40 hover:shadow-sm"
+                transitionTypes={["module-switch"]}
+                className="relative block cursor-pointer space-y-3 rounded-xl border p-6 transition duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-md motion-reduce:transform-none motion-reduce:transition-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
               >
                 {!tieneEntitlement ? (
                   <Badge className="absolute top-3 right-3 border border-primary/20 bg-primary/10 px-1.5 text-[10px] font-semibold tracking-wide text-primary uppercase">

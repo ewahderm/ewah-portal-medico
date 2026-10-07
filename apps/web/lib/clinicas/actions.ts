@@ -42,13 +42,14 @@ export async function actualizarMarcaClinica(formData: FormData) {
     throw new Error("Solo un administrador puede editar la marca de la clínica.");
   }
 
-  const nombreComercial = campoOpcional(formData, "nombreComercial");
+  // El nombre comercial ya no se edita aquí (vive en Datos básicos, 0080);
+  // la RPC conserva el parámetro por compatibilidad y lo ignora.
   const correoNotificaciones = campoOpcional(formData, "correoNotificaciones");
   const telefonoContacto = campoOpcional(formData, "telefonoContacto");
 
   const supabase = await createClient();
   const { error } = await supabase.rpc("fn_actualizar_marca_propia_clinica", {
-    p_nombre_comercial: nombreComercial,
+    p_nombre_comercial: null,
     p_correo_notificaciones: correoNotificaciones,
     p_telefono_contacto: telefonoContacto,
   });
@@ -77,20 +78,31 @@ export async function actualizarDatosBasicosClinica(formData: FormData) {
   const nit = String(formData.get("nit") ?? "").trim();
   if (!nit) throw new Error("El número de identificación es obligatorio.");
 
-  const supabase = await createClient();
-
-  // RPC aparte (0059) para no cambiar la firma de la función principal; el
-  // mensaje de "ya existe otra clínica con ese número" es apto para mostrar.
-  const { error: errorNit } = await supabase.rpc("fn_actualizar_nit_clinica", { p_nit: nit });
-  if (errorNit) {
+  const nombreLegal = campoOpcional(formData, "nombreLegal");
+  if (!nombreLegal) throw new Error("El nombre legal de la clínica es obligatorio.");
+  if (nombreLegal.length > 200) throw new Error("El nombre legal no puede superar 200 caracteres.");
+  const nombreComercial = campoOpcional(formData, "nombreComercial");
+  if (nombreComercial && nombreComercial.length > 200) {
+    throw new Error("El nombre comercial no puede superar 200 caracteres.");
+  }
+  // Se quitan espacios, puntos o guiones que vengan al copiarlo del
+  // certificado de la ARL (mismo criterio que tenía el perfil SG-SST).
+  const codigoActividad = campoOpcional(formData, "codigoActividadEconomica")?.replace(/\D/g, "") || null;
+  if (codigoActividad && !/^[1-5]\d{6}$/.test(codigoActividad)) {
     throw new Error(
-      errorNit.message.includes("Ya existe otra clínica")
-        ? errorNit.message
-        : "No se pudo actualizar el número de identificación.",
+      "La actividad económica tiene 7 dígitos y empieza por la clase de riesgo (1 a 5). Cópiala de tu afiliación a la ARL.",
     );
   }
 
-  const { error } = await supabase.rpc("fn_actualizar_datos_basicos_clinica", {
+  const supabase = await createClient();
+
+  // Una sola RPC (0080) que encadena perfil + NIT (0059) + datos básicos
+  // (0052) en la misma transacción: si algo falla no queda a medio guardar.
+  const { error } = await supabase.rpc("fn_guardar_datos_basicos_clinica", {
+    p_nombre_legal: nombreLegal,
+    p_nombre_comercial: nombreComercial,
+    p_codigo_actividad_economica: codigoActividad,
+    p_nit: nit,
     p_pais_operacion_id: paisOperacionId,
     p_exoneracion_aportes: exoneracionAportes,
     p_direccion: campoOpcional(formData, "direccion"),
@@ -105,9 +117,16 @@ export async function actualizarDatosBasicosClinica(formData: FormData) {
     p_departamento_id: valorOpcionalSelect(formData, "departamentoId"),
     p_ciudad_id: valorOpcionalSelect(formData, "ciudadId"),
   });
-  if (error) throw new Error("No se pudo actualizar la configuración.");
+  if (error) {
+    // P0001 = raise exception de las funciones: mensajes escritos para el
+    // usuario (NIT duplicado, nombre legal vacío, código inválido...).
+    if (error.code === "P0001") throw new Error(error.message);
+    console.error("[clinicas] guardar datos básicos", error);
+    throw new Error("No se pudieron guardar los datos de la clínica. Intenta de nuevo.");
+  }
 
   revalidatePath("/parametros");
+  revalidatePath("/suscripcion");
 }
 
 // No pasa por comprimirImagen.ts a propósito: ese util re-codifica todo a

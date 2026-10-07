@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition, type ReactElement } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ImageIcon } from "lucide-react";
 import { actualizarMarcaClinica, subirLogoClinica } from "@/lib/clinicas/actions";
@@ -20,14 +21,12 @@ import {
 
 export function MarcaDialog({
   trigger,
-  nombreLegal,
   nombreComercial,
   correoNotificaciones,
   telefonoContacto,
   logoUrl,
 }: {
   trigger: ReactElement;
-  nombreLegal: string;
   nombreComercial: string | null;
   correoNotificaciones: string | null;
   telefonoContacto: string | null;
@@ -127,19 +126,18 @@ export function MarcaDialog({
         </div>
 
         <form action={handleGuardarDatos} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="nombreComercial">Nombre comercial</Label>
-            <Input
-              id="nombreComercial"
-              name="nombreComercial"
-              defaultValue={nombreComercial ?? ""}
-              placeholder={nombreLegal}
-            />
-            <p className="text-xs text-muted-foreground">
-              Así te verán tus pacientes en los correos. Si lo dejas vacío, se usa &quot;{nombreLegal}
-              &quot;.
-            </p>
-          </div>
+          <p className="text-xs text-muted-foreground">
+            {nombreComercial ? (
+              <>
+                Tus pacientes te ven como <span className="font-medium text-foreground">{nombreComercial}</span>.{" "}
+              </>
+            ) : null}
+            El nombre comercial se configura en{" "}
+            <Link href="/parametros" className="text-primary underline underline-offset-4">
+              Parámetros &gt; Datos básicos
+            </Link>
+            .
+          </p>
           <div className="space-y-2">
             <Label htmlFor="correoNotificaciones">Correo de notificaciones</Label>
             <Input

@@ -2,15 +2,35 @@
 // lo usan los Server Components de varias secciones.
 
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUsuario } from "@/lib/auth/session";
 import { getConteoTrabajadores, getPerfilSst, type ConteoTrabajadores, type PerfilSst } from "@/lib/sst/consultas";
 import { diagnosticar, type Diagnostico } from "@/lib/sst/grupo";
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 
+// La actividad económica vive en clinicas (0080). Se filtra por la clínica
+// del usuario: un super admin ve todas las clínicas por RLS y un
+// .maybeSingle() sin filtro fallaría con más de una fila.
+async function getCodigoActividadClinica(supabase: Supabase): Promise<string | null> {
+  const usuario = await getCurrentUsuario();
+  if (!usuario) return null;
+  const { data, error } = await supabase
+    .from("clinicas")
+    .select("codigo_actividad_economica")
+    .eq("id", usuario.clinica_id)
+    .maybeSingle();
+  if (error) console.error("[sst] actividad económica de la clínica", error);
+  return data?.codigo_actividad_economica ?? null;
+}
+
 export async function getDiagnostico(
   supabase: Supabase,
 ): Promise<{ perfil: PerfilSst | null; conteo: ConteoTrabajadores | null; d: Diagnostico | null }> {
-  const [perfil, conteo] = await Promise.all([getPerfilSst(supabase), getConteoTrabajadores(supabase)]);
+  const [perfil, conteo, codigoActividad] = await Promise.all([
+    getPerfilSst(supabase),
+    getConteoTrabajadores(supabase),
+    getCodigoActividadClinica(supabase),
+  ]);
   const d = conteo
     ? diagnosticar({
         modo: perfil?.modo ?? "empleador",
@@ -19,7 +39,7 @@ export async function getDiagnostico(
         sinCategoria: conteo.sin_categoria,
         otros: perfil?.otros_trabajadores ?? 0,
         excluyeContratistas: perfil?.excluye_contratistas ?? false,
-        codigoActividad: perfil?.codigo_actividad ?? null,
+        codigoActividad,
         claseClinica: conteo.clase_clinica,
         claseCargosMax: conteo.clase_cargos_max,
       })

@@ -36,10 +36,25 @@ aplicar 00-stubs-supabase.sql
 for f in "$RAIZ"/supabase/migrations/*.sql; do
   n=$(basename "$f" | cut -c1-4)
   if [ "$n" = "0061" ]; then echo "  (alinear ids de practicas_medicas)"; alinear_ids | PSQL > /dev/null; fi
+  if [ "$n" = "0080" ]; then
+    echo "  (crear perfil clínico legado para probar el backfill)"
+    PSQL <<'SQL' > /dev/null
+insert into clinicas (id, nombre, nit, plan_id, pais_operacion_id)
+values (
+  '00000000-0000-0000-0000-000000000080',
+  'Clínica de prueba perfil 0080',
+  'MIGRATION-0080',
+  (select id from planes where codigo = 'gratis'),
+  (select id from paises where codigo = 'CO')
+);
+insert into sst_perfil (clinica_id, codigo_actividad)
+values ('00000000-0000-0000-0000-000000000080', '3862101');
+SQL
+  fi
   aplicar "$f"
 done
 
-for datos in $(ls f*-datos.sql | sort -V) $(ls sst*-datos.sql 2>/dev/null | sort -V); do
+for datos in $(ls f*-datos.sql | sort -V) $(ls sst*-datos.sql 2>/dev/null | sort -V) $(ls ma*-datos.sql 2>/dev/null | sort -V) $(ls rp*-datos.sql 2>/dev/null | sort -V); do
   fase=${datos%-datos.sql}
   echo "Pruebas $fase:"
   PSQL < "$datos" > /dev/null

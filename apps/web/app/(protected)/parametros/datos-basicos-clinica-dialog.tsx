@@ -34,6 +34,9 @@ type Ciudad = { id: string; nombre: string; departamento_id: string };
 type PracticaMedica = { id: string; codigo: string | null; nombre: string };
 
 type ClinicaDatosBasicos = {
+  nombreLegal: string;
+  nombreComercial: string | null;
+  codigoActividadEconomica: string | null;
   paisOperacionId: string;
   exoneracionAportes: boolean;
   direccion: string | null;
@@ -141,6 +144,50 @@ export function DatosBasicosClinicaDialog({
         </DialogHeader>
         <form action={handleGuardar} className="space-y-5">
           <div className="space-y-3">
+            <p className="text-sm font-semibold">Identidad de la clínica</p>
+            <div className="space-y-2">
+              <Label htmlFor="nombreLegal" className="font-semibold">Nombre legal</Label>
+              <Input
+                id="nombreLegal"
+                name="nombreLegal"
+                defaultValue={clinica.nombreLegal}
+                maxLength={200}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="nombreComercial">Nombre comercial</Label>
+              <Input
+                id="nombreComercial"
+                name="nombreComercial"
+                defaultValue={clinica.nombreComercial ?? ""}
+                maxLength={200}
+                placeholder={clinica.nombreLegal}
+              />
+              <p className="text-xs text-muted-foreground">
+                Es el nombre visible para tus pacientes. Si lo dejas vacío, se usa el nombre legal.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="codigoActividadEconomica">Actividad económica</Label>
+              <Input
+                id="codigoActividadEconomica"
+                name="codigoActividadEconomica"
+                inputMode="numeric"
+                // Sin pattern a propósito: se puede pegar "3 862101" o
+                // "3.862.101" tal como viene en el certificado; el servidor
+                // deja solo los dígitos y valida los 7 (lib/clinicas/actions.ts).
+                maxLength={15}
+                defaultValue={clinica.codigoActividadEconomica ?? ""}
+                placeholder="Ej.: 3862101"
+              />
+              <p className="text-xs text-muted-foreground">
+                Código de 7 dígitos del certificado de afiliación a la ARL; el primero indica la clase de riesgo.
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-3 border-t pt-4">
             <p className="text-sm font-semibold">Identificación y contacto</p>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-2">

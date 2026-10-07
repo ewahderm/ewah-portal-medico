@@ -8,6 +8,7 @@ import {
   BriefcaseIcon,
   ShieldCheckIcon,
   HardHatIcon,
+  ChartNoAxesColumnIncreasingIcon,
   type LucideIcon,
 } from "lucide-react";
 
@@ -38,6 +39,13 @@ export type ModuloRegistro = {
 };
 
 export const REGISTRO_MODULOS: ModuloRegistro[] = [
+  {
+    codigo: "reportes",
+    nombre: "Reportes",
+    descripcion: "Tendencias, tratamientos y valor registrado en un solo lugar.",
+    href: "/reportes",
+    icono: ChartNoAxesColumnIncreasingIcon,
+  },
   {
     codigo: "pacientes",
     nombre: "Pacientes",

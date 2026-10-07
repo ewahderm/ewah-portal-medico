@@ -134,3 +134,88 @@
     @apply font-sans;
   }
 }
+
+@keyframes reporte-reveal-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes reporte-trace-in {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.reporte-reveal {
+  animation: reporte-reveal-in 520ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+/* El <path> lleva pathLength={1}: el largo del trazo vale 1 sin importar
+   la forma de la curva, así un solo guion de largo 1 lo dibuja completo. */
+.reporte-trace {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: reporte-trace-in 900ms ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reporte-reveal,
+  .reporte-trace {
+    animation: none;
+  }
+
+  .reporte-trace {
+    stroke-dasharray: none;
+    stroke-dashoffset: 0;
+  }
+
+  .reporte-bar {
+    transition: none;
+  }
+
+  [data-slot="mobile-nav-panel"] {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+@keyframes modulo-aparece {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes modulo-desaparece {
+  to {
+    opacity: 0;
+  }
+}
+
+::view-transition-old(.module-switch) {
+  animation: 120ms ease-in both modulo-desaparece;
+}
+
+::view-transition-new(.module-switch) {
+  animation: 220ms ease-out 70ms both modulo-aparece;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(.module-switch),
+  ::view-transition-new(.module-switch) {
+    animation: none !important;
+  }
+}

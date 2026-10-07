@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ViewTransition } from "react";
 import { requireUsuario, esAdministrador } from "@/lib/auth/session";
 import { logout } from "@/lib/auth/actions";
 import { createClient } from "@/lib/supabase/server";
@@ -8,32 +9,64 @@ import { EwahLogo } from "@/components/ewah-logo";
 import { MobileNav } from "./_components/mobile-nav";
 import { NavGroup } from "./_components/nav-group";
 
-const NAV_GROUPS = [
+type EntradaNavegacion = {
+  href: string;
+  label: string;
+  modulo?: string;
+  requiere?: string[];
+  badge?: number;
+};
+
+type GrupoNavegacion = {
+  label: string;
+  direct?: boolean;
+  items: EntradaNavegacion[];
+};
+
+const NAV_GROUPS: GrupoNavegacion[] = [
   {
-    label: "Clínico",
+    label: "Inicio",
+    direct: true,
     items: [
-      { href: "/pacientes", label: "Pacientes" },
-      { href: "/tratamientos", label: "Tratamientos" },
-      { href: "/citas", label: "Agenda" },
+      { href: "/dashboard", label: "Dashboard" },
+      { href: "/reportes", label: "Reportes", modulo: "reportes" },
+    ],
+  },
+  {
+    label: "Atención",
+    items: [
+      { href: "/citas", label: "Agenda", modulo: "citas" },
+      { href: "/pacientes", label: "Pacientes", modulo: "pacientes" },
+      { href: "/tratamientos", label: "Tratamientos", modulo: "tratamientos" },
     ],
   },
   {
     label: "Operación",
     items: [
-      { href: "/inventario", label: "Inventario" },
-      { href: "/campanas", label: "Campañas" },
-      { href: "/medio-ambiente", label: "Medio Ambiente" },
-      { href: "/rrhh", label: "Recursos Humanos" },
-      { href: "/sst", label: "SG-SST" },
+      { href: "/inventario", label: "Inventario", modulo: "inventario" },
+      { href: "/rrhh", label: "Recursos Humanos", modulo: "rrhh" },
+    ],
+  },
+  {
+    label: "Relación",
+    items: [
+      { href: "/campanas", label: "Campañas", modulo: "campanas" },
+    ],
+  },
+  {
+    label: "Cumplimiento",
+    items: [
+      { href: "/medio-ambiente", label: "Medio Ambiente", modulo: "medio_ambiente" },
+      { href: "/habilitacion", label: "Habilitación", modulo: "habilitacion" },
+      { href: "/sst", label: "SG-SST", modulo: "sst" },
     ],
   },
   {
     label: "Administración",
     items: [
-      { href: "/usuarios", label: "Usuarios" },
-      { href: "/parametros", label: "Parámetros" },
-      { href: "/habilitacion", label: "Habilitación" },
-      { href: "/suscripcion", label: "Suscripción" },
+      { href: "/usuarios", label: "Usuarios", modulo: "usuarios" },
+      { href: "/parametros", label: "Parámetros", modulo: "parametros" },
+      { href: "/suscripcion", label: "Suscripción", modulo: "suscripcion" },
     ],
   },
 ];
@@ -68,27 +101,45 @@ export default async function ProtectedLayout({
   // sesión (no el admin) — es la bandera cross-tenant del equipo de EWAH
   // Tech, nunca asignable desde ninguna pantalla de la app.
   const supabaseSesion = await createClient();
-  const [{ data: esSuperAdmin }, urgentesHabilitacion, urgentesSst] = await Promise.all([
+  const [{ data: esSuperAdmin }, { data: modulosDisponibles, error: errorModulos }, urgentesHabilitacion, urgentesSst] = await Promise.all([
     supabaseSesion.rpc("es_super_admin"),
+    supabaseSesion.rpc("fn_modulos_nav_visibles"),
     contarUrgentesHabilitacion(supabaseSesion),
     contarUrgentesSst(supabaseSesion),
   ]);
-  const navGroups = NAV_GROUPS.map((grupo) =>
-    grupo.label === "Operación"
-      ? { ...grupo, items: grupo.items.map((item) => (item.href === "/sst" && urgentesSst > 0 ? { ...item, badge: urgentesSst } : item)) }
-      : grupo.label === "Administración"
+  // El filtro del menú es conveniencia, no seguridad: cada página vuelve a
+  // exigir su permiso. Si la RPC falla (o la migración 0084 aún no está
+  // aplicada) se muestra el menú completo, como antes, en vez de tumbar
+  // todas las pantallas protegidas.
+  if (errorModulos) console.error("[nav] fn_modulos_nav_visibles", errorModulos);
+  const codigosVisibles = errorModulos
+    ? null
+    : new Set<string>((modulosDisponibles ?? []).map((modulo: { codigo: string }) => modulo.codigo));
+  const navGroups = NAV_GROUPS
+    .map((grupo) => ({
+      ...grupo,
+      items: grupo.items
+        .filter((item) => !item.modulo || !codigosVisibles || [item.modulo, ...(item.requiere ?? [])].every((codigo) => codigosVisibles.has(codigo)))
+        .map((item) => {
+          const menuItem = { href: item.href, label: item.label };
+          return item.href === "/sst" && urgentesSst > 0
+            ? { ...menuItem, badge: urgentesSst }
+            : item.href === "/habilitacion" && urgentesHabilitacion > 0
+              ? { ...menuItem, badge: urgentesHabilitacion }
+              : menuItem;
+        }),
+    }))
+    .filter((grupo) => grupo.items.length > 0)
+    .map((grupo) => grupo.label === "Administración"
       ? {
           ...grupo,
           items: [
-            ...grupo.items.map((item) =>
-              item.href === "/habilitacion" && urgentesHabilitacion > 0 ? { ...item, badge: urgentesHabilitacion } : item,
-            ),
+            ...grupo.items,
             ...(esAdministrador(usuario) ? [{ href: "/exportar", label: "Exportar datos" }] : []),
-            ...(esSuperAdmin ? [{ href: "/plataforma", label: "Plataforma" }] : []),
           ],
         }
-      : grupo,
-  );
+      : grupo)
+    .concat(esSuperAdmin ? [{ label: "Plataforma", direct: false, items: [{ href: "/plataforma", label: "Plataforma" }] }] : []);
 
   // Cliente admin a propósito, no el de sesión: clinica_actual() (y por lo
   // tanto la policy de select normal) ahora exige clinicas.activo = true —
@@ -134,7 +185,7 @@ export default async function ProtectedLayout({
       <header className="border-b print:hidden">
         <div className="mx-auto flex max-w-[1536px] items-center justify-between px-6 py-4">
           <nav className="flex items-center gap-6 text-sm font-medium">
-            <Link href="/dashboard">
+            <Link href="/dashboard" transitionTypes={["module-switch"]}>
               {logoClinicaUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -146,14 +197,19 @@ export default async function ProtectedLayout({
                 <EwahLogo variant="dark" />
               )}
             </Link>
-            <div className="hidden items-center gap-6 md:flex">
+            {/* Menú de escritorio desde xl (1280 px): con 2 enlaces + 5 grupos
+                + el logo (máx. 210 px) cabe con gap-1; por debajo, el menú
+                lateral con los mismos grupos (SPEC-navegacion-motion). */}
+            <div className="hidden items-center gap-1 xl:flex">
               {navGroups.map((grupo) => (
-                <NavGroup key={grupo.label} label={grupo.label} items={grupo.items} />
+                <NavGroup key={grupo.label} label={grupo.label} items={grupo.items} direct={grupo.direct} />
               ))}
             </div>
           </nav>
-          <div className="hidden items-center gap-4 text-sm md:flex">
-            <span className="text-muted-foreground">
+          <div className="hidden items-center gap-4 text-sm xl:flex">
+            {/* El nombre solo desde 2xl: entre 1280 y 1536 px no cabe junto a
+                los grupos; sigue visible en el menú lateral. */}
+            <span className="hidden text-muted-foreground 2xl:inline">
               {usuario.nombre} · {usuario.roles?.nombre}
             </span>
             <form action={logout}>
@@ -170,8 +226,10 @@ export default async function ProtectedLayout({
           />
         </div>
       </header>
-      <main className="mx-auto w-full max-w-[1536px] flex-1 px-6 py-8 print:max-w-none print:p-0">
-        {children}
+      <main className="mx-auto w-full max-w-[1536px] flex-1 px-4 py-6 sm:px-6 sm:py-8 print:max-w-none print:p-0">
+        <ViewTransition update={{ "module-switch": "module-switch", default: "none" }} default="none">
+          {children}
+        </ViewTransition>
       </main>
     </div>
   );

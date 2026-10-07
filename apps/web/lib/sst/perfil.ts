@@ -17,11 +17,6 @@ export async function guardarPerfilSst(_prev: ActionState, formData: FormData): 
   const modo = String(formData.get("modo") ?? "");
   if (modo !== "empleador" && modo !== "independiente") return { error: "Cuéntanos si trabajas solo o con personal." };
 
-  const codigo = campoOpcional(formData, "codigoActividad")?.replace(/\D/g, "") ?? null;
-  if (codigo && !/^[1-5]\d{6}$/.test(codigo)) {
-    return { error: "El código de actividad tiene 7 dígitos y empieza por la clase de riesgo (1 a 5). Cópialo de tu afiliación a la ARL." };
-  }
-
   const otrosTexto = campoOpcional(formData, "otrosTrabajadores") ?? "0";
   const otros = Number(otrosTexto);
   if (!Number.isInteger(otros) || otros < 0 || otros > 100000) return { error: "Los otros trabajadores deben ser un número entero." };
@@ -45,7 +40,6 @@ export async function guardarPerfilSst(_prev: ActionState, formData: FormData): 
 
   const datos = {
     modo,
-    codigo_actividad: codigo,
     otros_trabajadores: otros,
     otros_trabajadores_detalle: campoOpcional(formData, "otrosDetalle")?.slice(0, 500) ?? null,
     excluye_contratistas: excluye,

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useActionState } from "react";
 import { PlusIcon } from "lucide-react";
 import { crearResiduo } from "@/lib/medio-ambiente/actions";
-import { TIPOS_RESIDUO } from "@/lib/medio-ambiente/constantes";
+import { TIPOS_RESIDUO_NUEVOS, etiquetaOpcionResiduo } from "@/lib/medio-ambiente/constantes";
 import { useCerrarAlExito } from "@/lib/forms/cerrarAlExito";
 import { toast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
@@ -24,9 +24,10 @@ import { toItems, toItemsOpcional, type Opcion } from "@/lib/forms/opciones";
 import { SIN_SELECCION } from "@/lib/forms/opcional";
 import { FechaJornadaFields } from "./fecha-jornada-fields";
 
-const ITEMS_TIPO_RESIDUO = TIPOS_RESIDUO.map((t) => ({
+// Sin el "quimico" histórico: un pesaje nuevo elige la característica.
+const ITEMS_TIPO_RESIDUO = TIPOS_RESIDUO_NUEVOS.map((t) => ({
   value: t.value,
-  label: `${t.caneca === "roja" ? "Roja" : t.caneca === "blanca" ? "Blanca" : "Negra"} — ${t.label}`,
+  label: etiquetaOpcionResiduo(t),
 }));
 
 export function NuevoResiduoDialog({
@@ -88,7 +89,7 @@ export function NuevoResiduoDialog({
 
           <div className="space-y-2">
             <Label htmlFor="pesoKg">Peso (kg)</Label>
-            <Input id="pesoKg" name="pesoKg" type="number" step="0.001" min="0" required placeholder="0.000" />
+            <Input id="pesoKg" name="pesoKg" type="number" step="0.001" min="0" max="99999.999" required placeholder="0.000" />
           </div>
 
           <FechaJornadaFields />

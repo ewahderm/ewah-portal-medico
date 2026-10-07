@@ -13,9 +13,9 @@ select t.ok(c.dependientes = :lab and c.contratistas = :ser and c.dependientes >
   from fn_sst_conteo_trabajadores() c;
 select t.ok(clase_cargos_max = 'IV', 'la mayor clase de los cargos vigentes es IV') from fn_sst_conteo_trabajadores();
 
-insert into sst_perfil (clinica_id, codigo_actividad, created_by) values (clinica_actual(), '3862101', '00000000-0000-0000-0000-00000000000b');
+-- La actividad económica ya no es del perfil SG-SST: vive en clinicas (0080, ver sst11).
+insert into sst_perfil (clinica_id, created_by) values (clinica_actual(), '00000000-0000-0000-0000-00000000000b');
 select t.ok(created_by = auth.uid(), 'el perfil queda a nombre de quien lo crea') from sst_perfil;
-select t.debe_fallar('update sst_perfil set codigo_actividad = ''8621''', 'check');
 select t.debe_fallar('update sst_perfil set excluye_contratistas = true', 'exclusion_justificada');
 update sst_perfil set excluye_contratistas = true, justificacion_exclusion = 'Contratos de menos de un mes, sin afiliación por la clínica';
 select t.ok(excluye_contratistas, 'excluir contratistas con justificación') from sst_perfil;

@@ -14,8 +14,13 @@ await page.goto(`${B}/sst`);
 await page.getByText("Qué te exige la norma").waitFor();
 console.log("inicial:", (await page.locator("text=Qué te exige la norma").locator("..").innerText()).replace(/\s+/g, " ").slice(0, 200));
 await page.screenshot({ path: `${S}/sst-1-inicial.png`, fullPage: true });
-await page.fill("#codigoActividad", "3862101");
-await page.getByRole("button", { name: "Guardar" }).click();
+// La actividad económica es dato de la clínica (0080): se guarda en Parámetros.
+await page.goto(`${B}/parametros`);
+await page.getByRole("button", { name: "Datos básicos de la clínica" }).click();
+await page.fill("#codigoActividadEconomica", "3862101");
+await page.getByRole("dialog").getByRole("button", { name: "Guardar", exact: true }).click();
+await page.getByText("Datos de la clínica actualizados").waitFor({ timeout: 15000 });
+await page.goto(`${B}/sst`);
 await page.getByText(/aplican 7 estándares/).waitFor({ timeout: 15000 });
 console.log("con código:", await page.getByText(/aplican 7 estándares/).innerText());
 // excluir contratistas sin justificación → error

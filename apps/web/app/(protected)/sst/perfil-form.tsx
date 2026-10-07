@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import Link from "next/link";
 import { guardarPerfilSst } from "@/lib/sst/perfil";
 import { FORMACIONES_RESPONSABLE, MODOS_SST } from "@/lib/sst/constantes";
 import type { PerfilSst } from "@/lib/sst/consultas";
@@ -58,18 +59,14 @@ export function PerfilSstForm({ perfil: perfilInicial, puedeEditar }: { perfil: 
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="space-y-1">
-            <Label htmlFor="codigoActividad">Código de actividad económica (Dec. 768 de 2022)</Label>
-            <Input
-              id="codigoActividad"
-              name="codigoActividad"
-              inputMode="numeric"
-              maxLength={7}
-              placeholder="Ej.: 3862101"
-              defaultValue={perfil?.codigo_actividad ?? ""}
-            />
+          <div className="space-y-1 rounded-lg border p-3">
+            <p className="text-sm font-medium">Actividad económica de la clínica</p>
             <p className="text-xs text-muted-foreground">
-              7 dígitos; el primero es tu clase de riesgo. Está en tu certificado de afiliación a la ARL.
+              Este dato se administra desde{" "}
+              <Link href="/parametros" className="text-primary underline underline-offset-4">
+                Parámetros &gt; Datos básicos
+              </Link>
+              .
             </p>
           </div>
           <div className="space-y-1">

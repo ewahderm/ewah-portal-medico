@@ -185,7 +185,8 @@ export default async function ParametrosPage() {
     supabase
       .from("clinicas")
       .select(
-        `nit, agencia_regulatoria, pais_operacion_id, exoneracion_aportes_salud_parafiscales,
+        `nombre, nombre_comercial, codigo_actividad_economica, nit, agencia_regulatoria,
+         pais_operacion_id, exoneracion_aportes_salud_parafiscales,
          direccion, telefono, email, tipo_persona_id, tipo_documento_id, rol_actor_id,
          tipo_transaccion_invima_id, codigo_habilitacion, clase_riesgo_id, departamento_id, ciudad_id`,
       )
@@ -258,6 +259,9 @@ export default async function ParametrosPage() {
   }));
   const claseRiesgoDefaultId = clinicaData.data?.clase_riesgo_id ?? null;
   const datosBasicosClinica = {
+    nombreLegal: clinicaData.data?.nombre ?? "",
+    nombreComercial: clinicaData.data?.nombre_comercial ?? null,
+    codigoActividadEconomica: clinicaData.data?.codigo_actividad_economica ?? null,
     paisOperacionId,
     exoneracionAportes,
     direccion: clinicaData.data?.direccion ?? null,

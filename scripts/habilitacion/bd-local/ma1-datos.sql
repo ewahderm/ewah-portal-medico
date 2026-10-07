@@ -1,0 +1,1 @@
+-- Las pruebas usan las clínicas y sedes que crea f5-datos.sql.
