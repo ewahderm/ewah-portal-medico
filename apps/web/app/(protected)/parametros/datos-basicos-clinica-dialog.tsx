@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition, type ReactElement } from "react";
 import { useRouter } from "next/navigation";
-import { XIcon } from "lucide-react";
+import { PlusIcon, XIcon } from "lucide-react";
 import { actualizarDatosBasicosClinica } from "@/lib/clinicas/actions";
 import {
   agregarServicioHabilitado,
@@ -386,6 +386,10 @@ function ServiciosHabilitadosSection({
   const [grupo, setGrupo] = useState(SIN_SELECCION);
   const [servicioId, setServicioId] = useState(SIN_SELECCION);
   const [codigoNuevo, setCodigoNuevo] = useState("");
+  // El formulario de alta va detrás de un botón: con servicios ya cargados
+  // es secundario y abierto confundía con las filas guardadas de arriba.
+  // Sin ningún servicio es lo único que hay que hacer, así que arranca abierto.
+  const [agregando, setAgregando] = useState(inicial.length === 0);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -433,9 +437,12 @@ function ServiciosHabilitadosSection({
       try {
         const creado = await agregarServicioHabilitado(servicioId, sedeElegida, codigoNuevo || null);
         setServicios((actual) => [...actual, creado]);
-        // Se conservan sede y grupo para seguir agregando servicios.
+        // Se cierra el formulario; para otro servicio se vuelve a abrir con
+        // el botón. Se conserva la sede para agilizar el siguiente alta.
+        setGrupo(SIN_SELECCION);
         setServicioId(SIN_SELECCION);
         setCodigoNuevo("");
+        setAgregando(false);
       } catch (e) {
         setError(e instanceof Error ? e.message : "No se pudo agregar.");
       }
@@ -530,10 +537,8 @@ function ServiciosHabilitadosSection({
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {haySedes ? (
                     <div className="space-y-1">
-                      {/* Combobox solo reenvía `id` al input: la etiqueta
-                          accesible va por un Label oculto. */}
-                      <Label htmlFor={`sede-servicio-${s.id}`} className="sr-only">
-                        Sede de {nombre}
+                      <Label htmlFor={`sede-servicio-${s.id}`} className="text-xs text-muted-foreground">
+                        Sede donde se presta
                       </Label>
                       <Combobox
                         id={`sede-servicio-${s.id}`}
@@ -555,12 +560,17 @@ function ServiciosHabilitadosSection({
                   ) : (
                     <p className="self-center text-xs text-muted-foreground">Sin sede</p>
                   )}
-                  <Input
-                    placeholder="Código de habilitación"
-                    aria-label={`Código de habilitación de ${nombre}`}
-                    defaultValue={s.codigo_habilitacion ?? ""}
-                    onBlur={(e) => handleActualizarCodigo(s.id, e.target.value)}
-                  />
+                  <div className="space-y-1">
+                    <Label htmlFor={`codigo-servicio-${s.id}`} className="text-xs text-muted-foreground">
+                      Código de habilitación (REPS)
+                    </Label>
+                    <Input
+                      id={`codigo-servicio-${s.id}`}
+                      placeholder="Ej.: 112233"
+                      defaultValue={s.codigo_habilitacion ?? ""}
+                      onBlur={(e) => handleActualizarCodigo(s.id, e.target.value)}
+                    />
+                  </div>
                 </div>
                 {s.practicas_medicas?.requisitos ? (
                   <details className="text-xs">
@@ -574,7 +584,32 @@ function ServiciosHabilitadosSection({
         </div>
       ) : null}
 
+      {!agregando ? (
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full sm:w-auto"
+          onClick={() => {
+            setError(null);
+            setAgregando(true);
+          }}
+        >
+          <PlusIcon /> {servicios.length > 0 ? "Agregar otro servicio habilitado" : "Agregar servicio habilitado"}
+        </Button>
+      ) : (
       <div className="space-y-3 rounded-lg border border-dashed border-input p-3">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-sm font-medium">Nuevo servicio habilitado</p>
+          {servicios.length > 0 ? (
+            <Button type="button" variant="ghost" size="sm" disabled={pending} onClick={() => setAgregando(false)}>
+              Cancelar
+            </Button>
+          ) : null}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Elige la sede y el servicio, y escribe el código que REPS le asignó a ese servicio en esa sede. Si
+          el mismo servicio se presta en otra sede, agrégalo otra vez con su propio código.
+        </p>
         {haySedes ? (
           <div className="space-y-2">
             <Label htmlFor="sedeServicioNuevo">1. Sede</Label>
@@ -628,19 +663,23 @@ function ServiciosHabilitadosSection({
           ) : null}
         </div>
 
-        <div className="flex gap-2">
-          <Input
-            className="flex-1"
-            placeholder="Código de habilitación"
-            aria-label="Código de habilitación del servicio"
-            value={codigoNuevo}
-            onChange={(e) => setCodigoNuevo(e.target.value)}
-          />
-          <Button type="button" variant="outline" disabled={pending} onClick={handleAgregar}>
-            Agregar
-          </Button>
+        <div className="space-y-2">
+          <Label htmlFor="codigoServicioNuevo">{haySedes ? "4. Código de habilitación (REPS)" : "3. Código de habilitación (REPS)"}</Label>
+          <div className="flex gap-2">
+            <Input
+              id="codigoServicioNuevo"
+              className="flex-1"
+              placeholder="Ej.: 112233"
+              value={codigoNuevo}
+              onChange={(e) => setCodigoNuevo(e.target.value)}
+            />
+            <Button type="button" disabled={pending} onClick={handleAgregar}>
+              Agregar
+            </Button>
+          </div>
         </div>
       </div>
+      )}
       <p className="text-xs text-muted-foreground">
         Los requisitos de cada servicio son material de referencia, no reemplazan el texto de la
         Resolución 3100.
