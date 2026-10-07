@@ -187,6 +187,24 @@ $$;`,
       ),
       asercionConteo("hab_mapeo_practica_servicio", servDeNorma, m.mapeo.length),
     ]),
+    `-- Backfill del numeral en filas de clinica_servicios_habilitados creadas
+-- antes de este mapeo (0055/0061, p. ej. desde Datos básicos): si la
+-- práctica tiene UNA sola opción seleccionable, se asigna. El trigger
+-- fn_servicio_habilitado_validar (0062) completa la complejidad si el
+-- servicio admite una sola. Las de varias opciones quedan "falta elegir
+-- numeral". Idempotente (solo toca filas con numeral null).
+update clinica_servicios_habilitados c
+set servicio_norma_id = u.servicio_norma_id
+from (
+  select m.practica_medica_id, min(m.servicio_norma_id::text)::uuid as servicio_norma_id
+  from hab_mapeo_practica_servicio m
+  join hab_servicios_norma s on s.id = m.servicio_norma_id
+  where s.${enNorma} and s.seleccionable
+  group by m.practica_medica_id
+  having count(*) = 1
+) u
+where c.servicio_norma_id is null
+  and c.practica_medica_id = u.practica_medica_id;`,
     "",
   ];
   return { nombre: NOMBRE_0063, sql: partes.join("\n\n") };

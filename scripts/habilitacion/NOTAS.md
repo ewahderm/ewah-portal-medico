@@ -2,7 +2,7 @@
 
 Genera las migraciones de catálogo global del módulo (diseño técnico §1.2 y §2):
 
-- `salida/0063_habilitacion_seed_norma.sql`: norma, estándares, grupos, servicios, bloques, criterios, remisiones y mapeo práctica → servicio.
+- `salida/0063_habilitacion_seed_norma.sql`: norma, estándares, grupos, servicios, bloques, criterios, remisiones y mapeo práctica → servicio. Al final, backfill de `clinica_servicios_habilitados.servicio_norma_id` en filas existentes cuya práctica tiene un solo numeral (F2).
 - `salida/0064_habilitacion_seed_catalogos.sql`: tipos de prestador, documentos, obligaciones y reglas de fecha, novedades y festivos.
 
 Se escriben en `salida/` y **no** en `supabase/migrations/`. La fase F2 las mueve junto con el esquema (0062).
