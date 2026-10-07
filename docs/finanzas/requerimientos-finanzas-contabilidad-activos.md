@@ -1,7 +1,13 @@
 # Requerimientos: Flujo de caja, contabilidad automatizada (PUC) y activos fijos
 
 Fecha: 2026-10-07 (decisiones del usuario incorporadas el mismo día, §15). Estado:
-**planeación, sin desarrollo**. Este documento es la base para
+**planeación, sin desarrollo**.
+
+> **Alcance acordado:** este documento es la **visión final** (contabilidad de la clínica
+> bajo NIIF). La **primera parte a construir es solo el flujo de caja**, especificada en
+> `etapa1-flujo-de-caja.md`, diseñada para que todo lo de aquí se monte encima sin rehacerla.
+> Orden: Etapa 1 flujo de caja → 2 por cobrar/pagar y DIAN → 3 contabilidad NIIF → 4 activos
+> y mantenimiento → 5 Supersalud. Este documento es la base para
 construir el módulo por fases (como Habilitación y SG-SST). Nada de lo aquí descrito existe
 todavía en el código; las tablas y funciones son la especificación que se convertirá en
 migraciones a partir de la **0089** (la 0081 es un hueco: no se reutiliza).
@@ -501,6 +507,10 @@ Mismos patrones de la app: Base UI (Combobox, Dialog, Tabs), toasts, estado cong
 
 ## 12. Fases propuestas
 
+> Reordenadas por etapas (decisión del usuario): la Etapa 1 (flujo de caja) toma de aquí
+> cuentas, socios, movimientos, Bold, tarifas y cierre de mes **sin asientos**; las fases de
+> esta tabla son las de la visión completa y se reparten en las etapas 2 a 5.
+
 Cada fase con migración, pruebas de BD (`bd-local`), vitest y recorrido en navegador, como
 Habilitación y SG-SST. Números de migración a confirmar al construir (coordinar con otras
 sesiones: hoy la siguiente libre es 0089).
@@ -601,9 +611,8 @@ configura) y Supersalud (2, según la norma). Siguen abiertas las demás.
    | ReteICA | 0,414 % (4,14 por mil) | `porcentaje_reteica` 0,414 |
    | ReteIVA | 0 % | `porcentaje_reteiva` 0 (la venta de salud no lleva IVA) |
 
-   Ejemplo, cobro de $100.000: comisión $4.090, ReteRenta $1.500, ReteICA $414 →
-   **neto $93.996** (si además Bold factura IVA del 19 % sobre la comisión, $777 más → neto
-   $93.219). **Por confirmar con el reporte o la factura de Bold**: si el 3,79 % ya incluye
-   el IVA. Contablemente la comisión (y su IVA) van a gasto financiero 5305; ReteRenta y
+   **La comisión ya incluye el IVA** (confirmado por el usuario). Ejemplo, cobro de
+   $100.000: comisión $4.090 (IVA incluido), ReteRenta $1.500, ReteICA $414 → **neto
+   $93.996**. Contablemente la comisión (y su IVA) van a gasto financiero 5305; ReteRenta y
    ReteICA **no son gasto**: son anticipos de impuestos que la clínica descuenta en su
    declaración (1355).
