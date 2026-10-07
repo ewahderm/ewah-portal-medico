@@ -21,12 +21,15 @@ select t.ok(
    from clinicas where nombre = 'Clínica A Legal'),
   'el administrador guarda ambos nombres y el código de su clínica'
 );
+-- Como superusuario: la RLS de clinicas oculta a A la fila de la otra clínica.
+reset role;
 select t.ok(
   (select nombre = 'Clínica de prueba perfil 0080'
           and codigo_actividad_economica = '3862101'
    from clinicas where id = '00000000-0000-0000-0000-000000000080'),
   'guardar el perfil de A no altera otra clínica'
 );
+select t.como('00000000-0000-0000-0000-00000000000a'); set role authenticated;
 select t.debe_fallar(
   $$select fn_actualizar_perfil_propia_clinica(' ', 'Marca', '3862101')$$,
   'nombre legal'
