@@ -35,11 +35,14 @@ export async function obtenerClinicaParaPdf() {
   };
 }
 
-export async function actualizarMarcaClinica(formData: FormData) {
+// Las acciones de marca devuelven { error } en vez de lanzar: en producción Next
+// oculta el mensaje de toda excepción de una server action (el usuario solo ve
+// "Minified React error #441").
+export async function actualizarMarcaClinica(formData: FormData): Promise<{ error?: string }> {
   const usuario = await getCurrentUsuario();
-  if (!usuario) throw new Error("Sesión inválida.");
+  if (!usuario) return { error: "Sesión inválida." };
   if (!esAdministrador(usuario)) {
-    throw new Error("Solo un administrador puede editar la marca de la clínica.");
+    return { error: "Solo un administrador puede editar la marca de la clínica." };
   }
 
   // El nombre comercial ya no se edita aquí (vive en Datos básicos, 0080);
@@ -53,9 +56,13 @@ export async function actualizarMarcaClinica(formData: FormData) {
     p_correo_notificaciones: correoNotificaciones,
     p_telefono_contacto: telefonoContacto,
   });
-  if (error) throw new Error("No se pudo actualizar la marca de la clínica.");
+  if (error) {
+    console.error("[clinicas] actualizar marca", error);
+    return { error: "No se pudo actualizar la marca de la clínica." };
+  }
 
   revalidatePath("/suscripcion");
+  return {};
 }
 
 // Datos básicos de la clínica como prestador de salud (RIPS/REPS/INVIMA) +
@@ -136,22 +143,22 @@ export async function actualizarDatosBasicosClinica(formData: FormData): Promise
 // No pasa por comprimirImagen.ts a propósito: ese util re-codifica todo a
 // JPEG, lo que le quitaría la transparencia a un logo PNG/SVG. Aquí solo se
 // valida tipo y tamaño — el navegador sube el archivo tal cual.
-export async function subirLogoClinica(formData: FormData) {
+export async function subirLogoClinica(formData: FormData): Promise<{ error?: string }> {
   const usuario = await getCurrentUsuario();
-  if (!usuario) throw new Error("Sesión inválida.");
+  if (!usuario) return { error: "Sesión inválida." };
   if (!esAdministrador(usuario)) {
-    throw new Error("Solo un administrador puede cambiar el logo de la clínica.");
+    return { error: "Solo un administrador puede cambiar el logo de la clínica." };
   }
 
   const archivo = formData.get("logo");
   if (!(archivo instanceof File) || archivo.size === 0) {
-    throw new Error("Selecciona un archivo de logo.");
+    return { error: "Selecciona un archivo de logo." };
   }
   if (!TIPOS_LOGO_PERMITIDOS.includes(archivo.type)) {
-    throw new Error("El logo debe ser PNG, JPEG, WebP o SVG.");
+    return { error: "El logo debe ser PNG, JPEG, WebP o SVG." };
   }
   if (archivo.size > TAMANO_MAXIMO_LOGO) {
-    throw new Error("El logo no puede pesar más de 2MB.");
+    return { error: "El logo no puede pesar más de 2MB." };
   }
 
   const supabase = await createClient();
@@ -168,12 +175,18 @@ export async function subirLogoClinica(formData: FormData) {
   const { error: uploadError } = await supabase.storage
     .from("clinica-logos")
     .upload(path, archivo, { contentType: archivo.type });
-  if (uploadError) throw new Error("No se pudo subir el logo.");
+  if (uploadError) {
+    console.error("[clinicas] subir logo (storage)", uploadError);
+    return { error: "No se pudo subir el logo." };
+  }
 
   const { error: rpcError } = await supabase.rpc("fn_actualizar_logo_propia_clinica", {
     p_logo_storage_path: path,
   });
-  if (rpcError) throw new Error("No se pudo guardar el logo.");
+  if (rpcError) {
+    console.error("[clinicas] guardar logo (rpc)", rpcError);
+    return { error: "No se pudo guardar el logo." };
+  }
 
   // Best-effort: limpia el archivo anterior para no acumular huérfanos en
   // el bucket. Si falla, el logo nuevo ya quedó guardado igual.
@@ -183,4 +196,5 @@ export async function subirLogoClinica(formData: FormData) {
   }
 
   revalidatePath("/suscripcion");
+  return {};
 }
