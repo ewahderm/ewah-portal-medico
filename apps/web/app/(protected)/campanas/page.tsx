@@ -98,7 +98,7 @@ export default async function CampanasPage() {
           <MegaphoneIcon className="size-6" />
         </div>
         <div className="flex-1">
-          <div className="flex items-start justify-between gap-4">
+          <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <h1 className="text-2xl font-semibold">Campañas</h1>
               <p className="text-sm text-muted-foreground">
@@ -106,7 +106,7 @@ export default async function CampanasPage() {
                 contactados, con cita agendada y convertidos en tratamiento.
               </p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {esAdministrador(usuario) ? <ExportarXlsxLink href="/api/exportar/campanas" /> : null}
               {puedeCrear ? (
                 <CampanaDialog

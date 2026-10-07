@@ -149,7 +149,7 @@ function CerrarAutoevaluacionDialog({ onCerrar }: { onCerrar: () => void }) {
                 {noAptos.length > 0 ? (
                   <p>
                     {noAptos.length === 1 ? "Este servicio no se puede declarar" : `Estos ${noAptos.length} servicios no se pueden declarar`} en
-                    el REPS: la norma no admite cumplimiento parcial y tienen al menos un «No cumple».
+                    el REPS: la norma no admite cumplimiento parcial y {noAptos.length === 1 ? "tiene" : "tienen"} al menos un «No cumple».
                   </p>
                 ) : null}
                 {sinEvaluar.length > 0 ? (

@@ -91,7 +91,8 @@ export default async function HabilitacionSedesPage() {
           <AlertDescription>
             {serviciosSinSede.length === 1 ? "Un servicio" : `${serviciosSinSede.length} servicios`} sin sede (
             {serviciosSinSede.map((s) => s.practicas_medicas?.nombre ?? nombrePractica.get(s.practica_medica_id)).join(", ")}
-            ) no cuentan para los criterios. Asígnales una sede en Parámetros → Datos básicos.
+            ) {serviciosSinSede.length === 1 ? "no cuenta" : "no cuentan"} para los criterios.{" "}
+            {serviciosSinSede.length === 1 ? "Asígnale" : "Asígnales"} una sede en Parámetros → Datos básicos.
           </AlertDescription>
         </Alert>
       ) : null}

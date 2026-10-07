@@ -141,7 +141,7 @@ export function ObligacionesCliente({
         ) : null}
         <div className="flex flex-wrap gap-2">
           {cat.plataforma_url ? (
-            <Button size="sm" variant="ghost" nativeButton={false} render={<a href={cat.plataforma_url} target="_blank" rel="noopener noreferrer" />}>
+            <Button size="sm" variant="ghost" className="h-auto max-w-full whitespace-normal py-1 text-left" nativeButton={false} render={<a href={cat.plataforma_url} target="_blank" rel="noopener noreferrer" />}>
               {cat.plataforma_nombre ?? "Portal"} <ExternalLinkIcon />
             </Button>
           ) : null}

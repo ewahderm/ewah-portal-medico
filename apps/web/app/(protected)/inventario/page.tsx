@@ -80,7 +80,7 @@ export default async function InventarioPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-start gap-3">
           <div className="flex size-11 items-center justify-center rounded-xl bg-primary text-primary-foreground">
             <PackageIcon className="size-6" />
@@ -92,7 +92,7 @@ export default async function InventarioPage() {
             </p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {esAdministrador(usuario) ? <ExportarXlsxLink href="/api/exportar/inventario" /> : null}
           <Button variant="outline" nativeButton={false} render={<Link href="/inventario/escanear" />}>
             <QrCodeIcon /> Escanear
