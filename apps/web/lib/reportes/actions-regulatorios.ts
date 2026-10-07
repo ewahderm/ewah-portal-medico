@@ -13,7 +13,12 @@ import { agruparComisionesNomina, type ComisionNomina } from "./nomina";
 export async function obtenerReporteInvima(): Promise<InsumoInvima[] | { error: string }> {
   const check = await accesoInvima();
   if (!check.ok) return { error: check.error };
-  return cargarReporteInvima(check.usuario.clinica_id);
+  try {
+    return await cargarReporteInvima(check.usuario.clinica_id);
+  } catch (e) {
+    console.error("[reportes] reporte INVIMA", e);
+    return { error: "No se pudo cargar el reporte INVIMA." };
+  }
 }
 
 export async function obtenerComisionesNomina(desde: string, hasta: string): Promise<ComisionNomina[] | { error: string }> {
@@ -22,6 +27,11 @@ export async function obtenerComisionesNomina(desde: string, hasta: string): Pro
   if (!esRangoFechaValido(desde, hasta)) {
     return { error: "Elige un rango válido de hasta 366 días." };
   }
-  const filas = await cargarComisionesNomina(check.usuario.clinica_id, desde, hasta);
-  return agruparComisionesNomina(filas);
+  try {
+    const filas = await cargarComisionesNomina(check.usuario.clinica_id, desde, hasta);
+    return agruparComisionesNomina(filas);
+  } catch (e) {
+    console.error("[reportes] comisiones de nómina", e);
+    return { error: "No se pudieron consultar las comisiones de nómina." };
+  }
 }

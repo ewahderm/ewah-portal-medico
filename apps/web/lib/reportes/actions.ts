@@ -26,5 +26,10 @@ export async function obtenerAnaliticaClinica(desde: string, hasta: string): Pro
     return { error: "No se pudo cargar la analítica de la clínica." };
   }
   if (!data) return { error: "La consulta de analítica no devolvió datos." };
-  return construirAnaliticaClinica(data as FilaAnalitica[]);
+  try {
+    return construirAnaliticaClinica(data as FilaAnalitica[]);
+  } catch (e) {
+    console.error("[reportes] construirAnaliticaClinica", e);
+    return { error: "No se pudo cargar la analítica de la clínica." };
+  }
 }

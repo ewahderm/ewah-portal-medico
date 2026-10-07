@@ -376,7 +376,12 @@ export async function obtenerReportePgirasa(sedeId: string, mes: string): Promis
   }
   if (!data) return { error: "La consulta del consolidado PGIRASA no devolvió datos." };
 
-  return construirReportePgirasa(mes, data as FilaReportePgirasa[]);
+  try {
+    return construirReportePgirasa(mes, data as FilaReportePgirasa[]);
+  } catch (e) {
+    console.error("[medio-ambiente] construirReportePgirasa", e);
+    return { error: "No se pudo cargar el consolidado PGIRASA." };
+  }
 }
 
 // ============================================================
