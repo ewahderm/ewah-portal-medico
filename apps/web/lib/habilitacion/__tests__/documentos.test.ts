@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { documentosAplicables, type ContextoDocumentos, type SedeContexto } from "@/lib/habilitacion/reglas-documentos";
+import { armarChecklist, resumenChecklist } from "@/lib/habilitacion/checklist";
 import { estadoDocumento } from "@/lib/habilitacion/estado-documento";
 import { indicadoresSuficiencia, parsePesosCO } from "@/lib/habilitacion/suficiencia";
 import type { DocumentoCatalogo } from "@/lib/habilitacion/tipos";
@@ -146,6 +147,30 @@ describe("estadoDocumento (HU-3.2)", () => {
     expect(estadoDocumento(c30, null, v({ fecha_expedicion: "2026-10-01" }), "2026-11-15", "2026-10-06").estado).toBe("vencido");
     expect(estadoDocumento(c30, null, v({ fecha_expedicion: "2026-09-10" }), null, "2026-10-06")).toMatchObject({ estado: "por_vencer", dias: 4 });
     expect(estadoDocumento(c30, null, v(), null, "2026-10-06").estado).toBe("por_vencer");
+  });
+});
+
+describe("armarChecklist: documentos financieros sin permiso de edición (0085 · 7c)", () => {
+  const ctx: ContextoDocumentos = { ...base, esIpsNueva: true };
+  const financiero = () => armarChecklist(CATALOGO, [], ctx, null, "2026-10-06", false).find((i) => i.catalogo?.codigo === "estados_financieros");
+
+  it("sin EDIT no se afirma 'Falta cargarlo': el estado es sin_permiso", () => {
+    expect(financiero()?.estado.estado).toBe("sin_permiso");
+  });
+  it("con EDIT sigue siendo pendiente", () => {
+    const i = armarChecklist(CATALOGO, [], ctx, null, "2026-10-06", true).find((x) => x.catalogo?.codigo === "estados_financieros");
+    expect(i?.estado.estado).toBe("pendiente");
+  });
+  it("un documento no financiero sin cargar sigue pendiente aunque no haya EDIT", () => {
+    const i = armarChecklist(CATALOGO, [], ctx, null, "2026-10-06", false).find((x) => x.catalogo?.codigo === "formulario_inscripcion_reps");
+    expect(i?.estado.estado).toBe("pendiente");
+  });
+  it("los sin_permiso no cuentan ni como listos ni como faltantes del resumen", () => {
+    const cat = [doc("formulario_inscripcion_reps"), doc("fin_para_radicar", { es_financiero: true })];
+    const sinEdit = resumenChecklist(armarChecklist(cat, [], ctx, null, "2026-10-06", false));
+    const conEdit = resumenChecklist(armarChecklist(cat, [], ctx, null, "2026-10-06", true));
+    expect(conEdit.total).toBe(2);
+    expect(sinEdit.total).toBe(1);
   });
 });
 

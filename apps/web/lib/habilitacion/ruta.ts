@@ -212,3 +212,15 @@ export function fechaColombiaDe(instante: string): string {
     new Date(instante),
   );
 }
+
+// Años (entre desde y hasta, ambos inclusive) de los que no hay ningún festivo
+// cargado para el país: ahí "día no hábil" solo cuenta sábados y domingos
+// (fn_es_dia_no_habil, 0069), así que la pantalla debe avisarlo.
+export function aniosSinFestivos(desde: string, hasta: string, fechasFestivos: string[]): number[] {
+  const conFestivos = new Set(fechasFestivos.map((f) => Number(f.slice(0, 4))));
+  const faltan: number[] = [];
+  for (let a = Number(desde.slice(0, 4)); a <= Number(hasta.slice(0, 4)); a++) {
+    if (!conFestivos.has(a)) faltan.push(a);
+  }
+  return faltan;
+}

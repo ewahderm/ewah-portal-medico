@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdminExport } from "@/lib/exportar/acceso";
+import { requireEntitlement } from "@/lib/auth/requireEntitlement";
 import { construirLibroXlsx } from "@/lib/exportar/xlsx";
 import { getAutoevaluacion, getDetalleAutoevaluacion, getUsuariosClinica } from "@/lib/habilitacion/consultas";
 import { construirPdfAutoevaluacion, hojasXlsx } from "@/lib/habilitacion/exportar";
@@ -12,11 +13,15 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 // exporta (regla del proyecto, lib/exportar/acceso.ts); la lectura va con
 // el cliente de sesión, así que RLS sigue filtrando por clínica.
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  let usuario;
   try {
-    await requireAdminExport();
+    usuario = await requireAdminExport();
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "No autorizado." }, { status: 403 });
   }
+  // Habilitación con gestión (plan Pro): sin ella no hay autoevaluaciones que exportar.
+  const gestion = await requireEntitlement("habilitacion", "gestion");
+  if (!gestion.ok) return NextResponse.json({ error: gestion.error }, { status: 403 });
 
   const { id } = await params;
   const formato = new URL(request.url).searchParams.get("formato") === "pdf" ? "pdf" : "xlsx";
@@ -27,7 +32,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     getAutoevaluacion(supabase, id),
     getDetalleAutoevaluacion(supabase, id, true),
     getUsuariosClinica(supabase),
-    supabase.from("clinicas").select("nombre, nombre_comercial, nit").maybeSingle(),
+    // Por id: un super admin ve todas las clínicas y .maybeSingle() sin filtro fallaría.
+    supabase.from("clinicas").select("nombre, nombre_comercial, nit").eq("id", usuario.clinica_id).maybeSingle(),
   ]);
   if (!autoevaluacion) return NextResponse.json({ error: "No encontrada." }, { status: 404 });
 
