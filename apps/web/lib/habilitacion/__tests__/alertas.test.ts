@@ -88,7 +88,7 @@ describe("correo de alertas de habilitación (F9)", () => {
   });
 });
 
-describe("registro de lo avisado (0085)", () => {
+describe("registro de lo avisado (0086)", () => {
   const items = [item({ titulo: "A", correo_adicional: "ctd@x.co" }), item({ titulo: "B" })];
 
   it("si el correo del equipo falla, no se registra nada aunque el contador externo lo recibiera", () => {

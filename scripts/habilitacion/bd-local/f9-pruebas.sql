@@ -46,17 +46,17 @@ from fn_hab_alertas_pendientes(:'a') where objeto_tipo = 'extintor';
 select t.ok(count(*) = 0, 'el plan de mejora cerrado no alerta')
 from fn_hab_alertas_pendientes(:'a', current_date + 400) p join hab_planes_mejora pm on pm.id = p.objeto_id where pm.estado = 'cerrada';
 
--- 0085: la fecha objetivo forma parte de la llave de idempotencia. El extintor
+-- 0086: la fecha objetivo forma parte de la llave de idempotencia. El extintor
 -- recargado conserva la fila y solo mueve fecha_vencimiento: debe avisar de nuevo.
 select id as ext from extintores where ubicacion = 'Bodega' \gset
 insert into hab_alertas_enviadas (clinica_id, objeto_tipo, objeto_id, umbral_dias, fecha_objetivo, destinatarios)
 select :'a', p.objeto_tipo, p.objeto_id, unnest(p.umbrales), p.fecha, '{a@x.co}'
 from fn_hab_alertas_pendientes(:'a') p where p.objeto_id = :'ext';
-select t.ok(count(*) = 0, '0085 · extintor ya avisado: la misma fecha no se repite')
+select t.ok(count(*) = 0, '0086 · extintor ya avisado: la misma fecha no se repite')
   from fn_hab_alertas_pendientes(:'a') where objeto_id = :'ext';
 update extintores set fecha_vencimiento = (now() at time zone 'America/Bogota')::date + 20 where id = :'ext';
 select t.ok(count(*) = 1 and min(dias) = 20 and min(umbrales::text) = '{30}',
-  '0085 · extintor recargado y otra vez por vencer: vuelve a avisar (umbral 30) aunque sea la misma fila')
+  '0086 · extintor recargado y otra vez por vencer: vuelve a avisar (umbral 30) aunque sea la misma fila')
   from fn_hab_alertas_pendientes(:'a') where objeto_id = :'ext';
 -- La llave única sigue impidiendo repetir el mismo (objeto, umbral, fecha).
 select t.debe_fallar(format($q$insert into hab_alertas_enviadas (clinica_id, objeto_tipo, objeto_id, umbral_dias, fecha_objetivo)
@@ -80,7 +80,7 @@ select t.ok(fn_hab_conteo_urgentes() = (
 
 -- ============ F10 · estado de declaración y cierre ============
 select t.ok(count(*) = 1, 'un servicio declarado en la sede') from fn_hab_estados_declaracion();
--- 0085 · HU-4.6 AC2: "No cumple O pendientes" exigen confirmación. Se dejan
+-- 0086 · HU-4.6 AC2: "No cumple O pendientes" exigen confirmación. Se dejan
 -- sin incumplimientos (los No cumple previos pasan a "No aplica" con
 -- justificación) pero con criterios pendientes: el servicio queda "sin evaluar"
 -- y el cierre sin confirmar debe fallar. Después se restauran.
@@ -88,7 +88,7 @@ create temp table nc_previos as
 select criterio_id from fn_hab_tablero_criterios(:SA) where estado = 'no_cumple' and not es_encabezado and not autorresuelto;
 select fn_hab_evaluar(:SA, criterio_id, 'no_aplica', 'No aplica: prueba de cierre con criterios pendientes sin incumplimientos', null) from nc_previos;
 select t.ok(estado = 'sin_evaluar' and no_cumple = 0 and pendientes > 0,
-  '0085 · sin incumplimientos pero con pendientes el servicio está sin evaluar') from fn_hab_estados_declaracion();
+  '0086 · sin incumplimientos pero con pendientes el servicio está sin evaluar') from fn_hab_estados_declaracion();
 select t.debe_fallar('select fn_hab_cerrar_autoevaluacion(''Autoevaluación con pendientes'', ''renovacion_anual'')', 'SERVICIOS_NO_APTOS.*sin evaluar');
 select fn_hab_evaluar(:SA, criterio_id, 'no_cumple', null, 'Restaurado tras la prueba de pendientes') from nc_previos;
 
@@ -112,12 +112,12 @@ select t.ok(count(*) = (select count(*) from fn_hab_tablero_criterios(:SA)), 'la
 select t.ok(confirmo_servicios_no_aptos and jsonb_array_length(servicios_no_aptos) = 1, 'queda la confirmación y la lista congelada de no aptos')
   from hab_autoevaluaciones where id = :'ae';
 select t.ok(servicios_no_aptos->0->>'estado' = 'con_incumplimientos' and servicios_no_aptos->0 ? 'pendientes',
-  '0085 · cada servicio no apto congelado trae su estado y sus pendientes') from hab_autoevaluaciones where id = :'ae';
--- 0085 · privacidad: la foto inmutable NUNCA copia filas por persona de RRHH.
+  '0086 · cada servicio no apto congelado trae su estado y sus pendientes') from hab_autoevaluaciones where id = :'ae';
+-- 0086 · privacidad: la foto inmutable NUNCA copia filas por persona de RRHH.
 select t.ok(not exists (
     select 1 from hab_autoevaluacion_detalle d, jsonb_array_elements(d.evidencias) ev
     where d.autoevaluacion_id = :'ae' and (ev->'resumen' ? 'filas' or ev->'resumen' ? 'filas_visibles' or ev::text like '%Ana Médica%' or ev::text like '%Luis Auxiliar%')),
-  '0085 · el cierre no copia nombres ni filas de RRHH a la foto');
+  '0086 · el cierre no copia nombres ni filas de RRHH a la foto');
 select t.ok((resumen->'totales'->>'evaluables')::int = (select count(*) from fn_hab_tablero_criterios(:SA) where not es_encabezado and not autorresuelto),
   'el resumen cuenta los evaluables') from hab_autoevaluaciones where id = :'ae';
 select t.ok((resumen->'totales'->>'no_cumple')::int >= 1 and jsonb_array_length(resumen->'estandares') = 7 or jsonb_array_length(resumen->'estandares') > 0,

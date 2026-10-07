@@ -54,23 +54,23 @@ select t.ok(count(*) > 0, 'C1 recibe FT018 mensual') from hab_obligacion_ocurren
 select t.ok(count(*) = 1, 'la FT003 presentada se conserva tras el cambio de grupo') from hab_obligacion_ocurrencias o join hab_obligaciones_catalogo c on c.id = o.obligacion_id
   where o.clinica_id = (select id from clinicas where nombre = 'Clinica D2') and c.codigo = 'FT003' and o.estado = 'presentado';
 
--- 3b. 0085: una obligación PENDIENTE VENCIDA no se borra al regenerar (antes la
+-- 3b. 0086: una obligación PENDIENTE VENCIDA no se borra al regenerar (antes la
 --     ventana de la clínica sin inscribir arrancaba hoy y la de ayer
 --     desaparecía en vez de figurar como vencida). Una pendiente FUTURA que ya
 --     no corresponde sí se retira (cambio de grupo).
 insert into hab_obligacion_ocurrencias (clinica_id, obligacion_id, origen, clave_periodo, etiqueta_periodo, fecha_limite, generada_por)
-select c.id, o.id, 'calendario', x.clave, 'Periodo de prueba 0085', x.fecha, 'sistema'
+select c.id, o.id, 'calendario', x.clave, 'Periodo de prueba 0086', x.fecha, 'sistema'
 from clinicas c
 join hab_obligaciones_catalogo o on o.codigo = 'FT006',
-  (values ('prueba-vencida-0085', (now() at time zone 'America/Bogota')::date - 1),
-          ('prueba-futura-0085', (now() at time zone 'America/Bogota')::date + 15)) as x(clave, fecha)
+  (values ('prueba-vencida-0086', (now() at time zone 'America/Bogota')::date - 1),
+          ('prueba-futura-0086', (now() at time zone 'America/Bogota')::date + 15)) as x(clave, fecha)
 where c.nombre = 'Clinica C2';
 select fn_hab_generar_ocurrencias(id) from clinicas where nombre = 'Clinica C2';
-select t.ok(count(*) = 1 and bool_and(estado = 'pendiente'), '0085 · la pendiente de ayer sigue ahí (vencida), no se borra al regenerar')
-  from hab_obligacion_ocurrencias where clave_periodo = 'prueba-vencida-0085';
-select t.ok(count(*) = 0, '0085 · la pendiente futura que ya no corresponde sí se retira')
-  from hab_obligacion_ocurrencias where clave_periodo = 'prueba-futura-0085';
-delete from hab_obligacion_ocurrencias where clave_periodo = 'prueba-vencida-0085';
+select t.ok(count(*) = 1 and bool_and(estado = 'pendiente'), '0086 · la pendiente de ayer sigue ahí (vencida), no se borra al regenerar')
+  from hab_obligacion_ocurrencias where clave_periodo = 'prueba-vencida-0086';
+select t.ok(count(*) = 0, '0086 · la pendiente futura que ya no corresponde sí se retira')
+  from hab_obligacion_ocurrencias where clave_periodo = 'prueba-futura-0086';
+delete from hab_obligacion_ocurrencias where clave_periodo = 'prueba-vencida-0086';
 
 -- 4. Usuario de la clínica A (admin, D2, inscrito en f7)
 select t.como('00000000-0000-0000-0000-00000000000a'); set role authenticated;

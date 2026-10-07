@@ -150,7 +150,7 @@ describe("estadoDocumento (HU-3.2)", () => {
   });
 });
 
-describe("armarChecklist: documentos financieros sin permiso de edición (0085 · 7c)", () => {
+describe("armarChecklist: documentos financieros sin permiso de edición (0086 · 7c)", () => {
   const ctx: ContextoDocumentos = { ...base, esIpsNueva: true };
   const financiero = () => armarChecklist(CATALOGO, [], ctx, null, "2026-10-06", false).find((i) => i.catalogo?.codigo === "estados_financieros");
 

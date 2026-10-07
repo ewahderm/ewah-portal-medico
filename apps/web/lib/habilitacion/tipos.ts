@@ -274,7 +274,7 @@ export type ResumenEvidencia = {
   sugerencia: "cumple" | "no_cumple" | null;
   enlace: string;
   // Solo talento humano: los nombres se devuelven únicamente a quien también tiene
-  // rrhh/VIEW (0085); sin ese permiso llegan los conteos y filas_visibles = false.
+  // rrhh/VIEW (0086); sin ese permiso llegan los conteos y filas_visibles = false.
   filas_visibles?: boolean;
   filas?: { nombre: string; titulo: "ok" | "falta"; tarjeta: "ok" | "falta"; vacunas: "vigente" | "vencida" | "falta" }[];
   calculado_en: string;
@@ -525,7 +525,7 @@ export type Autoevaluacion = {
   cerrado_por: string;
   fecha_declaracion_reps: string | null;
   confirmo_servicios_no_aptos: boolean;
-  // Desde 0085 también incluye los servicios sin evaluar (estado = "sin_evaluar", con
+  // Desde 0086 también incluye los servicios sin evaluar (estado = "sin_evaluar", con
   // sus pendientes); los cierres anteriores solo traen los de incumplimientos.
   servicios_no_aptos: { sede: string; servicio_clave: string; servicio: string; no_cumple: number; pendientes?: number; estado?: string }[];
   resumen: ResumenAutoevaluacion;

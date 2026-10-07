@@ -1,7 +1,7 @@
 "use server";
 
 // Cierre de la autoevaluación (F10, HU-4.6). La foto la arma la BD
-// (fn_hab_cerrar_autoevaluacion, 0070; 0085 suma los servicios sin evaluar a los
+// (fn_hab_cerrar_autoevaluacion, 0070; 0086 suma los servicios sin evaluar a los
 // que exigen confirmar): conjunto de criterios, estados
 // derivados, evidencias y resumen. Aquí solo se valida la forma de lo que
 // escribe el usuario (nombre, motivo, fechas) y se traducen los errores.

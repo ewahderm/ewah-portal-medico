@@ -10,12 +10,12 @@ select t.ok(fn_hab_resumen_evidencia('rrhh_talento_humano', :SA)->'conteos' @> '
   'talento humano: 2 personas, 1 con título y tarjeta, 1 vacuna vencida');
 select t.ok(not (fn_hab_resumen_evidencia('rrhh_talento_humano', :SA)::text ~* '(9876543|salari|contrato|diagn)'),
   'talento humano no devuelve salario, contrato ni diagnóstico');
--- 0085 · privacidad: Calidad no tiene rrhh/VIEW → solo conteos, ni un nombre.
+-- 0086 · privacidad: Calidad no tiene rrhh/VIEW → solo conteos, ni un nombre.
 select t.ok(fn_hab_resumen_evidencia('rrhh_talento_humano', :SA)->'filas' = '[]'::jsonb
   and fn_hab_resumen_evidencia('rrhh_talento_humano', :SA)->'filas_visibles' = 'false'::jsonb,
-  '0085 · sin rrhh/VIEW el resumen de talento humano no trae filas por persona');
+  '0086 · sin rrhh/VIEW el resumen de talento humano no trae filas por persona');
 select t.ok(not (fn_hab_resumen_evidencia('rrhh_talento_humano', :SA)::text ~* '(Ana Médica|Luis Auxiliar|TP-123)'),
-  '0085 · sin rrhh/VIEW no aparece ningún nombre ni tarjeta en el resumen (ni en el detalle)');
+  '0086 · sin rrhh/VIEW no aparece ningún nombre ni tarjeta en el resumen (ni en el detalle)');
 select t.ok(fn_hab_resumen_evidencia('ma_temperatura_nevera', :SA)->'conteos' @> '{"neveras": 1, "dias_min": 30, "fuera_de_rango": 1}'
   and fn_hab_resumen_evidencia('ma_temperatura_nevera', :SA)->>'estado' = 'alerta'
   and fn_hab_resumen_evidencia('ma_temperatura_nevera', :SA)->'sugerencia' = 'null', 'nevera: 30/30 días, 1 fuera de 2–8 °C → alerta sin sugerencia');
@@ -71,12 +71,12 @@ select t.ok(count(*) = 0, 'otra clínica no ve protocolos ajenos') from hab_prot
 
 -- Admin de A: no borra protocolos de habilitación; RRHH sigue igual
 reset role; select t.como('00000000-0000-0000-0000-00000000000a'); set role authenticated;
--- 0085 · con rrhh/VIEW (el admin) sí se ven los nombres, y solo esos 4 campos.
+-- 0086 · con rrhh/VIEW (el admin) sí se ven los nombres, y solo esos 4 campos.
 select t.ok((fn_hab_resumen_evidencia('rrhh_talento_humano', :SA)->>'filas_visibles')::boolean
   and jsonb_array_length(fn_hab_resumen_evidencia('rrhh_talento_humano', :SA)->'filas') = 2
   and (select bool_and(f ?& array['nombre', 'titulo', 'tarjeta', 'vacunas'] and (select count(*) from jsonb_object_keys(f)) = 4)
        from jsonb_array_elements(fn_hab_resumen_evidencia('rrhh_talento_humano', :SA)->'filas') f),
-  '0085 · con rrhh/VIEW cada persona trae solo nombre, título, tarjeta y vacunas');
+  '0086 · con rrhh/VIEW cada persona trae solo nombre, título, tarjeta y vacunas');
 delete from documentos_normativos where nombre_archivo like 'bioseguridad%';
 select t.ok(count(*) = 2, 'el admin no puede borrar protocolos de habilitación (sin política)') from documentos_normativos where nombre_archivo like 'bioseguridad%';
 delete from documentos_normativos where nombre_archivo = 'manual.pdf';

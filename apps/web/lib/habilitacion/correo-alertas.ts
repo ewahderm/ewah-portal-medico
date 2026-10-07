@@ -184,7 +184,7 @@ export function itemsAvisados(
 }
 
 // Fila de hab_alertas_enviadas: la fecha objetivo forma parte de la llave
-// (0085), así una fecha que se mueve (extintor recargado, plan reprogramado)
+// (0086), así una fecha que se mueve (extintor recargado, plan reprogramado)
 // vuelve a avisar en su nuevo ciclo.
 export const CONFLICTO_ALERTAS_ENVIADAS = "objeto_tipo,objeto_id,umbral_dias,fecha_objetivo";
 

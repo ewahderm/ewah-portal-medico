@@ -1,5 +1,5 @@
 -- ============================================================
--- 0085 · Habilitación: correcciones de la revisión (bugs verificados)
+-- 0086 · Habilitación: correcciones de la revisión (bugs verificados)
 -- ============================================================
 -- Todo con `create or replace` / alter sobre lo ya aplicado (0061–0084 no
 -- se tocan). Cada función se copió de su última definición y se cambió solo
@@ -224,7 +224,7 @@ as $$
 $$;
 
 comment on function fn_hab_alertas_pendientes(uuid, date) is
-  'Ítems de habilitación con un umbral de aviso alcanzado y no avisado para su fecha objetivo actual (F9, 0085). Solo el cron (service role).';
+  'Ítems de habilitación con un umbral de aviso alcanzado y no avisado para su fecha objetivo actual (F9, 0086). Solo el cron (service role).';
 
 -- ============================================================
 -- 4. Talento humano: nombres solo con rrhh/VIEW
