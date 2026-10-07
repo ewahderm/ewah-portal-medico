@@ -15,3 +15,17 @@ export async function requireAdminExport() {
   }
   return usuario;
 }
+
+/**
+ * Misma regla que requireAdminExport pero sin lanzar: para server actions,
+ * donde en producción Next oculta el mensaje de una excepción. Los Route
+ * Handlers siguen usando requireAdminExport (su catch sí lee el mensaje).
+ */
+export async function verificarAdminExport() {
+  const usuario = await getCurrentUsuario();
+  if (!usuario) return { ok: false as const, error: "Sesión inválida." };
+  if (!esAdministrador(usuario)) {
+    return { ok: false as const, error: "Solo un Administrador puede exportar o importar datos." };
+  }
+  return { ok: true as const, usuario };
+}
