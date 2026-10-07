@@ -24,6 +24,7 @@ const NAV_GROUPS = [
       { href: "/campanas", label: "Campañas" },
       { href: "/medio-ambiente", label: "Medio Ambiente" },
       { href: "/rrhh", label: "Recursos Humanos" },
+      { href: "/sst", label: "SG-SST" },
     ],
   },
   {

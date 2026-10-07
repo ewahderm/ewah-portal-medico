@@ -7,6 +7,7 @@ import {
   LeafIcon,
   BriefcaseIcon,
   ShieldCheckIcon,
+  HardHatIcon,
   type LucideIcon,
 } from "lucide-react";
 
@@ -99,5 +100,12 @@ export const REGISTRO_MODULOS: ModuloRegistro[] = [
     descripcion: "Inscripción REPS, autoevaluación y calendario regulatorio.",
     href: "/habilitacion",
     icono: ShieldCheckIcon,
+  },
+  {
+    codigo: "sst",
+    nombre: "SG-SST",
+    descripcion: "Seguridad y salud en el trabajo: estándares mínimos, accidentes y documentos.",
+    href: "/sst",
+    icono: HardHatIcon,
   },
 ];

@@ -39,7 +39,7 @@ for f in "$RAIZ"/supabase/migrations/*.sql; do
   aplicar "$f"
 done
 
-for datos in $(ls f*-datos.sql | sort -V); do
+for datos in $(ls f*-datos.sql | sort -V) $(ls sst*-datos.sql 2>/dev/null | sort -V); do
   fase=${datos%-datos.sql}
   echo "Pruebas $fase:"
   PSQL < "$datos" > /dev/null
