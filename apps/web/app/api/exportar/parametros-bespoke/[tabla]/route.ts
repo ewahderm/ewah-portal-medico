@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdminExport } from "@/lib/exportar/acceso";
 import { construirLibroXlsx, nombreArchivoXlsx, type ColumnaXlsx } from "@/lib/exportar/xlsx";
+import { describirCodigosPorSede, type CodigoPorSede } from "@/lib/clinicas/servicios-habilitados-tipos";
 
 // Los 4 catálogos "a medida" de Parámetros (ver page.tsx `bespoke`) salen
 // del motor genérico porque cada uno tiene columnas propias — este export
@@ -147,26 +148,27 @@ const CONFIG: Record<
   tipos_tratamiento: {
     nombre: "Tipos de tratamiento",
     select:
-      "codigo, nombre, activo, cups(codigo, descripcion), clinica_servicios_habilitados(codigo_habilitacion, practicas_medicas(nombre))",
+      "codigo, nombre, activo, cups(codigo, descripcion), practicas_medicas(nombre, clinica_servicios_habilitados(codigo_habilitacion, sedes(nombre)))",
     columnas: [
       { header: "Nombre", key: "nombre" },
       { header: "Código", key: "codigo" },
-      { header: "Código de habilitación", key: "codigo_habilitacion" },
       { header: "Servicio habilitado", key: "servicio" },
+      { header: "Código de habilitación por sede", key: "codigo_habilitacion" },
       { header: "CUPS", key: "cups" },
       { header: "Activo", key: "activo" },
     ],
     mapear: (f) => {
       const cups = f.cups as { codigo: string; descripcion: string } | null;
-      const servicio = f.clinica_servicios_habilitados as {
-        codigo_habilitacion: string | null;
-        practicas_medicas: { nombre: string } | null;
+      // Desde 0061 el tipo apunta a la práctica; el código depende de la sede.
+      const servicio = f.practicas_medicas as {
+        nombre: string;
+        clinica_servicios_habilitados: CodigoPorSede[];
       } | null;
       return {
         nombre: f.nombre,
         codigo: f.codigo ?? "",
-        codigo_habilitacion: servicio?.codigo_habilitacion ?? "",
-        servicio: servicio?.practicas_medicas?.nombre ?? "",
+        servicio: servicio?.nombre ?? "",
+        codigo_habilitacion: describirCodigosPorSede(servicio?.clinica_servicios_habilitados),
         cups: cups ? `${cups.codigo} — ${cups.descripcion}` : "",
         activo: f.activo ? "Sí" : "No",
       };

@@ -15,6 +15,10 @@ import {
 } from "@/components/ui/table";
 import { TipoTratamientoDialog } from "./tipo-tratamiento-dialog";
 import type { Opcion } from "@/lib/forms/opciones";
+import {
+  describirCodigosPorSede,
+  type CodigoPorSede,
+} from "@/lib/clinicas/servicios-habilitados-tipos";
 
 type CupsOpcion = { id: string; codigo: string; descripcion: string };
 
@@ -22,10 +26,10 @@ export type TipoTratamientoRow = {
   id: string;
   nombre: string;
   codigo: string | null;
-  servicio_habilitado_id: string | null;
-  clinica_servicios_habilitados: {
-    codigo_habilitacion: string | null;
-    practicas_medicas: { nombre: string } | null;
+  practica_medica_id: string | null;
+  practicas_medicas: {
+    nombre: string;
+    clinica_servicios_habilitados: CodigoPorSede[];
   } | null;
   cups_id: string | null;
   activo: boolean;
@@ -72,7 +76,7 @@ export function TiposTratamientoTable({
           <TableRow>
             <TableHead>Nombre</TableHead>
             <TableHead className="hidden md:table-cell">Código</TableHead>
-            <TableHead className="hidden md:table-cell">Cód. habilitación</TableHead>
+            <TableHead className="hidden md:table-cell">Servicio · cód. por sede</TableHead>
             <TableHead className="hidden md:table-cell">CUPS</TableHead>
             <TableHead className="text-right">Acciones</TableHead>
           </TableRow>
@@ -85,12 +89,13 @@ export function TiposTratamientoTable({
                 {valor.codigo ?? "—"}
               </TableCell>
               <TableCell className="hidden text-xs text-muted-foreground md:table-cell">
-                {valor.clinica_servicios_habilitados ? (
+                {valor.practicas_medicas ? (
                   <>
-                    <span className="font-mono">
-                      {valor.clinica_servicios_habilitados.codigo_habilitacion ?? "Sin código"}
+                    <span className="block">{valor.practicas_medicas.nombre}</span>
+                    <span className="block font-mono">
+                      {describirCodigosPorSede(valor.practicas_medicas.clinica_servicios_habilitados) ||
+                        "No habilitado en ninguna sede"}
                     </span>
-                    <span className="block">{valor.clinica_servicios_habilitados.practicas_medicas?.nombre}</span>
                   </>
                 ) : (
                   "—"

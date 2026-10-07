@@ -23,7 +23,7 @@ type TipoTratamiento = {
   id: string;
   nombre: string;
   codigo: string | null;
-  servicio_habilitado_id: string | null;
+  practica_medica_id: string | null;
   cups_id: string | null;
 };
 
@@ -70,18 +70,18 @@ export function TipoTratamientoDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="servicioHabilitadoId">Código de habilitación (opcional)</Label>
+            <Label htmlFor="practicaMedicaId">Servicio habilitado (opcional)</Label>
             <Combobox
-              id="servicioHabilitadoId"
-              name="servicioHabilitadoId"
+              id="practicaMedicaId"
+              name="practicaMedicaId"
               items={itemsServicios}
-              defaultValue={editando?.servicio_habilitado_id ?? SIN_SELECCION}
+              defaultValue={editando?.practica_medica_id ?? SIN_SELECCION}
               placeholder="Buscar..."
             />
             <p className="text-xs text-muted-foreground">
               {servicios.length === 0
                 ? "Tu clínica todavía no tiene servicios habilitados. Agrégalos en Datos básicos de la clínica (botón arriba a la derecha) y aparecerán aquí."
-                : "Servicio habilitado (REPS) con el que tu clínica presta este tratamiento. Los códigos se administran en Datos básicos de la clínica."}
+                : "Servicio (REPS) con el que tu clínica presta este tratamiento. Su código de habilitación depende de la sede donde se atienda; los códigos por sede se administran en Datos básicos de la clínica."}
             </p>
           </div>
 

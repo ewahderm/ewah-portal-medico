@@ -8,24 +8,41 @@ import {
   type ServicioHabilitado,
 } from "@/lib/clinicas/servicios-habilitados-tipos";
 
-// Lista de servicios habilitados ante REPS (0055) — cada fila persiste de
-// inmediato (igual que activarCups/desactivarCups), independiente del
-// botón "Guardar" del resto de Datos básicos de la clínica. Restringido a
-// administrador porque el RLS de clinica_servicios_habilitados exige
-// es_admin(), mismo nivel que fn_actualizar_datos_basicos_clinica.
+// Lista de servicios habilitados ante REPS (0055, por sede desde 0061) —
+// cada fila persiste de inmediato (igual que activarCups/desactivarCups),
+// independiente del botón "Guardar" del resto de Datos básicos de la
+// clínica. Desde Datos básicos sigue siendo solo de administrador (en
+// todos los planes); el detalle regulatorio de la misma fila (complejidad,
+// modalidades, estado) se edita desde Habilitación.
 
 export type { ServicioHabilitado };
 
-export async function agregarServicioHabilitado(
-  practicaMedicaId: string,
-  codigoHabilitacion: string | null,
-): Promise<ServicioHabilitado> {
+async function requireAdmin() {
   const usuario = await getCurrentUsuario();
   if (!usuario) throw new Error("Sesión inválida.");
   if (!esAdministrador(usuario)) {
     throw new Error("Solo un administrador puede cambiar esta configuración.");
   }
-  if (!practicaMedicaId) throw new Error("Selecciona una práctica médica.");
+  return usuario;
+}
+
+// 23505 = el unique (clínica, sede, práctica) de 0061; P0001 = el trigger
+// fn_hab_misma_clinica (sede de otra clínica), cuyo mensaje ya es para el
+// usuario. Cualquier otro error se oculta tras un mensaje genérico.
+function mensajeError(error: { code?: string; message: string }, generico: string) {
+  if (error.code === "23505") return "Ese servicio ya está registrado en esa sede.";
+  if (error.code === "P0001") return error.message;
+  console.error(error);
+  return generico;
+}
+
+export async function agregarServicioHabilitado(
+  practicaMedicaId: string,
+  sedeId: string | null,
+  codigoHabilitacion: string | null,
+): Promise<ServicioHabilitado> {
+  const usuario = await requireAdmin();
+  if (!practicaMedicaId) throw new Error("Selecciona un servicio.");
 
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -33,44 +50,51 @@ export async function agregarServicioHabilitado(
     .insert({
       clinica_id: usuario.clinica_id,
       practica_medica_id: practicaMedicaId,
+      sede_id: sedeId || null,
       codigo_habilitacion: codigoHabilitacion?.trim() || null,
       created_by: usuario.id,
+      updated_by: usuario.id,
     })
     .select(SERVICIO_HABILITADO_SELECT)
     .single();
-  if (error) {
-    if (error.code === "23505") throw new Error("Esa práctica médica ya está en la lista.");
-    throw new Error("No se pudo agregar el servicio habilitado.");
-  }
+  if (error) throw new Error(mensajeError(error, "No se pudo agregar el servicio habilitado."));
 
   revalidatePath("/parametros");
   return data as unknown as ServicioHabilitado;
 }
 
 export async function actualizarCodigoServicioHabilitado(id: string, codigoHabilitacion: string | null) {
-  const usuario = await getCurrentUsuario();
-  if (!usuario) throw new Error("Sesión inválida.");
-  if (!esAdministrador(usuario)) {
-    throw new Error("Solo un administrador puede cambiar esta configuración.");
-  }
+  const usuario = await requireAdmin();
 
   const supabase = await createClient();
   const { error } = await supabase
     .from("clinica_servicios_habilitados")
-    .update({ codigo_habilitacion: codigoHabilitacion?.trim() || null })
+    .update({ codigo_habilitacion: codigoHabilitacion?.trim() || null, updated_by: usuario.id })
     .eq("id", id)
     .eq("clinica_id", usuario.clinica_id);
-  if (error) throw new Error("No se pudo actualizar el código.");
+  if (error) throw new Error(mensajeError(error, "No se pudo actualizar el código."));
+
+  revalidatePath("/parametros");
+}
+
+// Asignar o cambiar la sede de una fila ya creada (p. ej. las creadas antes
+// de 0061, que quedaron sin sede).
+export async function actualizarSedeServicioHabilitado(id: string, sedeId: string | null) {
+  const usuario = await requireAdmin();
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("clinica_servicios_habilitados")
+    .update({ sede_id: sedeId || null, updated_by: usuario.id })
+    .eq("id", id)
+    .eq("clinica_id", usuario.clinica_id);
+  if (error) throw new Error(mensajeError(error, "No se pudo cambiar la sede."));
 
   revalidatePath("/parametros");
 }
 
 export async function eliminarServicioHabilitado(id: string) {
-  const usuario = await getCurrentUsuario();
-  if (!usuario) throw new Error("Sesión inválida.");
-  if (!esAdministrador(usuario)) {
-    throw new Error("Solo un administrador puede cambiar esta configuración.");
-  }
+  const usuario = await requireAdmin();
 
   const supabase = await createClient();
   const { error } = await supabase
@@ -78,7 +102,7 @@ export async function eliminarServicioHabilitado(id: string) {
     .delete()
     .eq("id", id)
     .eq("clinica_id", usuario.clinica_id);
-  if (error) throw new Error("No se pudo eliminar el servicio habilitado.");
+  if (error) throw new Error(mensajeError(error, "No se pudo eliminar el servicio habilitado."));
 
   revalidatePath("/parametros");
 }

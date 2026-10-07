@@ -7,9 +7,11 @@ import { actualizarDatosBasicosClinica } from "@/lib/clinicas/actions";
 import {
   agregarServicioHabilitado,
   actualizarCodigoServicioHabilitado,
+  actualizarSedeServicioHabilitado,
   eliminarServicioHabilitado,
   type ServicioHabilitado,
 } from "@/lib/clinicas/servicios-habilitados";
+import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -60,6 +62,7 @@ export function DatosBasicosClinicaDialog({
   rolesActor,
   tiposTransaccionInvima,
   practicasMedicas,
+  sedes,
   serviciosHabilitados,
 }: {
   trigger: ReactElement;
@@ -73,6 +76,7 @@ export function DatosBasicosClinicaDialog({
   rolesActor: Opcion[];
   tiposTransaccionInvima: Opcion[];
   practicasMedicas: PracticaMedica[];
+  sedes: Opcion[];
   serviciosHabilitados: ServicioHabilitado[];
 }) {
   const router = useRouter();
@@ -250,13 +254,14 @@ export function DatosBasicosClinicaDialog({
           <div className="space-y-3 border-t pt-4">
             <p className="text-sm font-semibold">Servicios habilitados ante REPS</p>
             <p className="text-xs text-muted-foreground">
-              Tu clínica puede estar habilitada para más de un servicio de salud — agrega cada
-              uno con el código de
-              habilitación que REPS te asignó para ese servicio. Los cambios
+              Tu clínica puede estar habilitada para más de un servicio de salud y en más de
+              una sede — agrega cada servicio en la sede donde lo prestas, con el código de
+              habilitación que REPS te asignó. Los cambios
               aquí se guardan de inmediato, no esperan al botón &quot;Guardar&quot; de abajo.
             </p>
             <ServiciosHabilitadosSection
               practicasMedicas={practicasMedicas}
+              sedes={sedes}
               inicial={serviciosHabilitados}
             />
           </div>
@@ -304,25 +309,35 @@ export function DatosBasicosClinicaDialog({
   );
 }
 
-// Persiste cada fila de inmediato (agregar/editar código/eliminar), igual
-// que activarCups/desactivarCups — vive fuera del <form> grande de arriba
-// porque no depende de su botón "Guardar" ni de fn_actualizar_datos_
-// basicos_clinica. Dos niveles en cascada (mismo patrón que País →
-// Departamento → Ciudad): primero el grupo (practicas_medicas.codigo, 0058),
-// luego el servicio de ese grupo. Un código de habilitación por servicio.
+// Persiste cada fila de inmediato (agregar/cambiar sede/editar código/
+// eliminar), igual que activarCups/desactivarCups — vive fuera del <form>
+// grande de arriba porque no depende de su botón "Guardar" ni de
+// fn_actualizar_datos_basicos_clinica. Desde 0061 cada fila es
+// práctica × sede: primero la sede, luego el grupo y el servicio en
+// cascada (mismo patrón que País → Departamento → Ciudad). Un código de
+// habilitación por servicio y sede.
 function ServiciosHabilitadosSection({
   practicasMedicas,
+  sedes,
   inicial,
 }: {
   practicasMedicas: PracticaMedica[];
+  sedes: Opcion[];
   inicial: ServicioHabilitado[];
 }) {
   const [servicios, setServicios] = useState(inicial);
+  // Con una sola sede se preselecciona: es el caso más común (consultorio
+  // independiente) y evita un paso que no aporta.
+  const [sedeId, setSedeId] = useState(sedes.length === 1 ? sedes[0].id : SIN_SELECCION);
   const [grupo, setGrupo] = useState(SIN_SELECCION);
   const [servicioId, setServicioId] = useState(SIN_SELECCION);
   const [codigoNuevo, setCodigoNuevo] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+
+  const haySedes = sedes.length > 0;
+  const itemsSedes = toItemsOpcional(sedes, SIN_SELECCION, "Selecciona una sede");
+  const itemsSedesFila = toItemsOpcional(sedes, SIN_SELECCION, "Asigna una sede");
 
   // Grupos en el orden en que aparecen en el catálogo (ya viene por `orden`).
   const grupos = useMemo(
@@ -335,10 +350,14 @@ function ServiciosHabilitadosSection({
     "Selecciona un grupo",
   );
 
+  // La misma práctica puede repetirse en otra sede, no en la misma.
+  const sedeElegida = sedeId === SIN_SELECCION ? null : sedeId;
   const serviciosDelGrupo = useMemo(() => {
-    const yaAgregados = new Set(servicios.map((s) => s.practicas_medicas?.id));
-    return practicasMedicas.filter((pm) => pm.codigo === grupo && !yaAgregados.has(pm.id));
-  }, [practicasMedicas, grupo, servicios]);
+    const yaEnLaSede = new Set(
+      servicios.filter((s) => s.sede_id === sedeElegida).map((s) => s.practicas_medicas?.id),
+    );
+    return practicasMedicas.filter((pm) => pm.codigo === grupo && !yaEnLaSede.has(pm.id));
+  }, [practicasMedicas, grupo, servicios, sedeElegida]);
 
   const itemsServicios = toItemsOpcional(
     serviciosDelGrupo.map((pm): Opcion => ({ id: pm.id, nombre: pm.nombre })),
@@ -347,6 +366,10 @@ function ServiciosHabilitadosSection({
   );
 
   function handleAgregar() {
+    if (haySedes && sedeId === SIN_SELECCION) {
+      setError("Selecciona la sede donde se presta el servicio.");
+      return;
+    }
     if (servicioId === SIN_SELECCION) {
       setError("Selecciona un grupo y un servicio.");
       return;
@@ -354,13 +377,33 @@ function ServiciosHabilitadosSection({
     setError(null);
     startTransition(async () => {
       try {
-        const creado = await agregarServicioHabilitado(servicioId, codigoNuevo || null);
+        const creado = await agregarServicioHabilitado(servicioId, sedeElegida, codigoNuevo || null);
         setServicios((actual) => [...actual, creado]);
-        // Se conserva el grupo para seguir agregando servicios del mismo.
+        // Se conservan sede y grupo para seguir agregando servicios.
         setServicioId(SIN_SELECCION);
         setCodigoNuevo("");
       } catch (e) {
         setError(e instanceof Error ? e.message : "No se pudo agregar.");
+      }
+    });
+  }
+
+  function handleCambiarSede(id: string, nuevaSedeId: string | null) {
+    const anterior = servicios.find((s) => s.id === id);
+    if (!anterior) return;
+    const sede = sedes.find((s) => s.id === nuevaSedeId) ?? null;
+    setError(null);
+    setServicios((actual) =>
+      actual.map((s) =>
+        s.id === id ? { ...s, sede_id: sede?.id ?? null, sedes: sede ? { nombre: sede.nombre } : null } : s,
+      ),
+    );
+    startTransition(async () => {
+      try {
+        await actualizarSedeServicioHabilitado(id, sede?.id ?? null);
+      } catch (e) {
+        setServicios((actual) => actual.map((s) => (s.id === id ? anterior : s)));
+        setError(e instanceof Error ? e.message : "No se pudo cambiar la sede.");
       }
     });
   }
@@ -398,50 +441,109 @@ function ServiciosHabilitadosSection({
 
       {servicios.length > 0 ? (
         <div className="space-y-2">
-          {servicios.map((s) => (
-            <div key={s.id} className="rounded-lg border border-input p-2">
-              <div className="flex items-center gap-2">
-                <div className="min-w-0 flex-1 text-sm">
-                  <p className="font-medium">{s.practicas_medicas?.nombre ?? "—"}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {s.practicas_medicas?.codigo}
-                    {s.practicas_medicas?.complejidad
-                      ? ` · Complejidad ${s.practicas_medicas.complejidad}`
-                      : null}
-                  </p>
+          {servicios.map((s) => {
+            const nombre = s.practicas_medicas?.nombre ?? "el servicio";
+            const sinSede = haySedes && !s.sede_id;
+            return (
+              <div
+                key={s.id}
+                className={cn(
+                  "space-y-2 rounded-lg border p-2",
+                  sinSede ? "border-destructive/50 bg-destructive/5" : "border-input",
+                )}
+              >
+                <div className="flex items-start gap-2">
+                  <div className="min-w-0 flex-1 text-sm">
+                    <p className="font-medium">{s.practicas_medicas?.nombre ?? "—"}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {s.practicas_medicas?.codigo}
+                      {s.practicas_medicas?.complejidad
+                        ? ` · Complejidad ${s.practicas_medicas.complejidad}`
+                        : null}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={`Quitar ${nombre}`}
+                    disabled={pending}
+                    onClick={() => handleEliminar(s.id)}
+                  >
+                    <XIcon />
+                  </Button>
                 </div>
-                <Input
-                  className="w-32 sm:w-40"
-                  placeholder="Código de habilitación"
-                  aria-label={`Código de habilitación de ${s.practicas_medicas?.nombre ?? "el servicio"}`}
-                  defaultValue={s.codigo_habilitacion ?? ""}
-                  onBlur={(e) => handleActualizarCodigo(s.id, e.target.value)}
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={`Quitar ${s.practicas_medicas?.nombre ?? "servicio"}`}
-                  disabled={pending}
-                  onClick={() => handleEliminar(s.id)}
-                >
-                  <XIcon />
-                </Button>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {haySedes ? (
+                    <div className="space-y-1">
+                      {/* Combobox solo reenvía `id` al input: la etiqueta
+                          accesible va por un Label oculto. */}
+                      <Label htmlFor={`sede-servicio-${s.id}`} className="sr-only">
+                        Sede de {nombre}
+                      </Label>
+                      <Combobox
+                        id={`sede-servicio-${s.id}`}
+                        items={itemsSedesFila}
+                        value={s.sede_id ?? SIN_SELECCION}
+                        onValueChange={(v) => {
+                          const valor = String(v ?? SIN_SELECCION);
+                          if (valor !== (s.sede_id ?? SIN_SELECCION)) {
+                            handleCambiarSede(s.id, valor === SIN_SELECCION ? null : valor);
+                          }
+                        }}
+                      />
+                      {sinSede ? (
+                        <p className="text-xs text-destructive">
+                          Asigna una sede: sin ella este servicio no entra en la autoevaluación de Habilitación.
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <p className="self-center text-xs text-muted-foreground">Sin sede</p>
+                  )}
+                  <Input
+                    placeholder="Código de habilitación"
+                    aria-label={`Código de habilitación de ${nombre}`}
+                    defaultValue={s.codigo_habilitacion ?? ""}
+                    onBlur={(e) => handleActualizarCodigo(s.id, e.target.value)}
+                  />
+                </div>
+                {s.practicas_medicas?.requisitos ? (
+                  <details className="text-xs">
+                    <summary className="cursor-pointer text-primary">Requisitos</summary>
+                    <p className="mt-1 text-muted-foreground">{s.practicas_medicas.requisitos}</p>
+                  </details>
+                ) : null}
               </div>
-              {s.practicas_medicas?.requisitos ? (
-                <details className="mt-1 text-xs">
-                  <summary className="cursor-pointer text-primary">Requisitos</summary>
-                  <p className="mt-1 text-muted-foreground">{s.practicas_medicas.requisitos}</p>
-                </details>
-              ) : null}
-            </div>
-          ))}
+            );
+          })}
         </div>
       ) : null}
 
       <div className="space-y-3 rounded-lg border border-dashed border-input p-3">
+        {haySedes ? (
+          <div className="space-y-2">
+            <Label htmlFor="sedeServicioNuevo">1. Sede</Label>
+            <Combobox
+              id="sedeServicioNuevo"
+              items={itemsSedes}
+              value={sedeId}
+              onValueChange={(v) => {
+                setSedeId(String(v ?? SIN_SELECCION));
+                setServicioId(SIN_SELECCION);
+                setError(null);
+              }}
+            />
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            Tu clínica todavía no tiene sedes registradas. Puedes agregar el servicio ahora y
+            asignarle la sede después de crearla en la pestaña Sedes.
+          </p>
+        )}
+
         <div className="space-y-2">
-          <Label htmlFor="grupoServicioNuevo">1. Grupo</Label>
+          <Label htmlFor="grupoServicioNuevo">{haySedes ? "2. Grupo" : "1. Grupo"}</Label>
           <Combobox
             id="grupoServicioNuevo"
             items={itemsGrupos}
@@ -455,7 +557,7 @@ function ServiciosHabilitadosSection({
         </div>
 
         <div className="space-y-2 border-l-2 border-primary/30 pl-3">
-          <Label htmlFor="servicioNuevo">2. Servicio</Label>
+          <Label htmlFor="servicioNuevo">{haySedes ? "3. Servicio" : "2. Servicio"}</Label>
           <Combobox
             id="servicioNuevo"
             items={itemsServicios}
@@ -464,7 +566,11 @@ function ServiciosHabilitadosSection({
             disabled={grupo === SIN_SELECCION || serviciosDelGrupo.length === 0}
           />
           {grupo !== SIN_SELECCION && serviciosDelGrupo.length === 0 ? (
-            <p className="text-xs text-muted-foreground">Ya agregaste todos los servicios de este grupo.</p>
+            <p className="text-xs text-muted-foreground">
+              {haySedes
+                ? "Ya agregaste todos los servicios de este grupo en esta sede."
+                : "Ya agregaste todos los servicios de este grupo."}
+            </p>
           ) : null}
         </div>
 

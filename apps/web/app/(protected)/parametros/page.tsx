@@ -37,6 +37,10 @@ import { CargoDialog } from "./cargo-dialog";
 import { TiposTratamientoTable, type TipoTratamientoRow } from "./tipos-tratamiento-table";
 import { TipoTratamientoDialog } from "./tipo-tratamiento-dialog";
 import { DatosBasicosClinicaDialog } from "./datos-basicos-clinica-dialog";
+import {
+  describirCodigosPorSede,
+  type ServicioHabilitado,
+} from "@/lib/clinicas/servicios-habilitados-tipos";
 import { CupsTab } from "./cups-tab";
 import { buscarCups } from "@/lib/parametros/cups";
 import { formatoPorcentaje } from "@/lib/format";
@@ -199,7 +203,9 @@ export default async function ParametrosPage() {
     supabase
       .from("tipos_tratamiento")
       .select(
-        "id, nombre, codigo, servicio_habilitado_id, cups_id, activo, cups(codigo, descripcion), clinica_servicios_habilitados(codigo_habilitacion, practicas_medicas(nombre))",
+        // Los códigos por sede de la práctica llegan anidados; el RLS de
+        // clinica_servicios_habilitados ya los limita a esta clínica.
+        "id, nombre, codigo, practica_medica_id, cups_id, activo, cups(codigo, descripcion), practicas_medicas(nombre, clinica_servicios_habilitados(codigo_habilitacion, sedes(nombre)))",
       )
       .order("orden"),
     getPaisesActivos(supabase),
@@ -216,11 +222,19 @@ export default async function ParametrosPage() {
 
   const cupsTabInicial = await buscarCups("");
 
-  // Opciones del desplegable de código de habilitación en Tipos de
-  // tratamiento (0057): los servicios que la clínica habilitó.
-  const serviciosOpciones = serviciosHabilitados.map((s) => ({
-    id: s.id,
-    nombre: `${s.codigo_habilitacion ?? "Sin código"} — ${s.practicas_medicas?.nombre ?? ""}`,
+  // Opciones del desplegable de servicio en Tipos de tratamiento: las
+  // prácticas que la clínica habilitó, una vez cada una aunque esté en
+  // varias sedes (0061, decisión A) — el código depende de la sede.
+  const filasPorPractica = new Map<string, { nombre: string; filas: ServicioHabilitado[] }>();
+  for (const s of serviciosHabilitados) {
+    if (!s.practicas_medicas) continue;
+    const grupo = filasPorPractica.get(s.practicas_medicas.id) ?? { nombre: s.practicas_medicas.nombre, filas: [] };
+    grupo.filas.push(s);
+    filasPorPractica.set(s.practicas_medicas.id, grupo);
+  }
+  const serviciosOpciones = [...filasPorPractica.entries()].map(([id, { nombre, filas }]) => ({
+    id,
+    nombre: `${nombre} (${describirCodigosPorSede(filas)})`,
   }));
 
   // "INVIMA" hoy — vive en clinicas.agencia_regulatoria para que una
@@ -446,6 +460,7 @@ export default async function ParametrosPage() {
             rolesActor={rolesActor}
             tiposTransaccionInvima={tiposTransaccionInvima}
             practicasMedicas={practicasMedicas}
+            sedes={sedes}
             serviciosHabilitados={serviciosHabilitados}
             trigger={
               <Button variant="outline" size="sm">

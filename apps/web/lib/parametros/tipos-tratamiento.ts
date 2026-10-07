@@ -14,7 +14,9 @@ function datosTipoTratamientoDesdeForm(formData: FormData) {
   return {
     nombre: String(formData.get("nombre") ?? "").trim(),
     codigo: campoOpcional(formData, "codigo"),
-    servicioHabilitadoId: valorOpcionalSelect(formData, "servicioHabilitadoId"),
+    // Servicio general (practicas_medicas) desde 0061: el código de
+    // habilitación se resuelve con la sede donde se presta el tratamiento.
+    practicaMedicaId: valorOpcionalSelect(formData, "practicaMedicaId"),
     cupsId: valorOpcionalSelect(formData, "cupsId"),
   };
 }
@@ -34,7 +36,7 @@ export async function crearTipoTratamiento(
     clinica_id: check.usuario.clinica_id,
     nombre: datos.nombre,
     codigo: datos.codigo,
-    servicio_habilitado_id: datos.servicioHabilitadoId,
+    practica_medica_id: datos.practicaMedicaId,
     cups_id: datos.cupsId,
   });
   if (error) {
@@ -65,7 +67,7 @@ export async function editarTipoTratamiento(
     .update({
       nombre: datos.nombre,
       codigo: datos.codigo,
-      servicio_habilitado_id: datos.servicioHabilitadoId,
+      practica_medica_id: datos.practicaMedicaId,
       cups_id: datos.cupsId,
     })
     .eq("id", id);
