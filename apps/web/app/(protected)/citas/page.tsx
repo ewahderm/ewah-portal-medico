@@ -164,7 +164,7 @@ export default async function CitasPage({
             Citas, bloqueos de horario y su enlace con Tratamientos.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {esAdministrador(usuario) ? (
             <ExportarXlsxLink
               href={`/api/exportar/citas?${new URLSearchParams({

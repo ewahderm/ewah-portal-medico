@@ -155,7 +155,7 @@ export function ReportePgirasaTab({
                 <TableBody>
                   {reporte.promedioPeligrosos.meses.map(({ mes: mesFila, peso }) => (
                     <TableRow key={mesFila}>
-                      <TableCell className="capitalize">{etiquetaMes(mesFila)}</TableCell>
+                      <TableCell>{etiquetaMesTitulo(mesFila)}</TableCell>
                       <TableCell>{peso.estado === "faltante" ? "—" : formatearKg(peso.kilogramos)}</TableCell>
                       <TableCell>
                         <Badge variant={peso.estado === "faltante" ? "destructive" : "outline"}>
@@ -244,7 +244,7 @@ export function ReportePgirasaTab({
                   <TableBody>
                     {reporte.confirmaciones.map((declaracion) => (
                       <TableRow key={declaracion.id}>
-                        <TableCell className="capitalize">{etiquetaMes(declaracion.mes)}</TableCell>
+                        <TableCell>{etiquetaMesTitulo(declaracion.mes)}</TableCell>
                         <TableCell>
                           <Badge variant={declaracion.revocadaEn ? "secondary" : "outline"}>
                             {declaracion.revocadaEn ? "Revocada" : "Vigente"}

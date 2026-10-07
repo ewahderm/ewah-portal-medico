@@ -202,7 +202,7 @@ export default async function TratamientosPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">Tratamientos</h1>
           <p className="text-sm text-muted-foreground">
@@ -210,7 +210,7 @@ export default async function TratamientosPage({
             edita: se anula (con motivo) y se corrige con uno nuevo.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {esAdministrador(usuario) ? (
             <ExportarXlsxLink
               href={`/api/exportar/tratamientos?${new URLSearchParams(
