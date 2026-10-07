@@ -64,34 +64,36 @@ export async function actualizarMarcaClinica(formData: FormData) {
 // motivo para seguir en /parametros y no en /suscripcion: es configuración
 // operativa/regulatoria, no de marca. Reemplaza a
 // actualizarPaisOperacionClinica, que queda sin uso pero no se borra.
-export async function actualizarDatosBasicosClinica(formData: FormData) {
+// Devuelve { error } en vez de lanzar: en producción Next oculta el mensaje de
+// toda excepción de una server action (el usuario solo veía "Minified React
+// error #441"), así que los mensajes escritos para el usuario viajan como
+// valor de retorno.
+export async function actualizarDatosBasicosClinica(formData: FormData): Promise<{ error?: string }> {
   const usuario = await getCurrentUsuario();
-  if (!usuario) throw new Error("Sesión inválida.");
+  if (!usuario) return { error: "Sesión inválida." };
   if (!esAdministrador(usuario)) {
-    throw new Error("Solo un administrador puede cambiar esta configuración.");
+    return { error: "Solo un administrador puede cambiar esta configuración." };
   }
 
   const paisOperacionId = String(formData.get("paisOperacionId") ?? "");
-  if (!paisOperacionId) throw new Error("Selecciona un país.");
+  if (!paisOperacionId) return { error: "Selecciona un país." };
   const exoneracionAportes = formData.get("exoneracionAportes") === "on";
 
   const nit = String(formData.get("nit") ?? "").trim();
-  if (!nit) throw new Error("El número de identificación es obligatorio.");
+  if (!nit) return { error: "El número de identificación es obligatorio." };
 
   const nombreLegal = campoOpcional(formData, "nombreLegal");
-  if (!nombreLegal) throw new Error("El nombre legal de la clínica es obligatorio.");
-  if (nombreLegal.length > 200) throw new Error("El nombre legal no puede superar 200 caracteres.");
+  if (!nombreLegal) return { error: "El nombre legal de la clínica es obligatorio." };
+  if (nombreLegal.length > 200) return { error: "El nombre legal no puede superar 200 caracteres." };
   const nombreComercial = campoOpcional(formData, "nombreComercial");
   if (nombreComercial && nombreComercial.length > 200) {
-    throw new Error("El nombre comercial no puede superar 200 caracteres.");
+    return { error: "El nombre comercial no puede superar 200 caracteres." };
   }
   // Se quitan espacios, puntos o guiones que vengan al copiarlo del
   // certificado de la ARL (mismo criterio que tenía el perfil SG-SST).
   const codigoActividad = campoOpcional(formData, "codigoActividadEconomica")?.replace(/\D/g, "") || null;
   if (codigoActividad && !/^[1-5]\d{6}$/.test(codigoActividad)) {
-    throw new Error(
-      "La actividad económica tiene 7 dígitos y empieza por la clase de riesgo (1 a 5). Cópiala de tu afiliación a la ARL.",
-    );
+    return { error: "La actividad económica tiene 7 dígitos y empieza por la clase de riesgo (1 a 5). Cópiala de tu afiliación a la ARL." };
   }
 
   const supabase = await createClient();
@@ -120,13 +122,14 @@ export async function actualizarDatosBasicosClinica(formData: FormData) {
   if (error) {
     // P0001 = raise exception de las funciones: mensajes escritos para el
     // usuario (NIT duplicado, nombre legal vacío, código inválido...).
-    if (error.code === "P0001") throw new Error(error.message);
+    if (error.code === "P0001") return { error: error.message };
     console.error("[clinicas] guardar datos básicos", error);
-    throw new Error("No se pudieron guardar los datos de la clínica. Intenta de nuevo.");
+    return { error: "No se pudieron guardar los datos de la clínica. Intenta de nuevo." };
   }
 
   revalidatePath("/parametros");
   revalidatePath("/suscripcion");
+  return {};
 }
 
 // No pasa por comprimirImagen.ts a propósito: ese util re-codifica todo a

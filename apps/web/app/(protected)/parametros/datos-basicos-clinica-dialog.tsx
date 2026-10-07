@@ -114,12 +114,18 @@ export function DatosBasicosClinicaDialog({
     setError(null);
     startTransition(async () => {
       try {
-        await actualizarDatosBasicosClinica(formData);
+        const resultado = await actualizarDatosBasicosClinica(formData);
+        if (resultado.error) {
+          setError(resultado.error);
+          return;
+        }
         router.refresh();
         setOpen(false);
         toast.add({ title: "Datos de la clínica actualizados", type: "success" });
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "No se pudo actualizar.");
+      } catch {
+        // Falla de red o excepción inesperada del servidor (su mensaje
+        // llega ofuscado en producción).
+        setError("No se pudo guardar. Revisa tu conexión e intenta de nuevo.");
       }
     });
   }
