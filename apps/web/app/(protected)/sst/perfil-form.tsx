@@ -15,7 +15,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
-export function PerfilSstForm({ perfil, puedeEditar }: { perfil: PerfilSst | null; puedeEditar: boolean }) {
+export function PerfilSstForm({ perfil: perfilInicial, puedeEditar }: { perfil: PerfilSst | null; puedeEditar: boolean }) {
+  // Los valores por defecto se congelan al montar: tras guardar, la página
+  // se revalida y Base UI no admite que cambie el defaultValue de un campo
+  // no controlado (lo que se ve ya es lo que se guardó).
+  const [perfil] = useState(perfilInicial);
   const [state, formAction, pending] = useActionState(guardarPerfilSst, null);
   const [modo, setModo] = useState<string>(perfil?.modo ?? "empleador");
   const [excluye, setExcluye] = useState(perfil?.excluye_contratistas ?? false);

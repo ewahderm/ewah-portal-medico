@@ -22,7 +22,8 @@ console.log("con código:", await page.getByText(/aplican 7 estándares/).innerT
 await page.getByText("No contar a los contratistas").click();
 await page.fill("#justificacionExclusion", "corta");
 await page.getByRole("button", { name: "Guardar" }).click();
-await page.getByText(/explica por qué|10 caracteres/).waitFor();
+// minLength=10: el navegador bloquea el envío (la action y la BD lo exigen igual).
+if (!(await page.locator("#justificacionExclusion").evaluate((el) => el.matches(":invalid")))) throw new Error("aceptó una justificación corta");
 console.log("validación de justificación OK");
 await page.fill("#otrosTrabajadores", "9");
 await page.getByText("No contar a los contratistas").click();
