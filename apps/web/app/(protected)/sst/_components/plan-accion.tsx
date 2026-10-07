@@ -17,8 +17,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
-// Plan de acción de cualquier origen (investigación de un evento o peligro
-// de la matriz, que además pide el tipo de control de la jerarquía).
+// Plan de acción de cualquier origen (investigación de un evento, peligro
+// de la matriz —que además pide el tipo de control de la jerarquía— o
+// ítem de la autoevaluación de estándares, cuyas acciones son de mejora).
 export function PlanAccion({
   origen,
   origenId,
@@ -28,7 +29,7 @@ export function PlanAccion({
   puedeCrear,
   puedeEditar,
 }: {
-  origen: "investigacion" | "matriz";
+  origen: "investigacion" | "matriz" | "autoevaluacion";
   origenId: string;
   acciones: AccionSst[];
   usuarios: { id: string; nombre: string }[];
@@ -129,7 +130,7 @@ function NuevaAccion({
   usuarios,
   onCerrar,
 }: {
-  origen: "investigacion" | "matriz";
+  origen: "investigacion" | "matriz" | "autoevaluacion";
   origenId: string;
   usuarios: { id: string; nombre: string }[];
   onCerrar: () => void;
@@ -179,8 +180,13 @@ function NuevaAccion({
           </div>
         ) : (
           <div className="space-y-1">
-            <Label htmlFor="tipoAccion">Tipo</Label>
-            <Combobox id="tipoAccion" name="tipo" items={TIPOS_ACCION.map((t) => ({ value: t.value, label: t.label }))} defaultValue="correctiva" />
+            <Label htmlFor={`tipoAccion-${origenId}`}>Tipo</Label>
+            <Combobox
+              id={`tipoAccion-${origenId}`}
+              name="tipo"
+              items={TIPOS_ACCION.map((t) => ({ value: t.value, label: t.label }))}
+              defaultValue={origen === "autoevaluacion" ? "mejora" : "correctiva"}
+            />
           </div>
         )}
         <div className="space-y-1">

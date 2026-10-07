@@ -404,3 +404,42 @@ export async function getInsumosIndicadores(supabase: Supabase, anio: number) {
   }
   return (data ?? []) as import("@/lib/sst/indicadores").InsumoMes[];
 }
+
+// ---------- F2: estándares mínimos ----------
+
+export type AutoevaluacionResumen = {
+  id: string;
+  anio: number;
+  grupo: "7" | "21" | "60";
+  estado: "abierta" | "cerrada";
+  puntaje: number | null;
+  nivel: "critico" | "moderado" | "aceptable" | null;
+  fecha_cierre: string | null;
+};
+
+export type ItemAutoevaluacion = {
+  id: string;
+  estado: "pendiente" | "cumple" | "no_cumple" | "no_aplica";
+  justificacion: string | null;
+  observacion: string | null;
+  updated_at: string;
+  estandar: { codigo: string; ciclo: "planear" | "hacer" | "verificar" | "actuar"; componente: string; nombre: string; descripcion: string; peso: number; orden: number; verificado: boolean };
+};
+
+export async function getAutoevaluaciones(supabase: Supabase): Promise<AutoevaluacionResumen[]> {
+  const { data } = await supabase
+    .from("sst_autoevaluaciones")
+    .select("id, anio, grupo, estado, puntaje, nivel, fecha_cierre")
+    .order("anio", { ascending: false });
+  return ((data ?? []) as AutoevaluacionResumen[]).map((a) => ({ ...a, puntaje: a.puntaje === null ? null : Number(a.puntaje) }));
+}
+
+export async function getItemsAutoevaluacion(supabase: Supabase, autoevaluacionId: string): Promise<ItemAutoevaluacion[]> {
+  const { data } = await supabase
+    .from("sst_autoevaluacion_items")
+    .select("id, estado, justificacion, observacion, updated_at, estandar:sst_estandares(codigo, ciclo, componente, nombre, descripcion, peso, orden, verificado)")
+    .eq("autoevaluacion_id", autoevaluacionId);
+  return ((data ?? []) as unknown as ItemAutoevaluacion[])
+    .map((i) => ({ ...i, estandar: { ...i.estandar, peso: Number(i.estandar.peso) } }))
+    .sort((a, b) => a.estandar.orden - b.estandar.orden);
+}

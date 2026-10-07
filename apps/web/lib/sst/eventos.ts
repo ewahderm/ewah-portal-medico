@@ -244,7 +244,7 @@ export async function urlInforme(accidenteId: string): Promise<{ error?: string;
 
 // Plan de acción (genérico: investigaciones y matriz de peligros).
 export async function crearAccion(input: {
-  origen: "investigacion" | "matriz";
+  origen: "investigacion" | "matriz" | "autoevaluacion";
   origenId: string;
   tipo: string;
   descripcion: string;
@@ -252,7 +252,7 @@ export async function crearAccion(input: {
   fechaCompromiso: string;
   jerarquia?: string | null;
 }): Promise<Resultado> {
-  if (input.origen !== "investigacion" && input.origen !== "matriz") return { error: "Origen inválido." };
+  if (input.origen !== "investigacion" && input.origen !== "matriz" && input.origen !== "autoevaluacion") return { error: "Origen inválido." };
   if (!esUuid(input.origenId) || !esUuid(input.responsableId)) return { error: "Datos inválidos." };
   if (!TIPOS_ACCION.some((t) => t.value === input.tipo)) return { error: "Tipo de acción inválido." };
   if (input.jerarquia && !JERARQUIA.some((j) => j.value === input.jerarquia)) return { error: "Tipo de control inválido." };

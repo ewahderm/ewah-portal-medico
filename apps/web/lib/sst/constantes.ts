@@ -19,7 +19,7 @@ export const SECCIONES_SST = [
   { href: "/sst/peligros", label: "Peligros", disponible: true },
   { href: "/sst/personas", label: "Capacitación y EPP", disponible: true },
   { href: "/sst/plan", label: "Plan y comités", disponible: true },
-  { href: "/sst/estandares", label: "Estándares", disponible: false },
+  { href: "/sst/estandares", label: "Estándares", disponible: true },
 ] as const;
 
 export const TIPOS_EVENTO = [
