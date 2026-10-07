@@ -4,13 +4,13 @@
 // tamaño y firma antes de registrar la fila.
 
 import { createClient } from "@/lib/supabase/client";
-import { prepararSubida } from "@/lib/habilitacion/autoevaluacion";
+import { prepararSubida, type AreaSubida } from "@/lib/habilitacion/subidas";
 import { detectarTipoArchivo } from "@/lib/habilitacion/archivos";
 import { MAX_ARCHIVO_BYTES } from "@/lib/habilitacion/constantes";
 
 export async function subirArchivoHabilitacion(
   archivo: File,
-  area: "evidencias" | "planes" | "protocolos",
+  area: AreaSubida,
   entidadId: string,
 ): Promise<{ error: string } | { path: string; nombre: string }> {
   if (archivo.size === 0) return { error: "El archivo está vacío." };

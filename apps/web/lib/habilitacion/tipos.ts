@@ -303,3 +303,169 @@ export type DetalleCriterio = {
   protocolos: Record<string, ProtocoloVigente | null>;
   nombresProtocolo: Record<string, string>;
 };
+
+// ============================================================
+// Documentos y trámite (F7, 0068)
+// ============================================================
+export type DocumentoCatalogo = {
+  id: string;
+  codigo: string;
+  nombre_corto: string;
+  descripcion_literal: string;
+  explicacion_sencilla: string | null;
+  aplica_a: string[];
+  obligatorio: boolean;
+  condicion_texto: string | null;
+  condiciones: string[];
+  seccion: "radicar" | "evidencia_visita";
+  por_sede: boolean;
+  tiene_vencimiento: boolean;
+  regla_vigencia: "max_30_dias_radicacion" | null;
+  uno_por_servicio: boolean;
+  fuente_norma: string | null;
+  fuente_articulo: string | null;
+  fuente_pagina: string | null;
+  fuente_url: string | null;
+  verificado: boolean;
+  orden: number;
+  es_financiero: boolean;
+};
+
+export const DOCUMENTO_CATALOGO_SELECT =
+  "id, codigo, nombre_corto, descripcion_literal, explicacion_sencilla, aplica_a, obligatorio, condicion_texto, condiciones, seccion, por_sede, tiene_vencimiento, regla_vigencia, uno_por_servicio, fuente_norma, fuente_articulo, fuente_pagina, fuente_url, verificado, orden, es_financiero";
+
+export type VersionDocumento = {
+  id: string;
+  documento_id: string;
+  version: number;
+  nombre_archivo: string;
+  mime: string;
+  tamano_bytes: number;
+  fecha_expedicion: string | null;
+  fecha_vencimiento: string | null;
+  es_financiero: boolean;
+  created_by: string | null;
+  created_at: string;
+};
+
+export type DocumentoClinica = {
+  id: string;
+  documento_catalogo_id: string | null;
+  nombre_adicional: string | null;
+  sede_id: string | null;
+  servicio_habilitado_id: string | null;
+  no_aplica: boolean;
+  no_aplica_justificacion: string | null;
+  observaciones: string | null;
+  versiones: VersionDocumento[];
+};
+
+export type HitoTramite = {
+  id: string;
+  tipo: string;
+  fecha: string;
+  numero: string | null;
+  observacion: string | null;
+  hay_incumplimientos_subsanables: boolean | null;
+  subsanar_hasta: string | null;
+  nombre_archivo: string | null;
+  anulado: boolean;
+  anulado_motivo: string | null;
+  created_by: string | null;
+  created_at: string;
+};
+
+export type SuficienciaRegistro = {
+  id: string;
+  fecha_corte: string;
+  patrimonio_total: number;
+  capital: number;
+  obligaciones_mercantiles_360: number;
+  obligaciones_laborales_360: number;
+  pasivo_corriente: number;
+  observacion: string | null;
+  anulado: boolean;
+  anulado_motivo: string | null;
+  created_at: string;
+};
+
+// ============================================================
+// Obligaciones y calendario (F8, 0069)
+// ============================================================
+export type ObligacionCatalogo = {
+  id: string;
+  codigo: string;
+  nombre: string;
+  descripcion_corta: string;
+  entidad: string;
+  plataforma_nombre: string | null;
+  plataforma_url: string | null;
+  norma_nombre: string | null;
+  norma_numero: string | null;
+  norma_articulo: string | null;
+  norma_url: string | null;
+  url_instructivo: string | null;
+  periodicidad: string;
+  activacion_default: "auto" | "por_confirmar" | "informativa";
+  requiere_confirmacion_asesor: boolean;
+  dias_aviso_default: number[];
+  verificado: boolean;
+  notas: string | null;
+};
+
+export const OBLIGACION_CATALOGO_SELECT =
+  "id, codigo, nombre, descripcion_corta, entidad, plataforma_nombre, plataforma_url, norma_nombre, norma_numero, norma_articulo, norma_url, url_instructivo, periodicidad, activacion_default, requiere_confirmacion_asesor, dias_aviso_default, verificado, notas";
+
+export type ObligacionClinica = {
+  id: string;
+  obligacion_id: string;
+  aplica_segun_perfil: boolean;
+  activa: boolean;
+  origen: "automatica" | "manual";
+  confirmada: boolean;
+  justificacion: string | null;
+  fecha_consulta_asesor: string | null;
+  dias_aviso: number[] | null;
+  responsable_id: string | null;
+  correo_adicional: string | null;
+  hab_obligaciones_catalogo: ObligacionCatalogo;
+};
+
+export type Ocurrencia = {
+  id: string;
+  obligacion_id: string;
+  origen: string;
+  clave_periodo: string;
+  periodo_corte: string | null;
+  etiqueta_periodo: string | null;
+  fecha_limite: string;
+  dia_no_habil: boolean;
+  estado: "pendiente" | "presentado" | "no_aplica_periodo" | "anulado";
+  fecha_presentacion: string | null;
+  radicado: string | null;
+  nombre_archivo: string | null;
+  observacion: string | null;
+  justificacion: string | null;
+  motivo_anulacion: string | null;
+  reemplaza_id: string | null;
+  generada_por: "sistema" | "usuario";
+};
+
+export const OCURRENCIA_SELECT =
+  "id, obligacion_id, origen, clave_periodo, periodo_corte, etiqueta_periodo, fecha_limite, dia_no_habil, estado, fecha_presentacion, radicado, nombre_archivo, observacion, justificacion, motivo_anulacion, reemplaza_id, generada_por";
+
+export type NovedadCatalogo = { id: string; codigo: string; categoria: string; nombre: string; definicion_literal: string; efecto: string | null };
+
+export type NovedadReportada = {
+  id: string;
+  novedad_id: string;
+  sede_id: string | null;
+  servicio_habilitado_id: string | null;
+  fecha_reporte: string;
+  radicado: string | null;
+  nombre_archivo: string | null;
+  observacion: string | null;
+  anulado: boolean;
+  motivo_anulacion: string | null;
+  created_at: string;
+};

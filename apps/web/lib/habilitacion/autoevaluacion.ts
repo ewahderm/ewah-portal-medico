@@ -7,25 +7,29 @@
 // "Cumple", append-only). Aquí solo se valida la forma y se traducen los
 // errores a mensajes claros. Ninguna action recibe clinica_id.
 
-import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { requireHabilitacion } from "@/lib/habilitacion/guard";
 import {
   ESTADOS_EVALUACION,
-  MAX_ARCHIVO_BYTES,
+  FUENTES_EVIDENCIA,
+  type FuenteEvidencia,
   MAX_JUSTIFICACION,
   MAX_OBSERVACION,
   MIN_JUSTIFICACION_NO_APLICA,
   MIN_MOTIVO_RETIRO,
-  SEGUNDOS_URL_FIRMADA,
   type EstadoEvaluacion,
 } from "@/lib/habilitacion/constantes";
-import { detectarTipoArchivo, sha256Hex } from "@/lib/habilitacion/archivos";
 import {
-  FUENTES_EVIDENCIA,
-  type FuenteEvidencia,
-} from "@/lib/habilitacion/constantes";
+  FECHA_ISO,
+  esUuid,
+  firmar,
+  mensajeError,
+  revalidar,
+  textoForm,
+  textoOpcional,
+  verificarArchivoSubido,
+  type Supabase,
+} from "@/lib/habilitacion/servidor";
 import type {
   DetalleCriterio,
   Evidencia,
@@ -36,43 +40,8 @@ import type {
   SugerenciaEvidencia,
 } from "@/lib/habilitacion/tipos";
 
-const BUCKET = "habilitacion";
-const FECHA_ISO = /^\d{4}-\d{2}-\d{2}$/;
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 type Resultado = { error?: string };
-type Supabase = Awaited<ReturnType<typeof createClient>>;
-type ErrorBd = { code?: string; message: string };
-
-function revalidar() {
-  revalidatePath("/habilitacion", "layout");
-}
-
-// Los triggers de 0066 lanzan mensajes ya escritos para el usuario
-// (P0001). El resto se traduce; el detalle técnico queda en el servidor.
-function mensajeError(contexto: string, error: ErrorBd, porDefecto: string): string {
-  console.error(`[habilitacion] ${contexto}`, error);
-  if (error.code === "P0001") return error.message;
-  if (error.code === "42501") return "No tienes permiso para esta acción o tu plan no la incluye.";
-  if (error.message?.includes("hab_evaluaciones_no_aplica_justificada")) {
-    return `Para marcar "No aplica" explica por qué (al menos ${MIN_JUSTIFICACION_NO_APLICA} caracteres).`;
-  }
-  if (error.code === "23514") return "Algún dato no tiene el formato esperado. Revisa el formulario.";
-  return porDefecto;
-}
-
-function texto(formData: FormData, campo: string): string {
-  return String(formData.get(campo) ?? "").trim();
-}
-
-function textoOpcional(valor: string | null | undefined): string | null {
-  const t = (valor ?? "").trim();
-  return t ? t : null;
-}
-
-function esUuid(v: unknown): v is string {
-  return typeof v === "string" && UUID.test(v);
-}
+const texto = textoForm;
 
 // ============================================================
 // Evaluar un criterio (HU-4.2) — RPC append-only
@@ -127,80 +96,6 @@ type EvidenciaJson = {
   tamano_bytes?: number;
   sha256?: string;
 };
-
-// ------------------------------------------------------------
-// Archivos: el navegador sube DIRECTO a storage con una URL firmada que
-// emite el servidor (las server actions se cortan en 1 MB y Vercel en
-// 4,5 MB; las evidencias admiten 10 MB). El servidor decide la ruta (el
-// nombre nunca sale del que sube el usuario, §1.5) y, antes de registrar
-// la fila, descarga el objeto con la sesión y verifica tamaño y FIRMA.
-// ------------------------------------------------------------
-const EXTENSIONES = ["pdf", "jpg", "png", "webp", "docx", "xlsx"] as const;
-type AreaArchivo = "evidencias" | "planes" | "protocolos";
-
-export async function prepararSubida(
-  area: AreaArchivo,
-  entidadId: string,
-  extension: string,
-): Promise<{ error?: string; path?: string; token?: string }> {
-  if (area !== "evidencias" && area !== "planes" && area !== "protocolos") return { error: "Destino inválido." };
-  if (!esUuid(entidadId)) return { error: "Destino inválido." };
-  if (!(EXTENSIONES as readonly string[]).includes(extension)) return { error: "Formato no soportado." };
-
-  const check = await requireHabilitacion(area === "planes" ? "EDIT" : "CREATE", { gestion: true });
-  if (!check.ok) return { error: check.error };
-
-  const supabase = await createClient();
-  const path = `${check.usuario.clinica_id}/${area}/${entidadId.toLowerCase()}/${crypto.randomUUID()}.${extension}`;
-  const { data, error } = await supabase.storage.from(BUCKET).createSignedUploadUrl(path);
-  if (error || !data) {
-    console.error("[habilitacion] createSignedUploadUrl", error);
-    return { error: "No se pudo preparar la subida del archivo." };
-  }
-  return { path: data.path, token: data.token };
-}
-
-type ArchivoVerificado = { path: string; nombre: string; mime: string; tamano: number; sha256: string };
-
-async function verificarArchivoSubido(
-  supabase: Supabase,
-  clinicaId: string,
-  area: AreaArchivo,
-  entidadId: string,
-  path: string,
-  nombre: string,
-): Promise<{ error: string } | ArchivoVerificado> {
-  const prefijo = `${clinicaId}/${area}/${entidadId.toLowerCase()}/`;
-  const resto = path.startsWith(prefijo) ? path.slice(prefijo.length) : "";
-  const forma = /^[0-9a-f-]{36}\.([a-z]+)$/.exec(resto);
-  if (!forma || !(EXTENSIONES as readonly string[]).includes(forma[1])) return { error: "Archivo inválido." };
-
-  const { data, error } = await supabase.storage.from(BUCKET).download(path);
-  if (error || !data) {
-    console.error("[habilitacion] download", error);
-    return { error: "No encontramos el archivo subido. Intenta de nuevo." };
-  }
-  const bytes = new Uint8Array(await data.arrayBuffer());
-  const tipo = detectarTipoArchivo(bytes);
-  if (bytes.length === 0 || bytes.length > MAX_ARCHIVO_BYTES || !tipo || tipo.extension !== forma[1]) {
-    // No hay política de delete en el bucket (ni admin): el archivo
-    // inválido lo retira el service role.
-    await createAdminClient().storage.from(BUCKET).remove([path]);
-    return {
-      error:
-        bytes.length > MAX_ARCHIVO_BYTES
-          ? "El archivo no puede pesar más de 10 MB."
-          : "Formato no soportado. Sube un PDF, una imagen (JPG, PNG, WEBP) o un Word/Excel (.docx, .xlsx).",
-    };
-  }
-  return {
-    path,
-    nombre: nombre.trim().slice(0, 255) || `archivo.${tipo.extension}`,
-    mime: tipo.mime,
-    tamano: bytes.length,
-    sha256: await sha256Hex(bytes),
-  };
-}
 
 // FormData: sedeId, criterioId, tipo, descripcion, url?, storagePath? y
 // nombreArchivo? (archivo ya subido con prepararSubida),
@@ -314,17 +209,6 @@ export async function urlEvidencia(evidenciaId: string): Promise<{ error?: strin
   const { data } = await supabase.from("hab_evidencias").select("storage_path, nombre_archivo").eq("id", evidenciaId).maybeSingle();
   if (!data?.storage_path) return { error: "El archivo no existe." };
   return firmar(supabase, data.storage_path, data.nombre_archivo);
-}
-
-async function firmar(supabase: Supabase, path: string, nombre: string | null) {
-  const { data, error } = await supabase.storage
-    .from(BUCKET)
-    .createSignedUrl(path, SEGUNDOS_URL_FIRMADA, nombre ? { download: nombre } : undefined);
-  if (error || !data) {
-    console.error("[habilitacion] createSignedUrl", error);
-    return { error: "No se pudo generar el enlace de descarga." };
-  }
-  return { url: data.signedUrl };
 }
 
 // ============================================================
