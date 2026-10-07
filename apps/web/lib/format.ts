@@ -1,5 +1,12 @@
+// Fecha de hoy en Colombia (aaaa-mm-dd). NO usar new Date().toISOString():
+// es UTC y desde las 7 p. m. ya devuelve "mañana" (default de fechas de
+// tratamientos, Agenda, cortes, etc.). Es la única fuente de "hoy" para
+// las pantallas clínicas; el formateador se crea una vez porque se llama
+// por fila en algunas tablas.
+const FORMATO_HOY = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Bogota" });
+
 export function hoy() {
-  return new Date().toISOString().slice(0, 10);
+  return FORMATO_HOY.format(new Date());
 }
 
 export function formatoMoneda(valor: number | null) {

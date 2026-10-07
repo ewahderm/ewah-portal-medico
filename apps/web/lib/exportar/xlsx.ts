@@ -1,4 +1,5 @@
 import * as XLSX from "xlsx";
+import { hoy } from "@/lib/format";
 
 export type ColumnaXlsx = { header: string; key: string };
 
@@ -73,6 +74,6 @@ export function leerFilasXlsx(buffer: Buffer, columnas: ColumnaXlsx[]): Record<s
 
 /** Nombre de archivo con la fecha de hoy, sin caracteres problemáticos. */
 export function nombreArchivoXlsx(base: string): string {
-  const fecha = new Date().toISOString().slice(0, 10);
+  const fecha = hoy();
   return `${base}-${fecha}.xlsx`;
 }

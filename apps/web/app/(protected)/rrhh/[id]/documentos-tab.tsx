@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/table";
 import { DocumentoUploadDialog } from "./documento-upload-dialog";
 import type { Opcion } from "@/lib/forms/opciones";
+import { hoy } from "@/lib/format";
 
 type Documento = {
   id: string;
@@ -45,7 +46,7 @@ export function DocumentosTab({
   const [documentos, setDocumentos] = useState<Documento[]>([]);
   const [confirmandoId, setConfirmandoId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
-  const hoy = new Date().toISOString().slice(0, 10);
+  const hoyFecha = hoy();
 
   function cargar() {
     startTransition(async () => {
@@ -104,7 +105,7 @@ export function DocumentosTab({
           </TableHeader>
           <TableBody>
             {documentos.map((d) => {
-              const vencida = d.fecha_vencimiento ? d.fecha_vencimiento < hoy : false;
+              const vencida = d.fecha_vencimiento ? d.fecha_vencimiento < hoyFecha : false;
               return (
                 <TableRow key={d.id}>
                   <TableCell className="text-muted-foreground">{labelTipoDocumento(d.tipo)}</TableCell>

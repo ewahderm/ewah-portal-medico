@@ -17,15 +17,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { Opcion } from "@/lib/forms/opciones";
+import { hoy } from "@/lib/format";
 
 const TODAS = "__todas__";
 
-function hoyISO() {
-  return new Date().toISOString().slice(0, 10);
-}
-
 export function CortesMensualesTab({ sedes }: { sedes: Opcion[] }) {
-  const [fechaCorte, setFechaCorte] = useState(hoyISO());
+  const [fechaCorte, setFechaCorte] = useState(hoy());
   const [sedeId, setSedeId] = useState(TODAS);
   const [filas, setFilas] = useState<CorteInventarioFila[] | null>(null);
   const [pending, startTransition] = useTransition();

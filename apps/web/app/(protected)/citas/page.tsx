@@ -9,16 +9,13 @@ import { FiltrosAgenda } from "./filtros-agenda";
 import { AgendaCalendario } from "./agenda-calendario";
 import { AtencionSinCitaDialog } from "../atenciones/atencion-sin-cita-dialog";
 import { nombreCompleto, type CitaRow } from "./tipos";
+import { hoy } from "@/lib/format";
 import { getSedesActivas, getMediosPagoActivos, getTiposTratamientoActivos } from "@/lib/catalogos";
 import { tieneInfoPendiente } from "@/lib/pacientes/completitud";
 import { getPacientesActivosParaPicker } from "@/lib/pacientes/picker";
 import { ExportarXlsxLink } from "../_components/exportar-xlsx-link";
 
 type Vista = "day" | "week" | "month";
-
-function hoyISO() {
-  return new Date().toISOString().slice(0, 10);
-}
 
 function parsearFechaISO(fechaISO: string) {
   const [y, m, d] = fechaISO.split("-").map(Number);
@@ -51,7 +48,7 @@ export default async function CitasPage({
     sedeId,
     profesionalId,
   } = await searchParams;
-  const fechaISO = fechaParam || hoyISO();
+  const fechaISO = fechaParam || hoy();
   const fecha = parsearFechaISO(fechaISO);
   const vista: Vista = vistaParam === "day" || vistaParam === "month" ? vistaParam : "week";
   const supabase = await createClient();

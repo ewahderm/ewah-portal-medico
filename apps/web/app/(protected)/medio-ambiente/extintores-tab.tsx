@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/table";
 import { ExtintorDialog } from "./extintor-dialog";
 import type { Opcion } from "@/lib/forms/opciones";
+import { hoy } from "@/lib/format";
 
 const TODOS = "__todos__";
 
@@ -41,7 +42,6 @@ type Extintor = {
   tipos_extintor: { nombre: string } | null;
 };
 
-const HOY = new Date().toISOString().slice(0, 10);
 
 export function ExtintoresTab({
   sedes,
@@ -181,7 +181,7 @@ export function ExtintoresTab({
             </TableHeader>
             <TableBody>
               {registros.map((e) => {
-                const vencido = e.fecha_vencimiento < HOY;
+                const vencido = e.fecha_vencimiento < hoy();
                 return (
                   <TableRow key={e.id}>
                     <TableCell className="font-medium">{e.ubicacion}</TableCell>
