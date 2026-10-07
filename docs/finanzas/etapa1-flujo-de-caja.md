@@ -65,6 +65,20 @@ Fuera de la Etapa 1 (siguientes etapas, ver §11):
 
 ## 3. Historias de usuario y criterios de aceptación
 
+### HU-0 · Fecha de inicio (configurable en la aplicación)
+Como administrador quiero elegir desde qué fecha la clínica lleva su flujo de caja en EWAH.
+- Se define en `/finanzas/configuracion` (permiso EDIT), con un asistente de arranque:
+  fecha de inicio → cuentas y su saldo a esa fecha → socios → medios de pago.
+- Puede ser hoy o una fecha pasada (por ejemplo, el 1 de enero para cargar el año). No futura.
+- Desde esa fecha nacen los ingresos automáticos de los tratamientos (HU-6): al fijarla en el
+  pasado, el sistema genera de una vez los ingresos de los tratamientos ya registrados
+  desde entonces y muestra cuántos y por cuánto antes de confirmar.
+- Los saldos iniciales de las cuentas quedan como movimientos de apertura en esa fecha.
+- **Cambiar la fecha** solo mientras no haya un mes cerrado: se anulan y regeneran las
+  aperturas y los ingresos automáticos (con confirmación y auditoría). Con meses cerrados,
+  la fecha queda fija.
+- Nada con fecha anterior al inicio se puede registrar.
+
 ### HU-1 · Configurar cuentas de dinero
 Como administrador quiero registrar las cuentas por donde se mueve la plata con su saldo
 inicial.
@@ -173,8 +187,10 @@ Como administrador quiero decir a qué cuenta llega cada medio de pago y cuánto
 
 ### HU-9 · Préstamos con socios
 - **Préstamo a socio** (sale plata): egreso de financiación que aumenta lo que el socio le
-  debe a la clínica. Aviso: la ley presume un interés mínimo sobre préstamos de la sociedad
-  a sus socios (art. 35 ET); lo define el contador.
+  debe a la clínica. **Sin intereses** (decisión de la clínica): el sistema no calcula ni
+  causa intereses. Queda una nota informativa para el contador: la ley tributaria presume un
+  interés mínimo en los préstamos de la sociedad a sus socios (art. 35 ET), que se trata en
+  la declaración de renta, no en el flujo de caja.
 - **Préstamo de socio** (entra plata): ingreso de financiación que aumenta lo que la clínica
   le debe al socio.
 - Las devoluciones se registran desde la ficha del socio y bajan el saldo correspondiente.
@@ -286,6 +302,7 @@ Migraciones desde la siguiente libre (hoy 0089; confirmar al construir).
 | `fin_tarifas_medio_pago` | `medio_pago_id`, `vigente_desde`, `porcentaje_comision`, `comision_incluye_iva`, `valor_fijo_comision`, `porcentaje_retefuente`, `porcentaje_reteica`, `porcentaje_reteiva`, `recargo_internacional`, `dias_habiles_abono` | Histórico |
 | `fin_movimientos` | `fecha`, `tipo` (`ingreso`, `egreso`, `transferencia`, `apertura`), `categoria`, `cuenta_id`, `cuenta_destino_id` (transferencias), `sede_id`, `tercero_tipo`/`tercero_id`/`tercero_nombre`, `socio_id`, `moneda`, `monto_original`, `tasa_cop`, `valor_cop` (generado), `monto_destino` + `tasa_destino` (transferencias entre monedas), `base`/`iva`/`retenciones` (opcionales), `descripcion`, `estado` (`registrado`, `pendiente_abono`, `por_cobrar`, `anulado`), `fecha_esperada`, `origen` (`manual`, `tratamiento`, `bold_liquidacion`, `reembolso_socio`, `cierre`), `origen_id`, `liquidacion_id`, `soporte_storage_path`/`nombre`, `anula_a`, `anulado_motivo`, `datos_activo jsonb` | Inmutable; unique (`origen`, `origen_id`) en automáticos |
 | `fin_liquidaciones_pasarela` | `medio_pago_id`, `fecha`, `cuenta_banco_id`, `bruto`, `comision`, `retefuente`, `reteica`, `reteiva`, `neto_esperado`, `neto_real`, `diferencia`, `tarifa_id`, `soporte_storage_path` | La BD calcula y valida `bruto = neto_real + comisión + retenciones + diferencia` |
+| `fin_config` | `clinica_id` pk, `fecha_inicio`, `activado_por/en`, `historial jsonb` (cambios de fecha con motivo) | HU-0 |
 | `fin_periodos` | `anio`, `mes`, `estado`, `cerrado_por/en`, `reabierto_motivo`, `foto jsonb` (saldos e informe al cierre) | Lo heredará la contabilidad |
 | `fin_arqueos` | `periodo_id`, `cuenta_id`, `saldo_sistema`, `saldo_contado`, `diferencia`, `movimiento_id` | |
 | `fin_alertas_enviadas` | como las de SST | Idempotencia del cron |
@@ -319,6 +336,7 @@ pdf, jpg, png, webp; 10 MB) con la subida firmada existente.
 | N7 | Tratamiento nuevo no anulado con fecha ≥ activación y valor > 0 → ingreso; anulado → anulación del ingreso; medio sin cuenta → "por revisar" |
 | N8 | Mes cerrado: ninguna inserción con fecha en él (trigger); reabrir exige APPROVE y motivo |
 | N9 | Anular = movimiento inverso con `anula_a`; un movimiento anulado no se vuelve a anular; los automáticos solo se anulan desde su origen |
+| N11 | Ningún movimiento con fecha anterior a `fin_config.fecha_inicio`; los ingresos automáticos solo para tratamientos con fecha ≥ inicio; cambiar la fecha solo sin meses cerrados (anula y regenera aperturas e ingresos automáticos) |
 | N10 | Sin tasa no hay movimiento en divisa; si la tasa difiere más del 10 % de la última usada, se pide confirmación |
 
 ---
@@ -383,7 +401,7 @@ pdf, jpg, png, webp; 10 MB) con la subida firmada existente.
 
 | Fase | Contenido |
 |---|---|
-| FC1 · Cimientos | Módulo y permisos, categorías (global y clínica), cuentas con saldo inicial, socios, configuración |
+| FC1 · Cimientos | Módulo y permisos, asistente de arranque con **fecha de inicio configurable**, categorías (global y clínica), cuentas con saldo inicial, socios |
 | FC2 · Movimientos | Registrar ingreso, egreso y transferencia; divisas; soporte; lista y anulación; tablero básico |
 | FC3 · Ingresos desde tratamientos | Trigger, medios de pago → cuenta, "por revisar", activación |
 | FC4 · Bold y tarifas | Tarifas por medio con simulador, pendientes, liquidación |
@@ -403,6 +421,7 @@ pdf, jpg, png, webp; 10 MB) con la subida firmada existente.
    registradas, depreciación, cronograma integrado con Habilitación y SG-SST.
 4. **Etapa 5 · Supersalud**: FT001… según la norma.
 
-Preguntas para el contador que sí afectan la Etapa 1: fecha de arranque y saldos iniciales
-de cada cuenta; si los socios reciben interés por los préstamos; si la prepagada se pacta
-como pago no salarial (solo cambia la cuenta, no el flujo).
+Decisiones del usuario: la **fecha de inicio se configura en la aplicación** (HU-0) y los
+**préstamos con socios no generan intereses** (HU-9). Pregunta que queda para el contador,
+sin bloquear la Etapa 1: si la prepagada se pacta como pago no salarial (solo cambia la
+cuenta contable, no el flujo).
