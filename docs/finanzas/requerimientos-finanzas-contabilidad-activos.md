@@ -591,5 +591,19 @@ configura) y Supersalud (2, según la norma). Siguen abiertas las demás.
 4. **FT001, FT002… según la norma**: la aplicabilidad la calcula el sistema con el perfil de
    Habilitación y las obligaciones ya sembradas, no una casilla manual (§4.10).
 5. **Lo que cobra Bold (u otro medio) es personalizable por medio de pago**, para cobros y
-   compras, con vigencia (`fin_tarifas_medio_pago`, R8 y R21). Pendiente: la imagen con la
-   tarifa actual de Bold para sembrar el ejemplo.
+   compras, con vigencia (`fin_tarifas_medio_pago`, R8 y R21). Tarifa que hoy le cobra Bold a
+   la clínica (captura del usuario, "en saldo de ventas"):
+
+   | Concepto | Valor | Campo |
+   |---|---|---|
+   | Tarifa estándar | 3,79 % + $300 | `porcentaje_comision` 3,79 · `valor_fijo_comision` 300 |
+   | ReteRenta | 1,5 % | `porcentaje_retefuente` 1,5 |
+   | ReteICA | 0,414 % (4,14 por mil) | `porcentaje_reteica` 0,414 |
+   | ReteIVA | 0 % | `porcentaje_reteiva` 0 (la venta de salud no lleva IVA) |
+
+   Ejemplo, cobro de $100.000: comisión $4.090, ReteRenta $1.500, ReteICA $414 →
+   **neto $93.996** (si además Bold factura IVA del 19 % sobre la comisión, $777 más → neto
+   $93.219). **Por confirmar con el reporte o la factura de Bold**: si el 3,79 % ya incluye
+   el IVA. Contablemente la comisión (y su IVA) van a gasto financiero 5305; ReteRenta y
+   ReteICA **no son gasto**: son anticipos de impuestos que la clínica descuenta en su
+   declaración (1355).
