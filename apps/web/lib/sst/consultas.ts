@@ -146,6 +146,7 @@ export async function getInvestigacion(supabase: Supabase, accidenteId: string):
 
 export type AccionSst = {
   id: string;
+  jerarquia: string | null;
   origen: string;
   origen_id: string | null;
   tipo: string;
@@ -157,10 +158,17 @@ export type AccionSst = {
   cierre_observacion: string | null;
 };
 
+const ACCION_SELECT = "id, jerarquia, origen, origen_id, tipo, descripcion, responsable_id, fecha_compromiso, estado, fecha_cierre, cierre_observacion";
+
+export async function getAccionesDeOrigen(supabase: Supabase, origen: string): Promise<AccionSst[]> {
+  const { data } = await supabase.from("sst_acciones").select(ACCION_SELECT).eq("origen", origen).order("created_at");
+  return (data ?? []) as AccionSst[];
+}
+
 export async function getAcciones(supabase: Supabase, origen: string, origenId: string): Promise<AccionSst[]> {
   const { data } = await supabase
     .from("sst_acciones")
-    .select("id, origen, origen_id, tipo, descripcion, responsable_id, fecha_compromiso, estado, fecha_cierre, cierre_observacion")
+    .select(ACCION_SELECT)
     .eq("origen", origen)
     .eq("origen_id", origenId)
     .order("created_at");
@@ -211,4 +219,44 @@ export async function getDocumentosSst(supabase: Supabase): Promise<DocumentosSs
     tipos: (tipos.data ?? []) as DocumentosSst["tipos"],
     versiones: (versiones.data ?? []) as unknown as VersionDocumentoSst[],
   };
+}
+
+// ============================================================
+// F5 · Matriz de peligros
+// ============================================================
+export type PeligroSst = {
+  id: string;
+  sede_id: string | null;
+  proceso: string;
+  actividad: string;
+  cargos: string | null;
+  rutinaria: boolean;
+  clasificacion: string;
+  descripcion: string;
+  efectos: string | null;
+  expuestos: number;
+  control_fuente: string | null;
+  control_medio: string | null;
+  control_individuo: string | null;
+  nd: number;
+  ne: number;
+  nc: number;
+  np: number;
+  nr: number;
+  nivel_riesgo: "I" | "II" | "III" | "IV";
+  peor_consecuencia: string | null;
+  requisito_legal: string | null;
+  updated_at: string;
+};
+
+export async function getPeligros(supabase: Supabase): Promise<PeligroSst[]> {
+  const { data, error } = await supabase
+    .from("sst_peligros")
+    .select(
+      "id, sede_id, proceso, actividad, cargos, rutinaria, clasificacion, descripcion, efectos, expuestos, control_fuente, control_medio, control_individuo, nd, ne, nc, np, nr, nivel_riesgo, peor_consecuencia, requisito_legal, updated_at",
+    )
+    .eq("activo", true)
+    .order("nr", { ascending: false });
+  if (error) console.error("[sst] getPeligros", error);
+  return (data ?? []) as PeligroSst[];
 }

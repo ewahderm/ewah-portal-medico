@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { PlusIcon } from "lucide-react";
 import { avanzarAccion, crearAccion } from "@/lib/sst/eventos";
 import { ESTADOS_ACCION, TIPOS_ACCION, etiqueta } from "@/lib/sst/constantes";
+import { JERARQUIA } from "@/lib/sst/gtc45";
 import type { AccionSst } from "@/lib/sst/consultas";
 import { diasHasta, fechaLegible, hoyColombiaCliente, sumarDias } from "@/lib/habilitacion/ruta";
 import { toast } from "@/components/ui/toast";
@@ -16,15 +17,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
+// Plan de acción de cualquier origen (investigación de un evento o peligro
+// de la matriz, que además pide el tipo de control de la jerarquía).
 export function PlanAccion({
-  investigacionId,
+  origen,
+  origenId,
   acciones,
   usuarios,
   nombres,
   puedeCrear,
   puedeEditar,
 }: {
-  investigacionId: string;
+  origen: "investigacion" | "matriz";
+  origenId: string;
   acciones: AccionSst[];
   usuarios: { id: string; nombre: string }[];
   nombres: Record<string, string>;
@@ -42,7 +47,7 @@ export function PlanAccion({
       </ul>
       {puedeCrear ? (
         nueva ? (
-          <NuevaAccion investigacionId={investigacionId} usuarios={usuarios} onCerrar={() => setNueva(false)} />
+          <NuevaAccion origen={origen} origenId={origenId} usuarios={usuarios} onCerrar={() => setNueva(false)} />
         ) : (
           <Button variant="outline" size="sm" onClick={() => setNueva(true)}>
             <PlusIcon /> Agregar acción
@@ -77,7 +82,7 @@ function AccionItem({ accion: a, responsable, puedeEditar }: { accion: AccionSst
           {vencida ? "Vencida" : etiqueta(ESTADOS_ACCION, a.estado)}
         </Badge>
         <span className="text-xs text-muted-foreground">
-          {etiqueta(TIPOS_ACCION, a.tipo)} · {responsable ?? "—"} · para el {fechaLegible(a.fecha_compromiso)}
+          {a.jerarquia ? etiqueta(JERARQUIA, a.jerarquia) : etiqueta(TIPOS_ACCION, a.tipo)} · {responsable ?? "—"} · para el {fechaLegible(a.fecha_compromiso)}
         </span>
       </div>
       <p>{a.descripcion}</p>
@@ -118,7 +123,17 @@ function AccionItem({ accion: a, responsable, puedeEditar }: { accion: AccionSst
   );
 }
 
-function NuevaAccion({ investigacionId, usuarios, onCerrar }: { investigacionId: string; usuarios: { id: string; nombre: string }[]; onCerrar: () => void }) {
+function NuevaAccion({
+  origen,
+  origenId,
+  usuarios,
+  onCerrar,
+}: {
+  origen: "investigacion" | "matriz";
+  origenId: string;
+  usuarios: { id: string; nombre: string }[];
+  onCerrar: () => void;
+}) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [pendiente, setPendiente] = useState(false);
@@ -130,9 +145,10 @@ function NuevaAccion({ investigacionId, usuarios, onCerrar }: { investigacionId:
     setPendiente(true);
     setError(null);
     const r = await crearAccion({
-      origen: "investigacion",
-      origenId: investigacionId,
-      tipo: String(fd.get("tipo") ?? "correctiva"),
+      origen,
+      origenId,
+      tipo: origen === "matriz" ? "preventiva" : String(fd.get("tipo") ?? "correctiva"),
+      jerarquia: origen === "matriz" ? String(fd.get("jerarquia") ?? "administrativo") : null,
       descripcion: String(fd.get("descripcion") ?? ""),
       responsableId: String(fd.get("responsableId") ?? ""),
       fechaCompromiso: String(fd.get("fechaCompromiso") ?? ""),
@@ -152,21 +168,28 @@ function NuevaAccion({ investigacionId, usuarios, onCerrar }: { investigacionId:
         </Alert>
       ) : null}
       <div className="space-y-1">
-        <Label htmlFor="descripcionAccion">Acción</Label>
-        <Textarea id="descripcionAccion" name="descripcion" rows={2} minLength={10} maxLength={2000} required />
+        <Label htmlFor={`descripcionAccion-${origenId}`}>{origen === "matriz" ? "Medida de intervención" : "Acción"}</Label>
+        <Textarea id={`descripcionAccion-${origenId}`} name="descripcion" rows={2} minLength={10} maxLength={2000} required />
       </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        {origen === "matriz" ? (
+          <div className="space-y-1">
+            <Label htmlFor={`jerarquia-${origenId}`}>Tipo de control</Label>
+            <Combobox id={`jerarquia-${origenId}`} name="jerarquia" items={JERARQUIA.map((j) => ({ value: j.value, label: j.label }))} defaultValue="administrativo" />
+          </div>
+        ) : (
+          <div className="space-y-1">
+            <Label htmlFor="tipoAccion">Tipo</Label>
+            <Combobox id="tipoAccion" name="tipo" items={TIPOS_ACCION.map((t) => ({ value: t.value, label: t.label }))} defaultValue="correctiva" />
+          </div>
+        )}
         <div className="space-y-1">
-          <Label htmlFor="tipoAccion">Tipo</Label>
-          <Combobox id="tipoAccion" name="tipo" items={TIPOS_ACCION.map((t) => ({ value: t.value, label: t.label }))} defaultValue="correctiva" />
+          <Label htmlFor={`responsableId-${origenId}`}>Responsable</Label>
+          <Combobox id={`responsableId-${origenId}`} name="responsableId" items={usuarios.map((u) => ({ value: u.id, label: u.nombre }))} required />
         </div>
         <div className="space-y-1">
-          <Label htmlFor="responsableId">Responsable</Label>
-          <Combobox id="responsableId" name="responsableId" items={usuarios.map((u) => ({ value: u.id, label: u.nombre }))} required />
-        </div>
-        <div className="space-y-1">
-          <Label htmlFor="fechaCompromiso">Para cuándo</Label>
-          <Input id="fechaCompromiso" name="fechaCompromiso" type="date" min={hoy} defaultValue={sumarDias(hoy, 30)} required />
+          <Label htmlFor={`fechaCompromiso-${origenId}`}>Para cuándo</Label>
+          <Input id={`fechaCompromiso-${origenId}`} name="fechaCompromiso" type="date" min={hoy} defaultValue={sumarDias(hoy, 30)} required />
         </div>
       </div>
       <div className="flex justify-end gap-2">

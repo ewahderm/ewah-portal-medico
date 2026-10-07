@@ -58,8 +58,8 @@ await paso("investigación: guardar, subir informe y cerrar", async () => {
 });
 await paso("plan de acción: crear y cerrar", async () => {
   await page.getByRole("button", { name: "Agregar acción" }).click();
-  await page.fill("#descripcionAccion", "Ubicar un guardián al alcance en cada consultorio");
-  await elegir("responsableId", "Admin Local");
+  await page.locator("textarea[id^=descripcionAccion]").fill("Ubicar un guardián al alcance en cada consultorio");
+  await page.locator("[id^=responsableId]").click(); await page.getByRole("option", { name: "Admin Local" }).click();
   await page.getByRole("button", { name: "Agregar", exact: true }).click();
   await page.getByText("Acción agregada").waitFor();
   await page.getByRole("button", { name: "Cerrar", exact: true }).click();

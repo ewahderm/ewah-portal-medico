@@ -15,7 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SemaforoBadge } from "../../../habilitacion/_components/semaforo-badge";
 import { SeguimientoForm } from "./seguimiento-form";
 import { InvestigacionForm } from "./investigacion-form";
-import { PlanAccion } from "./plan-accion";
+import { PlanAccion } from "../../_components/plan-accion";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -154,7 +154,8 @@ export default async function EventoPage({ params }: { params: Promise<{ id: str
           </CardHeader>
           <CardContent>
             <PlanAccion
-              investigacionId={investigacion.id}
+              origen="investigacion"
+              origenId={investigacion.id}
               acciones={acciones}
               usuarios={usuarios}
               nombres={nombresUsuarios}

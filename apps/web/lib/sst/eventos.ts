@@ -20,6 +20,7 @@ import {
   verificarArchivoSubido,
 } from "@/lib/habilitacion/servidor";
 import { GRAVEDADES, METODOLOGIAS, ROLES_EQUIPO, TIPOS_ACCION, TIPOS_EVENTO } from "@/lib/sst/constantes";
+import { JERARQUIA } from "@/lib/sst/gtc45";
 
 type Resultado = { error?: string };
 
@@ -241,17 +242,20 @@ export async function urlInforme(accidenteId: string): Promise<{ error?: string;
   return firmar(supabase, data.informe_storage_path, data.informe_nombre_archivo, "sst");
 }
 
-// Plan de acción (genérico; hoy desde investigaciones).
+// Plan de acción (genérico: investigaciones y matriz de peligros).
 export async function crearAccion(input: {
-  origen: "investigacion";
+  origen: "investigacion" | "matriz";
   origenId: string;
   tipo: string;
   descripcion: string;
   responsableId: string;
   fechaCompromiso: string;
+  jerarquia?: string | null;
 }): Promise<Resultado> {
+  if (input.origen !== "investigacion" && input.origen !== "matriz") return { error: "Origen inválido." };
   if (!esUuid(input.origenId) || !esUuid(input.responsableId)) return { error: "Datos inválidos." };
   if (!TIPOS_ACCION.some((t) => t.value === input.tipo)) return { error: "Tipo de acción inválido." };
+  if (input.jerarquia && !JERARQUIA.some((j) => j.value === input.jerarquia)) return { error: "Tipo de control inválido." };
   const descripcion = input.descripcion.trim();
   if (descripcion.length < 10 || descripcion.length > 2000) return { error: "Describe la acción (al menos 10 caracteres)." };
   if (!FECHA_ISO.test(input.fechaCompromiso)) return { error: "Escribe la fecha compromiso." };
@@ -267,6 +271,7 @@ export async function crearAccion(input: {
     descripcion,
     responsable_id: input.responsableId,
     fecha_compromiso: input.fechaCompromiso,
+    jerarquia: input.jerarquia ?? null,
   });
   if (error) return { error: mensajeError("crearAccion", error, "No se pudo crear la acción.") };
   revalidar();
