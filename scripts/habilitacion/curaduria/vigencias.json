@@ -1,0 +1,25 @@
+{
+  "descripcion": "Criterios con vigencia futura por la Res. 914 de 2025 (D4, decisión del usuario: hoy son exigibles y se muestran con la insignia 'Deja de exigirse el 3-ene-2027'; ese día salen solos del conjunto aplicable sin migración ni cron). Se revisaron a mano contra el art. 14 (derogatorias) y el art. 13 (modificación) de la Res. 914/2025 en la compilación de Supersalud.",
+  "norma": "Resolución 914 de 2025 (MinSalud), arts. 13, 14 y 15 (rige 18 meses después de su publicación en el Diario Oficial)",
+  "url": "https://normograma.supersalud.gov.co/compilacion/docs/resolucion_minsaludps_0914_2025.htm",
+  "fecha_efecto": "2027-01-03",
+  "curado_por": "desarrollo-fullstack (F0). Revisión pendiente: investigador-regulatorio.",
+  "fecha_curaduria": "2026-10-06",
+  "derogados": [
+    "11.1.IN.25", "11.1.IN.25.1", "11.1.IN.25.2", "11.1.IN.25.3", "11.1.IN.25.4", "11.1.IN.25.5", "11.1.IN.25.6", "11.1.IN.25.7", "11.1.IN.25.8",
+    "11.1.IN.26", "11.1.IN.26.1", "11.1.IN.26.2",
+    "11.1.IN.27", "11.1.IN.27.1", "11.1.IN.27.2", "11.1.IN.27.2.1", "11.1.IN.27.2.2", "11.1.IN.27.2.3", "11.1.IN.27.3",
+    "11.1.PP.13", "11.1.PP.13.1", "11.1.PP.13.1.1", "11.1.PP.13.1.2", "11.1.PP.13.1.3", "11.1.PP.13.1.4", "11.1.PP.13.1.5", "11.1.PP.13.1.6", "11.1.PP.13.1.7", "11.1.PP.13.1.8", "11.1.PP.13.1.9",
+    "11.1.PP.14",
+    "11.1.PP.16", "11.1.PP.16.1", "11.1.PP.16.2", "11.1.PP.16.3",
+    "11.1.HC.11", "11.1.HC.11.1", "11.1.HC.11.2", "11.1.HC.11.3", "11.1.HC.11.4", "11.1.HC.11.5",
+    "11.2.1.DO.23.7",
+    "11.5.1.IN.8.4", "11.5.1.IN.8.5"
+  ],
+  "modificados": [
+    {
+      "codigo": "11.2.1.DO.23.6",
+      "nota": "Art. 13: el texto de 2019 rige hasta el 2027-01-02 (vigente_hasta = 2027-01-03) y desde el 2027-01-03 rige el texto nuevo (fila aparte en criterios-adicionales.json). Son criterios distintos para evaluación: el texto nuevo aparece 'Pendiente' ese día."
+    }
+  ]
+}

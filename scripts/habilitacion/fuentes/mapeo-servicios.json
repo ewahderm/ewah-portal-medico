@@ -1,0 +1,822 @@
+[
+  {
+    "practica_medica_id": "e02fe4a9-da69-463c-8036-125cb0670197",
+    "grupo_usuario": "Consulta Externa",
+    "nombre_usuario": "Medicina General",
+    "numeral_res3100": "11.2.1",
+    "nombre_res3100": "Servicio de consulta externa general",
+    "numerales_res3100": [
+      {
+        "numeral": "11.2.1",
+        "nombre": "Servicio de consulta externa general"
+      }
+    ],
+    "siempre_aplica_tambien": "11.1",
+    "nota": "Consulta por profesional de la salud no especialista (TH 11.2.1 crit. 2: 'profesional de la salud de acuerdo con el servicio a ofertar'). La dotación 11.2.1 cita expresamente 'consulta externa de medicina general'."
+  },
+  {
+    "practica_medica_id": "66f0e259-bda1-4da2-a2ec-ed1862310cad",
+    "grupo_usuario": "Consulta Externa",
+    "nombre_usuario": "Enfermería",
+    "numeral_res3100": "11.2.1",
+    "nombre_res3100": "Servicio de consulta externa general",
+    "numerales_res3100": [
+      {
+        "numeral": "11.2.1",
+        "nombre": "Servicio de consulta externa general"
+      }
+    ],
+    "siempre_aplica_tambien": "11.1",
+    "nota": "Profesional de la salud no especialista → consulta externa general. La Res. 3100 no enumera profesiones por servicio; inferido de TH 11.2.1 vs 11.2.2."
+  },
+  {
+    "practica_medica_id": "197b86a8-bbfc-4db8-9dd2-99af9bd2e7db",
+    "grupo_usuario": "Consulta Externa",
+    "nombre_usuario": "Odontología General",
+    "numeral_res3100": "11.2.1",
+    "nombre_res3100": "Servicio de consulta externa general",
+    "numerales_res3100": [
+      {
+        "numeral": "11.2.1",
+        "nombre": "Servicio de consulta externa general"
+      }
+    ],
+    "siempre_aplica_tambien": "11.1",
+    "nota": "11.2.1 incluye 'consultorio odontológico' en infraestructura y dotación."
+  },
+  {
+    "practica_medica_id": "7d80642f-4ddc-4696-86bd-98b2d995c32c",
+    "grupo_usuario": "Consulta Externa",
+    "nombre_usuario": "Nutrición y Dietética",
+    "numeral_res3100": "11.2.1",
+    "nombre_res3100": "Servicio de consulta externa general",
+    "numerales_res3100": [
+      {
+        "numeral": "11.2.1",
+        "nombre": "Servicio de consulta externa general"
+      }
+    ],
+    "siempre_aplica_tambien": "11.1",
+    "nota": "Profesional no especialista → consulta externa general (inferido; la norma no lista profesiones)."
+  },
+  {
+    "practica_medica_id": "8b636bd9-e1c3-4689-81be-b2ca766ed41d",
+    "grupo_usuario": "Consulta Externa",
+    "nombre_usuario": "Psicología",
+    "numeral_res3100": "11.2.1",
+    "nombre_res3100": "Servicio de consulta externa general",
+    "numerales_res3100": [
+      {
+        "numeral": "11.2.1",
+        "nombre": "Servicio de consulta externa general"
+      }
+    ],
+    "siempre_aplica_tambien": "11.1",
+    "nota": "Profesional no especialista → consulta externa general (inferido). Si es psiquiatría o psicología especializada sería 11.2.2."
+  },
+  {
+    "practica_medica_id": "92801779-5797-415c-b2d4-0940d3f961c4",
+    "grupo_usuario": "Consulta Externa",
+    "nombre_usuario": "Optometría",
+    "numeral_res3100": "11.2.1",
+    "nombre_res3100": "Servicio de consulta externa general",
+    "numerales_res3100": [
+      {
+        "numeral": "11.2.1",
+        "nombre": "Servicio de consulta externa general"
+      }
+    ],
+    "siempre_aplica_tambien": "11.1",
+    "nota": "Profesional no especialista → consulta externa general (inferido)."
+  },
+  {
+    "practica_medica_id": "ca345094-484f-4862-abfa-bee60fe80288",
+    "grupo_usuario": "Consulta Externa",
+    "nombre_usuario": "Fisioterapia",
+    "numeral_res3100": "11.3.1",
+    "nombre_res3100": "Servicio de terapias",
+    "numerales_res3100": [
+      {
+        "numeral": "11.3.1",
+        "nombre": "Servicio de terapias"
+      }
+    ],
+    "siempre_aplica_tambien": "11.1",
+    "nota": "El usuario lo cargó en Consulta Externa, pero la Res. 3100 lo ubica en el grupo Apoyo diagnóstico: 11.3.1 'Incluye: Fisioterapia o terapia física…' (pág. 94)."
+  },
+  {
+    "practica_medica_id": "b1a73f46-6a9a-4969-b9f8-b002cb8a3466",
+    "grupo_usuario": "Consulta Externa",
+    "nombre_usuario": "Fonoaudiología y/o Terapia del Lenguaje",
+    "numeral_res3100": "11.3.1",
+    "nombre_res3100": "Servicio de terapias",
+    "numerales_res3100": [
+      {
+        "numeral": "11.3.1",
+        "nombre": "Servicio de terapias"
+      }
+    ],
+    "siempre_aplica_tambien": "11.1",
+    "nota": "11.3.1 incluye 'fonoaudiología o terapia del lenguaje'. Grupo distinto al que cargó el usuario."
+  },
+  {
+    "practica_medica_id": "98b32dcc-2710-450d-a680-90fd025fbce6",
+    "grupo_usuario": "Consulta Externa",
+    "nombre_usuario": "Terapia Ocupacional",
+    "numeral_res3100": "11.3.1",
+    "nombre_res3100": "Servicio de terapias",
+    "numerales_res3100": [
+      {
+        "numeral": "11.3.1",
+        "nombre": "Servicio de terapias"
+      }
+    ],
+    "siempre_aplica_tambien": "11.1",
+    "nota": "11.3.1 incluye 'terapia ocupacional'. Grupo distinto al que cargó el usuario."
+  },
+  {
+    "practica_medica_id": "98fb0ad4-fa98-40e8-8ed0-3b9a3f3aa75e",
+    "grupo_usuario": "Consulta Externa",
+    "nombre_usuario": "Terapia Respiratoria",
+    "numeral_res3100": "11.3.1",
+    "nombre_res3100": "Servicio de terapias",
+    "numerales_res3100": [
+      {
+        "numeral": "11.3.1",
+        "nombre": "Servicio de terapias"
+      }
+    ],
+    "siempre_aplica_tambien": "11.1",
+    "nota": "11.3.1 incluye 'terapia respiratoria'. Grupo distinto al que cargó el usuario."
+  },
+  {
+    "practica_medica_id": "2539d29d-68d6-4012-a09a-7efcc6ffbe39",
+    "grupo_usuario": "Consulta Externa",
+    "nombre_usuario": "Vacunación",
+    "numeral_res3100": "11.2.3",
+    "nombre_res3100": "Servicio de vacunación",
+    "numerales_res3100": [
+      {
+        "numeral": "11.2.3",
+        "nombre": "Servicio de vacunación"
+      }
+    ],
+    "siempre_aplica_tambien": "11.1",
+    "nota": null
+  },
+  {
+    "practica_medica_id": "9892ea0f-e201-4eea-aa64-8f3a2c392257",
+    "grupo_usuario": "Consulta Externa",
+    "nombre_usuario": "Seguridad y Salud en el Trabajo",
+    "numeral_res3100": "11.2.4",
+    "nombre_res3100": "Servicio de seguridad y salud en el trabajo",
+    "numerales_res3100": [
+      {
+        "numeral": "11.2.4",
+        "nombre": "Servicio de seguridad y salud en el trabajo"
+      }
+    ],
+    "siempre_aplica_tambien": "11.1",
+    "nota": null
+  },
+  {
+    "practica_medica_id": "9e3cc4a3-2aa9-460e-b6c5-dac0de69bf15",
+    "grupo_usuario": "Consulta Externa",
+    "nombre_usuario": "Especialidades Médicas (Cardiología, Neumología, Pediatría, Medicina Interna, Dermatología, Neurología, etc.)",
+    "numeral_res3100": "11.2.2",
+    "nombre_res3100": "Servicio de consulta externa especializada",
+    "numerales_res3100": [
+      {
+        "numeral": "11.2.2",
+        "nombre": "Servicio de consulta externa especializada"
+      }
+    ],
+    "siempre_aplica_tambien": "11.1",
+    "nota": "Consulta externa especializada (TH exige profesional especialista)."
+  },
+  {
+    "practica_medica_id": "0bfc65b5-ee56-49ab-8b3a-bceb76fa5800",
+    "grupo_usuario": "Consulta Externa",
+    "nombre_usuario": "Especialidades Quirúrgicas (Cirugía General, Ortopedia, Urología, Cirugía Plástica, etc.)",
+    "numeral_res3100": "11.2.2",
+    "nombre_res3100": "Servicio de consulta externa especializada",
+    "numerales_res3100": [
+      {
+        "numeral": "11.2.2",
+        "nombre": "Servicio de consulta externa especializada"
+      }
+    ],
+    "siempre_aplica_tambien": "11.1",
+    "nota": "Solo la CONSULTA de especialidades quirúrgicas. Si además opera, aplica 11.5.1 Cirugía."
+  },
+  {
+    "practica_medica_id": "276ea5d4-c02e-46cd-ad7f-c2f74a7a6edf",
+    "grupo_usuario": "Consulta Externa",
+    "nombre_usuario": "Especialidades Odontológicas (Ortodoncia, Endodoncia, Periodoncia, Cirugía Maxilofacial, etc.)",
+    "numeral_res3100": "11.2.2",
+    "nombre_res3100": "Servicio de consulta externa especializada",
+    "numerales_res3100": [
+      {
+        "numeral": "11.2.2",
+        "nombre": "Servicio de consulta externa especializada"
+      }
+    ],
+    "siempre_aplica_tambien": "11.1",
+    "nota": "Consulta externa especializada odontológica."
+  },
+  {
+    "practica_medica_id": "3a886c34-ff22-4cd8-9174-0112a812f09e",
+    "grupo_usuario": "Consulta Externa",
+    "nombre_usuario": "Dolor y Cuidados Paliativos",
+    "numeral_res3100": "11.2.2",
+    "nombre_res3100": "Servicio de consulta externa especializada",
+    "numerales_res3100": [
+      {
+        "numeral": "11.2.2",
+        "nombre": "Servicio de consulta externa especializada"
+      }
+    ],
+    "siempre_aplica_tambien": "11.1",
+    "nota": "11.1 TH crit. 5 menciona expresamente el 'servicio de consulta externa especializada de dolor y cuidado paliativo'."
+  },
+  {
+    "practica_medica_id": "5fdfd5d5-c1ae-4caa-aca0-3edc4d157a8e",
+    "grupo_usuario": "Apoyo Diagnóstico",
+    "nombre_usuario": "Toma de Muestras de Laboratorio Clínico",
+    "numeral_res3100": "11.3.11",
+    "nombre_res3100": "Servicio de toma de muestras de laboratorio clínico",
+    "numerales_res3100": [
+      {
+        "numeral": "11.3.11",
+        "nombre": "Servicio de toma de muestras de laboratorio clínico"
+      }
+    ],
+    "siempre_aplica_tambien": "11.1",
+    "nota": null
+  },
+  {
+    "practica_medica_id": "f39eb155-2ca6-495b-a24c-bbd434042115",
+    "grupo_usuario": "Apoyo Diagnóstico",
+    "nombre_usuario": "Laboratorio Clínico",
+    "numeral_res3100": "11.3.12",
+    "nombre_res3100": "Servicio de laboratorio clínico",
+    "numerales_res3100": [
+      {
+        "numeral": "11.3.12",
+        "nombre": "Servicio de laboratorio clínico"
+      }
+    ],
+    "siempre_aplica_tambien": "11.1",
+    "nota": "Si se habilita laboratorio clínico no es necesario habilitar toma de muestras (descripción 11.3.12)."
+  },
+  {
+    "practica_medica_id": "6ec75fbd-1289-4835-9d0d-43b0cd504d55",
+    "grupo_usuario": "Apoyo Diagnóstico",
+    "nombre_usuario": "Toma de Muestras de Cuello Uterino y Ginecológicas",
+    "numeral_res3100": "11.3.13",
+    "nombre_res3100": "Servicio de toma de muestras de cuello uterino y ginecológicas",
+    "numerales_res3100": [
+      {
+        "numeral": "11.3.13",
+        "nombre": "Servicio de toma de muestras de cuello uterino y ginecológicas"
+      }
+    ],
+    "siempre_aplica_tambien": "11.1",
+    "nota": null
+  },
+  {
+    "practica_medica_id": "9529caa1-c14d-4197-b776-a97b1369cc9f",
+    "grupo_usuario": "Apoyo Diagnóstico",
+    "nombre_usuario": "Laboratorio de Citologías Cérvico-uterinas",
+    "numeral_res3100": "11.3.14",
+    "nombre_res3100": "Servicio de laboratorio de citologías cervico-uterinas",
+    "numerales_res3100": [
+      {
+        "numeral": "11.3.14",
+        "nombre": "Servicio de laboratorio de citologías cervico-uterinas"
+      }
+    ],
+    "siempre_aplica_tambien": "11.1",
+    "nota": null
+  },
+  {
+    "practica_medica_id": "e7c7bee8-0366-4b13-92a0-e03c64f94fbc",
+    "grupo_usuario": "Apoyo Diagnóstico",
+    "nombre_usuario": "Servicio de Histotecnología",
+    "numeral_res3100": "11.3.15",
+    "nombre_res3100": "Servicio de laboratorio de histotecnología",
+    "numerales_res3100": [
+      {
+        "numeral": "11.3.15",
+        "nombre": "Servicio de laboratorio de histotecnología"
+      }
+    ],
+    "siempre_aplica_tambien": "11.1",
+    "nota": null
+  },
+  {
+    "practica_medica_id": "efbf28ac-6aac-483b-bf93-e5df688f76c4",
+    "grupo_usuario": "Apoyo Diagnóstico",
+    "nombre_usuario": "Patología",
+    "numeral_res3100": "11.3.16",
+    "nombre_res3100": "Servicio de patología",
+    "numerales_res3100": [
+      {
+        "numeral": "11.3.16",
+        "nombre": "Servicio de patología"
+      }
+    ],
+    "siempre_aplica_tambien": "11.1",
+    "nota": null
+  },
+  {
+    "practica_medica_id": "20050cd9-9b7c-4348-9360-343994a7f57f",
+    "grupo_usuario": "Apoyo Diagnóstico",
+    "nombre_usuario": "Radiología Odontológica",
+    "numeral_res3100": "11.3.3",
+    "nombre_res3100": "Servicio de radiología odontológica",
+    "numerales_res3100": [
+      {
+        "numeral": "11.3.3",
+        "nombre": "Servicio de radiología odontológica"
+      }
+    ],
+    "siempre_aplica_tambien": "11.1",
+    "nota": null
+  },
+  {
+    "practica_medica_id": "942d2354-b1cb-4483-bf3c-94769ca5e422",
+    "grupo_usuario": "Apoyo Diagnóstico",
+    "nombre_usuario": "Imágenes Diagnósticas (No Ionizantes - Ecografía, RM)",
+    "numeral_res3100": "11.3.4.2",
+    "nombre_res3100": "Imágenes diagnósticas — métodos diagnósticos con imágenes obtenidas mediante equipos generadores de radiaciones no ionizantes",
+    "numerales_res3100": [
+      {
+        "numeral": "11.3.4.2",
+        "nombre": "Imágenes diagnósticas — métodos diagnósticos con imágenes obtenidas mediante equipos generadores de radiaciones no ionizantes"
+      },
+      {
+        "numeral": "11.3.4",
+        "nombre": "Servicio de imágenes diagnósticas"
+      }
+    ],
+    "siempre_aplica_tambien": "11.1",
+    "nota": "Subnumeral de 11.3.4; la estructura (complejidad mediana) está en 11.3.4."
+  },
+  {
+    "practica_medica_id": "94abfea5-1382-4e52-b25d-2509d691c17b",
+    "grupo_usuario": "Apoyo Diagnóstico",
+    "nombre_usuario": "Imágenes Diagnósticas (Ionizantes - Rx, TAC, Mamografía)",
+    "numeral_res3100": "11.3.4.1",
+    "nombre_res3100": "Imágenes diagnósticas — métodos diagnósticos con imágenes obtenidas mediante equipos generadores de radiaciones ionizantes",
+    "numerales_res3100": [
+      {
+        "numeral": "11.3.4.1",
+        "nombre": "Imágenes diagnósticas — métodos diagnósticos con imágenes obtenidas mediante equipos generadores de radiaciones ionizantes"
+      },
+      {
+        "numeral": "11.3.4",
+        "nombre": "Servicio de imágenes diagnósticas"
+      }
+    ],
+    "siempre_aplica_tambien": "11.1",
+    "nota": "Subnumeral de 11.3.4; la estructura (complejidad baja/mediana/alta) está en 11.3.4."
+  },
+  {
+    "practica_medica_id": "fbf6b324-b66e-47c6-9d23-448bc934cde8",
+    "grupo_usuario": "Apoyo Diagnóstico",
+    "nombre_usuario": "Medicina Nuclear",
+    "numeral_res3100": "11.3.5",
+    "nombre_res3100": "Servicio de medicina nuclear",
+    "numerales_res3100": [
+      {
+        "numeral": "11.3.5",
+        "nombre": "Servicio de medicina nuclear"
+      }
+    ],
+    "siempre_aplica_tambien": "11.1",
+    "nota": null
+  },
+  {
+    "practica_medica_id": "e84fce88-ff63-4a51-b865-f5ea473a1983",
+    "grupo_usuario": "Apoyo Diagnóstico",
+    "nombre_usuario": "Radioterapia",
+    "numeral_res3100": "11.3.6",
+    "nombre_res3100": "Servicio de radioterapia",
+    "numerales_res3100": [
+      {
+        "numeral": "11.3.6",
+        "nombre": "Servicio de radioterapia"
+      }
+    ],
+    "siempre_aplica_tambien": "11.1",
+    "nota": null
+  },
+  {
+    "practica_medica_id": "970a9db2-ae49-453e-931f-e18f69b9ab45",
+    "grupo_usuario": "Apoyo Diagnóstico",
+    "nombre_usuario": "Quimioterapia",
+    "numeral_res3100": "11.3.7",
+    "nombre_res3100": "Servicio de quimioterapia",
+    "numerales_res3100": [
+      {
+        "numeral": "11.3.7",
+        "nombre": "Servicio de quimioterapia"
+      }
+    ],
+    "siempre_aplica_tambien": "11.1",
+    "nota": "Hay dos versiones en criterios.json: la de la Res. 1410/2022 (vigente, agrega la modalidad domiciliaria; ids 11.3.7.*) y el texto de 2019 (ids 11.3.7-2019.*) al que remiten los criterios 8-10 de 2022. Falta decisión jurídica sobre cuál usar para la modalidad intramural."
+  },
+  {
+    "practica_medica_id": "80d2b2d4-dc79-4c9d-aa4f-4acaa1f53649",
+    "grupo_usuario": "Apoyo Diagnóstico",
+    "nombre_usuario": "Diagnóstico Vascular",
+    "numeral_res3100": "11.3.8",
+    "nombre_res3100": "Servicio de diagnóstico vascular",
+    "numerales_res3100": [
+      {
+        "numeral": "11.3.8",
+        "nombre": "Servicio de diagnóstico vascular"
+      }
+    ],
+    "siempre_aplica_tambien": "11.1",
+    "nota": null
+  },
+  {
+    "practica_medica_id": "96a093f9-940a-4791-8f66-d33a7d129484",
+    "grupo_usuario": "Apoyo Diagnóstico",
+    "nombre_usuario": "Hemodinamia e Intervencionismo",
+    "numeral_res3100": "11.3.9",
+    "nombre_res3100": "Servicio de hemodinamia e intervencionismo",
+    "numerales_res3100": [
+      {
+        "numeral": "11.3.9",
+        "nombre": "Servicio de hemodinamia e intervencionismo"
+      }
+    ],
+    "siempre_aplica_tambien": "11.1",
+    "nota": null
+  },
+  {
+    "practica_medica_id": "f191bef6-8cab-49ec-92dc-4079e507ea17",
+    "grupo_usuario": "Apoyo Diagnóstico",
+    "nombre_usuario": "Gestión Pre-transfusional",
+    "numeral_res3100": "11.3.10",
+    "nombre_res3100": "Servicio de gestión pre transfusional",
+    "numerales_res3100": [
+      {
+        "numeral": "11.3.10",
+        "nombre": "Servicio de gestión pre transfusional"
+      }
+    ],
+    "siempre_aplica_tambien": "11.1",
+    "nota": "No puede habilitarse como servicio único (descripción 11.3.10)."
+  },
+  {
+    "practica_medica_id": "ad94593c-0f48-4c3b-97ed-e21ea45265c2",
+    "grupo_usuario": "Apoyo Diagnóstico",
+    "nombre_usuario": "Diálisis (Hemodiálisis y Peritoneal)",
+    "numeral_res3100": "11.3.17",
+    "nombre_res3100": "Servicio de diálisis",
+    "numerales_res3100": [
+      {
+        "numeral": "11.3.17",
+        "nombre": "Servicio de diálisis"
+      }
+    ],
+    "siempre_aplica_tambien": "11.1",
+    "nota": "Hemodiálisis = complejidad alta; diálisis peritoneal = mediana (estructura 11.3.17)."
+  },
+  {
+    "practica_medica_id": "9c748f25-044a-47c8-bb63-e9a8a6174719",
+    "grupo_usuario": "Apoyo Diagnóstico",
+    "nombre_usuario": "Servicio Farmacéutico",
+    "numeral_res3100": "11.3.2",
+    "nombre_res3100": "Servicio farmacéutico",
+    "numerales_res3100": [
+      {
+        "numeral": "11.3.2",
+        "nombre": "Servicio farmacéutico"
+      }
+    ],
+    "siempre_aplica_tambien": "11.1",
+    "nota": "No puede habilitarse como único servicio del portafolio (descripción 11.3.2)."
+  },
+  {
+    "practica_medica_id": "41e1876a-7674-4f75-a00b-1e93d0570539",
+    "grupo_usuario": "Internación",
+    "nombre_usuario": "Hospitalización General Adultos",
+    "numeral_res3100": "11.4.1",
+    "nombre_res3100": "Servicio de hospitalización",
+    "numerales_res3100": [
+      {
+        "numeral": "11.4.1",
+        "nombre": "Servicio de hospitalización"
+      }
+    ],
+    "siempre_aplica_tambien": "11.1",
+    "nota": "La Res. 3100 tiene un solo servicio de hospitalización (adultos y pediátrico juntos), por complejidad baja/mediana/alta."
+  },
+  {
+    "practica_medica_id": "2c07b523-86a1-41bf-a870-2c83c0c804e3",
+    "grupo_usuario": "Internación",
+    "nombre_usuario": "Hospitalización General Pediátrica",
+    "numeral_res3100": "11.4.1",
+    "nombre_res3100": "Servicio de hospitalización",
+    "numerales_res3100": [
+      {
+        "numeral": "11.4.1",
+        "nombre": "Servicio de hospitalización"
+      }
+    ],
+    "siempre_aplica_tambien": "11.1",
+    "nota": "Mismo servicio 11.4.1; no existe 'hospitalización pediátrica' como servicio separado."
+  },
+  {
+    "practica_medica_id": "65b71b1a-dfcc-4aa2-8fae-03fbb30158ef",
+    "grupo_usuario": "Internación",
+    "nombre_usuario": "Obstetricia",
+    "numeral_res3100": "11.4.1",
+    "nombre_res3100": "Servicio de hospitalización",
+    "numerales_res3100": [
+      {
+        "numeral": "11.4.1",
+        "nombre": "Servicio de hospitalización"
+      },
+      {
+        "numeral": "11.6.4",
+        "nombre": "Servicio para la atención del parto"
+      }
+    ],
+    "siempre_aplica_tambien": "11.1",
+    "nota": "SIN EQUIVALENTE DIRECTO: la Res. 3100 no tiene servicio 'obstetricia'. La internación obstétrica cae en 11.4.1 Hospitalización y el parto en 11.6.4 Atención del parto. Decidir con el usuario."
+  },
+  {
+    "practica_medica_id": "49e50cf6-f3be-4c3c-9e95-2a53f2290b05",
+    "grupo_usuario": "Internación",
+    "nombre_usuario": "Cuidado Intermedio (Adultos, Pediátrico, Neonatal)",
+    "numeral_res3100": "11.4.8",
+    "nombre_res3100": "Servicio de cuidado intermedio adulto",
+    "numerales_res3100": [
+      {
+        "numeral": "11.4.8",
+        "nombre": "Servicio de cuidado intermedio adulto"
+      },
+      {
+        "numeral": "11.4.6",
+        "nombre": "Servicio de cuidado intermedio pediátrico"
+      },
+      {
+        "numeral": "11.4.4",
+        "nombre": "Servicio de cuidado intermedio neonatal"
+      }
+    ],
+    "siempre_aplica_tambien": "11.1",
+    "nota": "UNO-A-MUCHOS: la norma tiene tres servicios distintos: 11.4.8 adulto, 11.4.6 pediátrico, 11.4.4 neonatal. Conviene dividir la fila del catálogo."
+  },
+  {
+    "practica_medica_id": "cfcbd41c-2354-427c-913a-b40fd638c766",
+    "grupo_usuario": "Internación",
+    "nombre_usuario": "Cuidado Intensivo (UCI Adultos, UCI Pediátrica, UCI Neonatal)",
+    "numeral_res3100": "11.4.9",
+    "nombre_res3100": "Servicio de cuidado intensivo adultos",
+    "numerales_res3100": [
+      {
+        "numeral": "11.4.9",
+        "nombre": "Servicio de cuidado intensivo adultos"
+      },
+      {
+        "numeral": "11.4.7",
+        "nombre": "Servicio de cuidado intensivo pediátrico"
+      },
+      {
+        "numeral": "11.4.5",
+        "nombre": "Servicio de cuidado intensivo neonatal"
+      }
+    ],
+    "siempre_aplica_tambien": "11.1",
+    "nota": "UNO-A-MUCHOS: 11.4.9 adultos, 11.4.7 pediátrico, 11.4.5 neonatal. Conviene dividir la fila del catálogo."
+  },
+  {
+    "practica_medica_id": "c1b09b07-739e-4ecb-a074-268d2de81b91",
+    "grupo_usuario": "Internación",
+    "nombre_usuario": "Unidad de Quemados (Adultos y Pediátrica)",
+    "numeral_res3100": "11.4.9",
+    "nombre_res3100": "Servicio de cuidado intensivo adultos",
+    "numerales_res3100": [
+      {
+        "numeral": "11.4.9",
+        "nombre": "Servicio de cuidado intensivo adultos"
+      },
+      {
+        "numeral": "11.4.7",
+        "nombre": "Servicio de cuidado intensivo pediátrico"
+      }
+    ],
+    "siempre_aplica_tambien": "11.1",
+    "nota": "SIN SERVICIO PROPIO: el paciente quemado crítico se rige por 11.4.9 (adulto) y 11.4.7 (pediátrico) según sus descripciones ('cumplirá con los criterios establecidos en el presente servicio para el paciente … quemado'). El quemado no crítico iría a 11.4.1."
+  },
+  {
+    "practica_medica_id": "77a7fd65-ca50-4c96-9406-00cd87207d04",
+    "grupo_usuario": "Internación",
+    "nombre_usuario": "Psiquiatría o Unidad de Salud Mental",
+    "numeral_res3100": "11.4.10",
+    "nombre_res3100": "Servicio de hospitalización en salud mental o consumo de sustancias psicoactivas",
+    "numerales_res3100": [
+      {
+        "numeral": "11.4.10",
+        "nombre": "Servicio de hospitalización en salud mental o consumo de sustancias psicoactivas"
+      }
+    ],
+    "siempre_aplica_tambien": "11.1",
+    "nota": "Hospitalización en salud mental o consumo de SPA."
+  },
+  {
+    "practica_medica_id": "6d954331-872d-4a68-9a69-cd38605f59e1",
+    "grupo_usuario": "Internación",
+    "nombre_usuario": "Cuidado Agudo en Salud Mental o Psiquiatría",
+    "numeral_res3100": "11.4.10",
+    "nombre_res3100": "Servicio de hospitalización en salud mental o consumo de sustancias psicoactivas",
+    "numerales_res3100": [
+      {
+        "numeral": "11.4.10",
+        "nombre": "Servicio de hospitalización en salud mental o consumo de sustancias psicoactivas"
+      }
+    ],
+    "siempre_aplica_tambien": "11.1",
+    "nota": "SIN SERVICIO PROPIO en la Res. 3100 (era un servicio de normas anteriores). Queda dentro de 11.4.10; duplica la fila anterior."
+  },
+  {
+    "practica_medica_id": "6473e5fc-20b5-4456-9cee-5494d03f470a",
+    "grupo_usuario": "Internación",
+    "nombre_usuario": "Atención Institucional de Paciente Crónico (con/sin ventilador)",
+    "numeral_res3100": "11.4.2",
+    "nombre_res3100": "Servicio de hospitalización paciente crónico",
+    "numerales_res3100": [
+      {
+        "numeral": "11.4.2",
+        "nombre": "Servicio de hospitalización paciente crónico"
+      }
+    ],
+    "siempre_aplica_tambien": "11.1",
+    "nota": "Hospitalización paciente crónico con y sin ventilador."
+  },
+  {
+    "practica_medica_id": "b9335740-ad76-451e-b604-19f13bca16f2",
+    "grupo_usuario": "Internación",
+    "nombre_usuario": "Atención a Consumidor de Sustancias Psicoactivas",
+    "numeral_res3100": "11.4.12",
+    "nombre_res3100": "Servicio para el cuidado básico del consumo de sustancias psicoactivas",
+    "numerales_res3100": [
+      {
+        "numeral": "11.4.12",
+        "nombre": "Servicio para el cuidado básico del consumo de sustancias psicoactivas"
+      },
+      {
+        "numeral": "11.4.10",
+        "nombre": "Servicio de hospitalización en salud mental o consumo de sustancias psicoactivas"
+      }
+    ],
+    "siempre_aplica_tambien": "11.1",
+    "nota": "AMBIGUO: si es internación no hospitalaria con pernoctada → 11.4.12; si es hospitalización → 11.4.10; si es parcial → 11.4.11."
+  },
+  {
+    "practica_medica_id": "b7e06fa7-cdd0-42ad-8444-e8ca7527249b",
+    "grupo_usuario": "Internación",
+    "nombre_usuario": "Internación Parcial (Hospital de Día)",
+    "numeral_res3100": "11.4.11",
+    "nombre_res3100": "Servicio de hospitalización parcial",
+    "numerales_res3100": [
+      {
+        "numeral": "11.4.11",
+        "nombre": "Servicio de hospitalización parcial"
+      }
+    ],
+    "siempre_aplica_tambien": "11.1",
+    "nota": "Hospitalización parcial (diurna, nocturna, fin de semana)."
+  },
+  {
+    "practica_medica_id": "17e4ac6c-80d3-4659-a5cc-3cc254a79481",
+    "grupo_usuario": "Quirúrgico",
+    "nombre_usuario": "Cirugía General / Especializada",
+    "numeral_res3100": "11.5.1",
+    "nombre_res3100": "Servicio de cirugía",
+    "numerales_res3100": [
+      {
+        "numeral": "11.5.1",
+        "nombre": "Servicio de cirugía"
+      }
+    ],
+    "siempre_aplica_tambien": "11.1",
+    "nota": "Un solo servicio de cirugía, complejidad mediana y alta."
+  },
+  {
+    "practica_medica_id": "71580613-eac8-4540-9fbb-65ebf9a0d93b",
+    "grupo_usuario": "Quirúrgico",
+    "nombre_usuario": "Cirugía Ambulatoria",
+    "numeral_res3100": "11.5.1",
+    "nombre_res3100": "Servicio de cirugía",
+    "numerales_res3100": [
+      {
+        "numeral": "11.5.1",
+        "nombre": "Servicio de cirugía"
+      }
+    ],
+    "siempre_aplica_tambien": "11.1",
+    "nota": "No es servicio separado: 11.5.1 tiene bloques 'Si realiza exclusivamente procedimientos de cirugía ambulatoria'."
+  },
+  {
+    "practica_medica_id": "345c5f07-4aab-4115-a91a-19a34db3a2f7",
+    "grupo_usuario": "Quirúrgico",
+    "nombre_usuario": "Trasplantes (Renal, Hígado, Corazón, Médula, etc.)",
+    "numeral_res3100": "11.5.1",
+    "nombre_res3100": "Servicio de cirugía",
+    "numerales_res3100": [
+      {
+        "numeral": "11.5.1",
+        "nombre": "Servicio de cirugía"
+      },
+      {
+        "numeral": "11.4.1",
+        "nombre": "Servicio de hospitalización"
+      }
+    ],
+    "siempre_aplica_tambien": "11.1",
+    "nota": "Trasplante de órganos y tejidos: criterios dentro de 11.5.1. Trasplante de médula (células progenitoras hematopoyéticas) está en 11.4.1 Hospitalización alta complejidad."
+  },
+  {
+    "practica_medica_id": "00f956eb-cfcf-4732-b5e5-7217c7f6394c",
+    "grupo_usuario": "Atención Inmediata",
+    "nombre_usuario": "Urgencias (Baja, Media, Alta Complejidad)",
+    "numeral_res3100": "11.6.1",
+    "nombre_res3100": "Servicio de urgencias",
+    "numerales_res3100": [
+      {
+        "numeral": "11.6.1",
+        "nombre": "Servicio de urgencias"
+      }
+    ],
+    "siempre_aplica_tambien": "11.1",
+    "nota": null
+  },
+  {
+    "practica_medica_id": "e0e2fc97-8a9c-42e2-b931-7b271e570c4d",
+    "grupo_usuario": "Atención Inmediata",
+    "nombre_usuario": "Atención del Parto",
+    "numeral_res3100": "11.6.4",
+    "nombre_res3100": "Servicio para la atención del parto",
+    "numerales_res3100": [
+      {
+        "numeral": "11.6.4",
+        "nombre": "Servicio para la atención del parto"
+      }
+    ],
+    "siempre_aplica_tambien": "11.1",
+    "nota": null
+  },
+  {
+    "practica_medica_id": "ff447734-9e1c-4222-a0f4-9daba150f807",
+    "grupo_usuario": "Atención Inmediata",
+    "nombre_usuario": "Transporte Asistencial Básico (TAB)",
+    "numeral_res3100": "11.6.2",
+    "nombre_res3100": "Servicio de transporte asistencial",
+    "numerales_res3100": [
+      {
+        "numeral": "11.6.2",
+        "nombre": "Servicio de transporte asistencial"
+      }
+    ],
+    "siempre_aplica_tambien": "11.1",
+    "nota": "Complejidad BAJA de 11.6.2. La norma no usa 'básico'; la correspondencia se infiere de la sigla 'TAB o TAM' exigida en baja y solo 'TAM' en mediana."
+  },
+  {
+    "practica_medica_id": "f6513754-5ffc-4d01-ac0e-64ffafe3f2fd",
+    "grupo_usuario": "Atención Inmediata",
+    "nombre_usuario": "Transporte Asistencial Medicalizado (TAM)",
+    "numeral_res3100": "11.6.2",
+    "nombre_res3100": "Servicio de transporte asistencial",
+    "numerales_res3100": [
+      {
+        "numeral": "11.6.2",
+        "nombre": "Servicio de transporte asistencial"
+      }
+    ],
+    "siempre_aplica_tambien": "11.1",
+    "nota": "Complejidad MEDIANA de 11.6.2 (inferido igual que TAB)."
+  },
+  {
+    "practica_medica_id": "814db256-468d-406e-8612-36243a292b1a",
+    "grupo_usuario": "Atención Inmediata",
+    "nombre_usuario": "Atención Prehospitalaria",
+    "numeral_res3100": "11.6.3",
+    "nombre_res3100": "Servicio atención prehospitalaria",
+    "numerales_res3100": [
+      {
+        "numeral": "11.6.3",
+        "nombre": "Servicio atención prehospitalaria"
+      }
+    ],
+    "siempre_aplica_tambien": "11.1",
+    "nota": null
+  }
+]

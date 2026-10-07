@@ -1,0 +1,94 @@
+{
+  "descripcion": "Correcciones curadas a los bloques de aplicabilidad (hab_bloques). Un bloque se identifica por servicio (clave) + estándar + orden (posición 1..n dentro del servicio, en el orden de criterios.json); 'encabezado_esperado' protege contra aplicar la corrección a un bloque equivocado si la fuente cambia (la validación falla).",
+  "curado_por": "desarrollo-fullstack (F0). Revisión pendiente: director-proyecto / investigador-regulatorio.",
+  "fecha_curaduria": "2026-10-06",
+  "correcciones": [
+    {
+      "servicio": "11.2.2",
+      "estandar": "historia_clinica_registros",
+      "orden": 24,
+      "encabezado_esperado": "Complejidad mediana / Modalidades intramural, extramural unidad móvil, jornada de salud y domiciliaria",
+      "agregar_modalidad": ["intramural"],
+      "motivo": "Hallazgo 1 del director: aplica_modalidad omitía 'intramural' aunque el encabezado literal lo incluye. Sin esto 11.2.2.HC.26 no le aparece a un consultorio especializado intramural (caso EWAH).",
+      "fuente": "Encabezado literal del bloque (Res. 3100/2019, numeral 11.2.2, estándar de historia clínica y registros)."
+    }
+  ],
+  "edificacion": [
+    {
+      "servicio": "11.1",
+      "estandar": "infraestructura",
+      "orden": 3,
+      "subtitulo_esperado": "Edificaciones de uso exclusivo en salud",
+      "aplica_tipo_edificacion": "exclusivo_salud",
+      "motivo": "Hallazgo 2 del director: normalizar el subtítulo de 11.1 IN a la dimensión aplica_tipo_edificacion."
+    },
+    {
+      "servicio": "11.1",
+      "estandar": "infraestructura",
+      "orden": 4,
+      "subtitulo_esperado": "Edificaciones de uso mixto",
+      "aplica_tipo_edificacion": "mixto",
+      "motivo": "Hallazgo 2 del director."
+    },
+    {
+      "servicio": "11.1",
+      "estandar": "infraestructura",
+      "orden": 5,
+      "subtitulo_esperado": "Edificaciones de uso exclusivo en salud y edificaciones de uso mixto",
+      "aplica_tipo_edificacion": null,
+      "motivo": "Aplica a ambos tipos de edificación: no filtra (null)."
+    }
+  ],
+  "jerarquia": [
+    {
+      "criterio": "11.3.6.DO.9.3",
+      "padre": null,
+      "motivo": "La norma numera '9.3. Cumple con los criterios que le sean aplicables de todos los servicios' bajo el encabezado 'Modalidad telemedicina - prestador de referencia', después de '9. Disponibilidad de:' (bloque intramural/remisor). Es la remisión a 11.1 del bloque de referencia, no un hijo de 9: se siembra como raíz de su bloque (nivel 0) conservando su código y número literales. Sin esto, a una sede solo prestador de referencia el motor le descartaría el criterio por no incluir a su 'padre'.",
+      "fuente": "Res. 3100/2019 pág. del numeral 11.3.6 (PDF y compilación de Supersalud muestran la misma numeración)."
+    }
+  ],
+  "falsos_positivos_auditoria": [
+    {
+      "servicio": "11.4.1",
+      "estandar": "talento_humano",
+      "orden": 4,
+      "encabezado_esperado": "Complejidad baja / Modalidad telemedicina / Categoría telemonitoreo - prestador remisor en modalidad extramural domiciliaria",
+      "motivo": "Telemonitoreo de pacientes en su domicilio: la modalidad del bloque es telemedicina; 'extramural domiciliaria' describe dónde está el paciente, no una modalidad declarada."
+    },
+    {
+      "servicio": "11.4.2",
+      "estandar": "talento_humano",
+      "orden": 4,
+      "encabezado_esperado": "Complejidad baja / Modalidad telemedicina / Categoría telemonitoreo - prestador remisor en modalidad extramural domiciliaria",
+      "motivo": "Igual que 11.4.1 TH orden 4."
+    },
+    {
+      "servicio": "11.4.2",
+      "estandar": "talento_humano",
+      "orden": 9,
+      "encabezado_esperado": "Complejidad mediana / Modalidad telemedicina / Categoría telemonitoreo - prestador remisor en modalidad extramural domiciliaria",
+      "motivo": "Igual que 11.4.1 TH orden 4."
+    },
+    {
+      "servicio": "11.4.2",
+      "estandar": "talento_humano",
+      "orden": 14,
+      "encabezado_esperado": "Complejidad mediana / Modalidad telemedicina / Categoría telemonitoreo - prestador remisor en modalidad extramural domiciliaria",
+      "motivo": "Igual que 11.4.1 TH orden 4."
+    },
+    {
+      "servicio": "11.3.10",
+      "estandar": "talento_humano",
+      "orden": 2,
+      "encabezado_esperado": "Servicios de salud de alta complejidad:",
+      "motivo": "Gestión pre-transfusional no tiene complejidad propia (no_aplica): el subtítulo se refiere a la complejidad de los servicios a los que apoya. El motor ignora la complejidad en servicios no_aplica, así que dejar aplica_complejidad en null es correcto (el usuario marca No aplica lo que no le corresponda)."
+    },
+    {
+      "servicio": "11.3.10",
+      "estandar": "talento_humano",
+      "orden": 3,
+      "encabezado_esperado": "Servicios de salud de baja y mediana complejidad:",
+      "motivo": "Igual que 11.3.10 TH orden 2."
+    }
+  ]
+}

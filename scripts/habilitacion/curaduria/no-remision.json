@@ -1,0 +1,21 @@
+{
+  "descripcion": "Candidatos que el regex RX_REMISION_OTRA (lib/candidatos.mjs) detecta pero que NO generan fila en hab_criterio_remisiones, con el porqué. Casi todos remiten a criterios que el motor ya incluye siempre que incluye al criterio origen (mismo bloque, o bloque general del mismo estándar/servicio/complejidad), así que una remisión sería redundante.",
+  "curado_por": "desarrollo-fullstack (F0). Revisión pendiente: director-proyecto / investigador-regulatorio.",
+  "fecha_curaduria": "2026-10-06",
+  "criterios": [
+    { "id": "11.1.TH.14", "motivo": "destino_siempre_incluido", "nota": "'Adicional a los criterios del estándar de talento humano enunciados que le aplique…': remite al bloque general de 11.1 TH (sin restricción de modalidad), que entra en toda sede con servicios." },
+    { "id": "11.1.IN.51", "motivo": "destino_siempre_incluido", "nota": "'Adicional a los criterios del estándar de infraestructura enunciados que le aplique…': bloques generales de 11.1 IN, siempre incluidos." },
+    { "id": "11.1.IN.52", "motivo": "destino_siempre_incluido", "nota": "Igual a 11.1.IN.51 (prestador de referencia)." },
+    { "id": "11.1.DO.16", "motivo": "destino_siempre_incluido", "nota": "'Adicional a los criterios enunciados del presente estándar…': bloque general de 11.1 DO, siempre incluido." },
+    { "id": "11.1.MD.16", "motivo": "destino_siempre_incluido", "nota": "'Adicional a los criterios enunciados del presente estándar, que le apliquen a estas modalidades…': bloque general de 11.1 MD, siempre incluido." },
+    { "id": "11.1.IN.50.1", "motivo": "remision_generica_no_representable", "nota": "'De acuerdo con los servicios a prestar, los ambientes y áreas cumplen con los criterios del servicio de salud de la modalidad intramural.' Remite a la infraestructura intramural de CADA servicio que la sede preste en unidad móvil, no a un servicio fijo. No se modela como remisión: el criterio queda evaluable a mano (el usuario verifica contra los criterios intramurales de sus servicios). Ver NOTAS.md." },
+    { "id": "11.3.17.PP.22", "motivo": "mismo_bloque", "nota": "'… adicional a los criterios definidos en el numeral 20…': 11.3.17.PP.20 está en el mismo bloque." },
+    { "id": "11.3.17.PP.23", "motivo": "destino_siempre_incluido", "nota": "'… adicional a los criterios definidos en los numerales 20 y 21…' (bloque extramural jornada de salud): PP.20 y PP.21 están en el bloque 'intramural, extramural jornada de salud y telemedicina – remisor', que coincide siempre que coincide el de PP.23." },
+    { "id": "11.4.1.TH.16", "motivo": "mismo_bloque", "nota": "'… adicional a lo definido en los numerales 13 y 14': TH.13 y TH.14 están en el mismo bloque (alta)." },
+    { "id": "11.5.1.IN.12", "motivo": "destino_siempre_incluido", "nota": "'Cumple con los criterios anteriormente definidos…': los criterios anteriores de IN son del bloque con la misma complejidad y modalidad (mediana y alta, intramural, telemedicina – remisor)." },
+    { "id": "11.5.1.PP.33", "motivo": "mismo_bloque", "nota": "'Cumple con los criterios definidos para las complejidades mediana y alta cuando aplique…': es el mismo bloque (mediana y alta)." },
+    { "id": "11.6.2.IN.22", "motivo": "destino_siempre_incluido", "nota": "'Cumple con los criterios definidos en materia de comunicaciones para ambulancia terrestre…': bloques de baja complejidad del mismo servicio, que entran todos con baja." },
+    { "id": "11.6.2.DO.34", "motivo": "destino_siempre_incluido", "nota": "'Adicional a lo establecido para transporte terrestre, marítimo y fluvial en mediana complejidad…': bloques de mediana del mismo servicio, ya incluidos." },
+    { "id": "11.6.2.MD.40", "motivo": "destino_siempre_incluido", "nota": "'Adicional a lo establecido para transporte terrestre, marítimo y fluvial en media complejidad': bloques de mediana del mismo servicio, ya incluidos." }
+  ]
+}

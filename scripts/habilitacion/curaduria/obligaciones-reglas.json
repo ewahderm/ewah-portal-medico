@@ -1,0 +1,245 @@
+{
+  "descripcion": "Estructura de hab_obligaciones_catalogo y hab_obligacion_vencimientos. Textos (nombre, descripción, plataforma, norma, notas) vienen de fuentes/reportes.json; aquí van los campos estructurados y las reglas de fecha. Una regla = una ocurrencia por año: (mes_corte, dia_corte|null=último día, meses_despues, dia_limite). 'plantilla' expande reglas repetitivas: mensual = 12 cortes (uno por mes), trimestral = cortes 3/6/9/12; 'excepcion_diciembre' reemplaza la regla del corte de diciembre.",
+  "criterio_fechas": "D5 (decisión del usuario): la fecha límite es la LITERAL de la norma; si cae en día no hábil la UI avisa 'preséntalo antes' (no se corre al día hábil siguiente).",
+  "grupos": ["B", "C1", "C2", "D1", "D2", "D3"],
+  "codigos_condicion_obligaciones": {
+    "privada_o_mixta": "NUEVO (F0): IPS privada o mixta (no obligada al Régimen de Contabilidad Pública). Las públicas reportan por otra vía (CE 2024151000000005-5, no investigada).",
+    "internacion_o_urgencias": "NUEVO (F0): la sede tiene algún servicio del grupo internación (11.4) o urgencias (11.6.1).",
+    "telemedicina": "Habilita algún servicio en telemedicina.",
+    "upgd": "Caracterizada como UPGD de SIVIGILA (dato del perfil).",
+    "revisor_fiscal": "Tiene revisor fiscal (dato del perfil).",
+    "pedt": "Realiza actividades de PEDT / Ruta de Promoción y Mantenimiento y Materno Perinatal.",
+    "factura_servicios_salud": "Factura servicios de salud."
+  },
+  "dias_aviso_default": [30, 15, 7, 1, 0],
+  "curado_por": "desarrollo-fullstack (F0). Revisión pendiente: director-proyecto.",
+  "fecha_curaduria": "2026-10-06",
+  "obligaciones": [
+    {
+      "codigo": "FT001", "periodicidad": "semestral", "aplica_a_tipos": ["ips", "transporte_especial"], "aplica_a_grupos": null,
+      "condiciones": ["privada_o_mixta"], "activacion_default": "auto", "grupo_prueba": "D2",
+      "nota_aplicabilidad": "La regla de fecha incluye explícitamente a TEP ('… D3 y Transporte Especial de Pacientes'). Grupo B: periodicidad de su EAPB (sin regla: la clínica la registra a mano).",
+      "vencimientos": [
+        { "aplica_a_grupos": ["C2", "D1", "D2", "D3"], "aplica_a_tipos": ["ips"], "mes_corte": 6, "meses_despues": 1, "dia_limite": 20, "etiqueta_periodo": "corte 30-jun" },
+        { "aplica_a_grupos": ["C2", "D1", "D2", "D3"], "aplica_a_tipos": ["ips"], "mes_corte": 12, "meses_despues": 2, "dia_limite": 20, "etiqueta_periodo": "corte 31-dic" },
+        { "aplica_a_grupos": null, "aplica_a_tipos": ["transporte_especial"], "mes_corte": 6, "meses_despues": 1, "dia_limite": 20, "etiqueta_periodo": "corte 30-jun" },
+        { "aplica_a_grupos": null, "aplica_a_tipos": ["transporte_especial"], "mes_corte": 12, "meses_despues": 2, "dia_limite": 20, "etiqueta_periodo": "corte 31-dic" },
+        { "plantilla": "mensual", "aplica_a_grupos": ["C1"], "aplica_a_tipos": ["ips"], "meses_despues": 1, "dia_limite": 20, "excepcion_diciembre": { "meses_despues": 2, "dia_limite": 20 } }
+      ]
+    },
+    {
+      "codigo": "FT002", "periodicidad": "anual", "aplica_a_tipos": ["ips"], "aplica_a_grupos": null,
+      "condiciones": [], "activacion_default": "auto", "grupo_prueba": "D2",
+      "vencimientos": [
+        { "aplica_a_grupos": null, "aplica_a_tipos": null, "mes_corte": 12, "meses_despues": 4, "dia_limite": 30, "etiqueta_periodo": "cierre 31-dic" }
+      ]
+    },
+    {
+      "codigo": "FT003", "periodicidad": "semestral", "aplica_a_tipos": ["ips", "transporte_especial"], "aplica_a_grupos": null,
+      "condiciones": ["privada_o_mixta"], "activacion_default": "auto", "grupo_prueba": "D2",
+      "vencimientos": [
+        { "aplica_a_grupos": ["C2", "D1", "D2", "D3"], "aplica_a_tipos": ["ips"], "mes_corte": 6, "meses_despues": 1, "dia_limite": 20, "etiqueta_periodo": "corte 30-jun" },
+        { "aplica_a_grupos": ["C2", "D1", "D2", "D3"], "aplica_a_tipos": ["ips"], "mes_corte": 12, "meses_despues": 2, "dia_limite": 20, "etiqueta_periodo": "corte 31-dic" },
+        { "aplica_a_grupos": null, "aplica_a_tipos": ["transporte_especial"], "mes_corte": 6, "meses_despues": 1, "dia_limite": 20, "etiqueta_periodo": "corte 30-jun" },
+        { "aplica_a_grupos": null, "aplica_a_tipos": ["transporte_especial"], "mes_corte": 12, "meses_despues": 2, "dia_limite": 20, "etiqueta_periodo": "corte 31-dic" },
+        { "plantilla": "mensual", "aplica_a_grupos": ["C1"], "aplica_a_tipos": ["ips"], "meses_despues": 1, "dia_limite": 20, "excepcion_diciembre": { "meses_despues": 2, "dia_limite": 20 } }
+      ]
+    },
+    {
+      "codigo": "FT004", "periodicidad": "semestral", "aplica_a_tipos": ["ips", "transporte_especial"], "aplica_a_grupos": null,
+      "condiciones": ["privada_o_mixta"], "activacion_default": "auto", "grupo_prueba": "D2",
+      "vencimientos": [
+        { "aplica_a_grupos": ["C2", "D1", "D2", "D3"], "aplica_a_tipos": ["ips"], "mes_corte": 6, "meses_despues": 1, "dia_limite": 20, "etiqueta_periodo": "corte 30-jun" },
+        { "aplica_a_grupos": ["C2", "D1", "D2", "D3"], "aplica_a_tipos": ["ips"], "mes_corte": 12, "meses_despues": 2, "dia_limite": 20, "etiqueta_periodo": "corte 31-dic" },
+        { "aplica_a_grupos": null, "aplica_a_tipos": ["transporte_especial"], "mes_corte": 6, "meses_despues": 1, "dia_limite": 20, "etiqueta_periodo": "corte 30-jun" },
+        { "aplica_a_grupos": null, "aplica_a_tipos": ["transporte_especial"], "mes_corte": 12, "meses_despues": 2, "dia_limite": 20, "etiqueta_periodo": "corte 31-dic" },
+        { "plantilla": "mensual", "aplica_a_grupos": ["C1"], "aplica_a_tipos": ["ips"], "meses_despues": 1, "dia_limite": 20, "excepcion_diciembre": { "meses_despues": 2, "dia_limite": 20 } }
+      ]
+    },
+    {
+      "codigo": "FT025", "periodicidad": "semestral", "aplica_a_tipos": ["ips", "transporte_especial"], "aplica_a_grupos": null,
+      "condiciones": ["privada_o_mixta"], "activacion_default": "auto", "grupo_prueba": "D2",
+      "nota_aplicabilidad": "Grupos B y C1: mensual (20 días calendario; cierre 20-feb).",
+      "vencimientos": [
+        { "aplica_a_grupos": ["C2", "D1", "D2", "D3"], "aplica_a_tipos": ["ips"], "mes_corte": 6, "meses_despues": 1, "dia_limite": 20, "etiqueta_periodo": "corte 30-jun" },
+        { "aplica_a_grupos": ["C2", "D1", "D2", "D3"], "aplica_a_tipos": ["ips"], "mes_corte": 12, "meses_despues": 2, "dia_limite": 20, "etiqueta_periodo": "corte 31-dic" },
+        { "aplica_a_grupos": null, "aplica_a_tipos": ["transporte_especial"], "mes_corte": 6, "meses_despues": 1, "dia_limite": 20, "etiqueta_periodo": "corte 30-jun" },
+        { "aplica_a_grupos": null, "aplica_a_tipos": ["transporte_especial"], "mes_corte": 12, "meses_despues": 2, "dia_limite": 20, "etiqueta_periodo": "corte 31-dic" },
+        { "plantilla": "mensual", "aplica_a_grupos": ["B", "C1"], "aplica_a_tipos": ["ips"], "meses_despues": 1, "dia_limite": 20, "excepcion_diciembre": { "meses_despues": 2, "dia_limite": 20 } }
+      ]
+    },
+    {
+      "codigo": "FT006", "periodicidad": "semestral", "aplica_a_tipos": ["ips"], "aplica_a_grupos": ["B", "C1", "C2", "D1"],
+      "condiciones": ["privada_o_mixta"], "activacion_default": "auto", "grupo_prueba": "C2",
+      "nota_aplicabilidad": "No aplica a D2 ni D3 (la prueba cruzada usa C2). C1 trimestral '20 días calendario después del corte' sin regla especial de cierre: el corte de diciembre vence el 20-ene (literal). Grupo B: según su EAPB (sin regla).",
+      "vencimientos": [
+        { "aplica_a_grupos": ["C2", "D1"], "aplica_a_tipos": null, "mes_corte": 6, "meses_despues": 1, "dia_limite": 20, "etiqueta_periodo": "corte 30-jun" },
+        { "aplica_a_grupos": ["C2", "D1"], "aplica_a_tipos": null, "mes_corte": 12, "meses_despues": 2, "dia_limite": 20, "etiqueta_periodo": "corte 31-dic" },
+        { "plantilla": "trimestral", "aplica_a_grupos": ["C1"], "aplica_a_tipos": null, "meses_despues": 1, "dia_limite": 20 }
+      ]
+    },
+    {
+      "codigo": "FT009", "periodicidad": "semestral", "aplica_a_tipos": ["ips"], "aplica_a_grupos": ["B", "C1", "C2", "D1"],
+      "condiciones": ["privada_o_mixta"], "activacion_default": "auto", "grupo_prueba": "C2",
+      "nota_aplicabilidad": "No aplica a D2 ni D3 (la prueba cruzada usa C2). C1 trimestral con cierre 20-feb. Grupo B: según su EAPB (sin regla).",
+      "vencimientos": [
+        { "aplica_a_grupos": ["C2", "D1"], "aplica_a_tipos": null, "mes_corte": 6, "meses_despues": 1, "dia_limite": 20, "etiqueta_periodo": "corte 30-jun" },
+        { "aplica_a_grupos": ["C2", "D1"], "aplica_a_tipos": null, "mes_corte": 12, "meses_despues": 2, "dia_limite": 20, "etiqueta_periodo": "corte 31-dic" },
+        { "plantilla": "trimestral", "aplica_a_grupos": ["C1"], "aplica_a_tipos": null, "meses_despues": 1, "dia_limite": 20, "excepcion_diciembre": { "meses_despues": 2, "dia_limite": 20 } }
+      ]
+    },
+    {
+      "codigo": "FT018", "periodicidad": "mensual", "aplica_a_tipos": ["ips"], "aplica_a_grupos": ["B", "C1", "C2", "D1"],
+      "condiciones": [], "activacion_default": "auto", "grupo_prueba": "D1",
+      "nota_aplicabilidad": "Públicas, privadas y mixtas de B, C1, C2 y D1. No aplica a D2 ni D3 (la prueba cruzada usa D1).",
+      "vencimientos": [
+        { "plantilla": "mensual", "aplica_a_grupos": null, "aplica_a_tipos": null, "meses_despues": 1, "dia_limite": 20, "excepcion_diciembre": { "meses_despues": 2, "dia_limite": 20 } }
+      ]
+    },
+    {
+      "codigo": "FP001-FP005", "periodicidad": "anual", "aplica_a_tipos": ["ips", "transporte_especial"], "aplica_a_grupos": null,
+      "condiciones": [], "activacion_default": "auto", "grupo_prueba": "D2",
+      "nota_aplicabilidad": "FP003 solo con revisor fiscal y FP005 'en caso de ser aplicable': se siembra como una sola obligación (un solo envío anual); la UI lo explica.",
+      "vencimientos": [
+        { "aplica_a_grupos": null, "aplica_a_tipos": null, "mes_corte": 12, "meses_despues": 4, "dia_limite": 10, "etiqueta_periodo": "cierre 31-dic" }
+      ]
+    },
+    {
+      "codigo": "datos-generales-nrvcc", "periodicidad": "semestral", "aplica_a_tipos": ["ips", "transporte_especial"], "aplica_a_grupos": null,
+      "condiciones": [], "activacion_default": "auto", "grupo_prueba": "D2",
+      "nota_aplicabilidad": "Todos los vigilados; no se verificó si el nRVCC tiene usuario para profesionales independientes (no se les asigna).",
+      "vencimientos": [
+        { "aplica_a_grupos": null, "aplica_a_tipos": null, "mes_corte": 6, "meses_despues": 1, "dia_limite": 20, "etiqueta_periodo": "corte 30-jun" },
+        { "aplica_a_grupos": null, "aplica_a_tipos": null, "mes_corte": 12, "meses_despues": 1, "dia_limite": 20, "etiqueta_periodo": "corte 31-dic" }
+      ]
+    },
+    {
+      "codigo": "ST002", "periodicidad": "anual", "aplica_a_tipos": ["ips"], "aplica_a_grupos": ["B", "C1", "C2", "D1", "D2"],
+      "condiciones": [], "activacion_default": "por_confirmar", "grupo_prueba": "D2",
+      "nota_aplicabilidad": "Grupos de la CE 018/2015 (derogada); la correspondencia con los grupos de 2021 no se verificó → por_confirmar (no genera alerta roja hasta que el usuario la active).",
+      "vencimientos": [
+        { "aplica_a_grupos": null, "aplica_a_tipos": null, "mes_corte": 12, "meses_despues": 2, "dia_limite": 28, "etiqueta_periodo": "cierre 31-dic" }
+      ]
+    },
+    {
+      "codigo": "reps-autoevaluacion", "periodicidad": "vencimiento_reps", "aplica_a_tipos": ["ips", "profesional_independiente", "transporte_especial", "objeto_social_diferente"], "aplica_a_grupos": null,
+      "condiciones": [], "activacion_default": "auto", "dias_aviso_default": [90, 60, 30, 15, 7, 1, 0],
+      "vencimientos": []
+    },
+    {
+      "codigo": "reps-novedades", "periodicidad": "eventual", "aplica_a_tipos": ["ips", "profesional_independiente", "transporte_especial", "objeto_social_diferente"], "aplica_a_grupos": null,
+      "condiciones": [], "activacion_default": "informativa",
+      "vencimientos": []
+    },
+    {
+      "codigo": "rips-fev", "periodicidad": "eventual", "aplica_a_tipos": ["ips", "profesional_independiente", "transporte_especial", "objeto_social_diferente"], "aplica_a_grupos": null,
+      "condiciones": [], "activacion_default": "auto", "requiere_confirmacion_asesor": true,
+      "nota_aplicabilidad": "D6 (decisión del usuario): 'Aplica — confirma con tu asesor' para todos; desactivable con justificación escrita y fecha de la consulta al asesor (la exclusión de la Res. 948/2026 art. 2 par. 1 para cirugía estética no financiada con recursos públicos no está verificada para medicina estética no quirúrgica).",
+      "vencimientos": []
+    },
+    {
+      "codigo": "res256-indicadores-calidad", "periodicidad": "trimestral", "aplica_a_tipos": ["ips", "transporte_especial"], "aplica_a_grupos": null,
+      "condiciones": [], "activacion_default": "auto", "grupo_prueba": "D2",
+      "vencimientos": [
+        { "plantilla": "trimestral", "aplica_a_grupos": null, "aplica_a_tipos": null, "meses_despues": 1, "dia_limite": 30 }
+      ]
+    },
+    {
+      "codigo": "res202-pedt", "periodicidad": "trimestral", "aplica_a_tipos": ["ips"], "aplica_a_grupos": null,
+      "condiciones": ["pedt"], "activacion_default": "auto", "grupo_prueba": "D2",
+      "nota_aplicabilidad": "Ventana de envío del día 18 al 25 del segundo mes tras el trimestre; la fecha límite es el 25.",
+      "vencimientos": [
+        { "plantilla": "trimestral", "aplica_a_grupos": null, "aplica_a_tipos": null, "meses_despues": 2, "dia_limite": 25 }
+      ]
+    },
+    {
+      "codigo": "sivigila", "periodicidad": "manual", "aplica_a_tipos": ["ips", "profesional_independiente"], "aplica_a_grupos": null,
+      "condiciones": ["upgd"], "activacion_default": "por_confirmar",
+      "nota_aplicabilidad": "Notificación semanal/inmediata según protocolos del INS (no transcritos). 'semanal' no está en el vocabulario de periodicidad: se siembra 'manual' (la clínica registra cada envío).",
+      "vencimientos": []
+    }
+  ],
+  "propias": [
+    {
+      "codigo": "telemedicina-mensual",
+      "nombre": "Reporte mensual de atenciones en telemedicina (REPS)",
+      "descripcion_corta": "Reportar dentro de los primeros cinco (5) días de cada mes las atenciones en modalidad de telemedicina (interactiva, no interactiva, telexperticia y telemonitoreo) en el enlace del REPS.",
+      "entidad": "minsalud",
+      "plataforma_nombre": "REPS – enlace de reporte de telemedicina",
+      "plataforma_url": "https://prestadores.minsalud.gov.co/habilitacion/",
+      "norma_nombre": "Resolución 3100 de 2019, art. 21 parágrafo (adicionado por la Res. 1138 de 2022)",
+      "norma_numero": "3100",
+      "norma_articulo": "Art. 21 parágrafo",
+      "norma_url": "https://normograma.supersalud.gov.co/compilacion/docs/resolucion_minsaludps_3100_2019.htm",
+      "periodicidad": "mensual", "aplica_a_tipos": ["ips", "profesional_independiente", "transporte_especial", "objeto_social_diferente"], "aplica_a_grupos": null,
+      "condiciones": ["telemedicina"], "activacion_default": "auto", "verificado": true,
+      "vencimientos": [
+        { "plantilla": "mensual", "aplica_a_grupos": null, "aplica_a_tipos": null, "meses_despues": 1, "dia_limite": 5 }
+      ]
+    },
+    {
+      "codigo": "capacidad-instalada-diaria",
+      "nombre": "Reporte diario de capacidad instalada (internación y urgencias)",
+      "descripcion_corta": "Reportar diariamente en el REPS la capacidad instalada de los servicios del grupo de internación y del servicio de urgencias.",
+      "entidad": "minsalud",
+      "plataforma_nombre": "REPS",
+      "plataforma_url": "https://prestadores.minsalud.gov.co/habilitacion/",
+      "norma_nombre": "Resolución 3100 de 2019, art. 21 parágrafo (adicionado por la Res. 1138 de 2022)",
+      "norma_numero": "3100",
+      "norma_articulo": "Art. 21 parágrafo",
+      "norma_url": "https://normograma.supersalud.gov.co/compilacion/docs/resolucion_minsaludps_3100_2019.htm",
+      "periodicidad": "manual", "aplica_a_tipos": ["ips", "profesional_independiente", "transporte_especial", "objeto_social_diferente"], "aplica_a_grupos": null,
+      "condiciones": ["internacion_o_urgencias"], "activacion_default": "informativa", "verificado": true,
+      "notas": "Diaria: no genera ocurrencias (sería una por día); se muestra como recordatorio informativo (§7 del requerimiento).",
+      "vencimientos": []
+    },
+    {
+      "codigo": "grupo-supersalud-anual",
+      "nombre": "Verificación anual del grupo de clasificación Supersalud",
+      "descripcion_corta": "Verificar cada año el grupo de clasificación de la IPS (B, C1, C2, D1, D2, D3) con las cifras a 31 de diciembre de la vigencia anterior; de él dependen qué archivos tipo FT se reportan y con qué periodicidad.",
+      "entidad": "supersalud",
+      "plataforma_nombre": "nRVCC",
+      "plataforma_url": "https://nrvcc.supersalud.gov.co/",
+      "norma_nombre": "Circular Externa Supersalud 20211700000005-5 de 2021, numeral 4.1",
+      "norma_numero": "20211700000005-5",
+      "norma_articulo": "Numeral 4.1",
+      "norma_url": "https://normograma.supersalud.gov.co/compilacion/docs/circular_supersalud_0005_2021.htm",
+      "periodicidad": "manual", "aplica_a_tipos": ["ips"], "aplica_a_grupos": null,
+      "condiciones": [], "activacion_default": "informativa", "verificado": false,
+      "notas": "La norma no fija una fecha límite para la verificación: no se inventa una. Se muestra como recordatorio anual que la clínica programa.",
+      "vencimientos": []
+    },
+    {
+      "codigo": "subsanacion-visita",
+      "nombre": "Subsanación de hallazgos de la visita de verificación",
+      "descripcion_corta": "Si la visita previa encuentra incumplimientos subsanables, el prestador tiene máximo 8 días hábiles desde el recibo de la comunicación para subsanarlos; si persisten, debe iniciar de nuevo el trámite.",
+      "entidad": "secretaria_salud",
+      "plataforma_nombre": "Secretaría de salud departamental o distrital",
+      "plataforma_url": null,
+      "norma_nombre": "Resolución 3100 de 2019, Manual num. 9.3.4.1",
+      "norma_numero": "3100",
+      "norma_articulo": "Art. 8.4; Art. 14; Manual 9.3.3.1, 9.3.4.1",
+      "norma_url": "https://www.minsalud.gov.co/sites/rid/Lists/BibliotecaDigital/RIDE/DE/DIJ/resolucion-3100-de-2019.pdf",
+      "periodicidad": "eventual", "aplica_a_tipos": ["ips", "profesional_independiente", "transporte_especial", "objeto_social_diferente"], "aplica_a_grupos": null,
+      "condiciones": [], "activacion_default": "auto", "verificado": true,
+      "notas": "La fecha sale del hito 'visita realizada con subsanables' + 8 días hábiles (usa la tabla festivos).",
+      "vencimientos": []
+    },
+    {
+      "codigo": "novedad-cierre-temporal",
+      "nombre": "Vencimiento del cierre temporal de un servicio",
+      "descripcion_corta": "El cierre temporal de un servicio dura máximo 1 año desde el reporte; si vencido no se reporta la reactivación, el servicio se inactiva en el REPS y para abrirlo hay que repetir el procedimiento de habilitación.",
+      "entidad": "secretaria_salud",
+      "plataforma_nombre": "REPS – formulario de novedades",
+      "plataforma_url": "https://prestadores.minsalud.gov.co/habilitacion/",
+      "norma_nombre": "Resolución 544 de 2023, art. 6 (modifica el art. 13 de la Res. 3100 de 2019)",
+      "norma_numero": "544",
+      "norma_articulo": "Art. 6 (Art. 13) inc. 1 y 2",
+      "norma_url": "https://www.minsalud.gov.co/Normatividad_Nuevo/Resoluci%C3%B3n%20No.%20544%20de%202023.pdf",
+      "periodicidad": "eventual", "aplica_a_tipos": ["ips", "profesional_independiente", "transporte_especial", "objeto_social_diferente"], "aplica_a_grupos": null,
+      "condiciones": [], "activacion_default": "auto", "verificado": true,
+      "notas": "La fecha sale de la novedad 'cierre temporal de servicio': alerta a los 11 meses, límite al año.",
+      "vencimientos": []
+    }
+  ]
+}

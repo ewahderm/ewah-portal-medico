@@ -1,0 +1,16 @@
+{
+  "descripcion": "Criterios que no están en criterios.json y entran por curaduría. Cada uno toma bloque, padre, número y página del criterio base ('mismo_lugar_que'); solo cambia el texto y la vigencia.",
+  "curado_por": "desarrollo-fullstack (F0). Revisión pendiente: investigador-regulatorio.",
+  "fecha_curaduria": "2026-10-06",
+  "criterios": [
+    {
+      "codigo": "11.2.1.DO.23.6",
+      "mismo_lugar_que": "11.2.1.DO.23.6",
+      "vigente_desde": "2027-01-03",
+      "texto_literal": "Instrumental básico definido por el prestador de acuerdo con la oferta del servicio (adultos o pediatría), la capacidad instalada y los procedimientos documentados en el estándar de procesos prioritarios.",
+      "fuente_texto": "compilacion_supersalud",
+      "nota_vigencia": "Texto dado por el art. 13 de la Res. 914 de 2025; rige a partir del 3 de enero de 2027 y reemplaza el texto de 2019 de este subnumeral.",
+      "fuente": "Resolución 914 de 2025 (MinSalud), art. 13 — https://normograma.supersalud.gov.co/compilacion/docs/resolucion_minsaludps_0914_2025.htm (consultada 2026-10-06)"
+    }
+  ]
+}

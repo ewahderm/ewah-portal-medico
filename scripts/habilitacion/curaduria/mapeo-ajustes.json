@@ -1,0 +1,86 @@
+{
+  "descripcion": "Ajustes D2 (decisión del usuario) sobre fuentes/mapeo-servicios.json para sembrar hab_mapeo_practica_servicio. Base: cada práctica del catálogo con sus 'numerales_res3100'. Aquí solo se declara lo que cambia.",
+  "decision_usuario": "practicas_medicas se ajusta a la norma: dividir Cuidado intermedio y Cuidado intensivo en adulto/pediátrico/neonatal; Fisioterapia, Fonoaudiología, Terapia ocupacional y Terapia respiratoria pasan al grupo de la norma (Terapias, Apoyo Diagnóstico); Obstetricia, Consumo de sustancias psicoactivas y Unidad de quemados: la clínica elige el numeral al seleccionarlos (varias opciones con requiere_eleccion).",
+  "uuid_practicas_nuevas": "Las prácticas nuevas las inserta la migración 0061 (F1) con uuid v5 = uuidv5(uuidv5(NAMESPACE_URL, 'https://ewah.tech/habilitacion'), 'practicas_medicas:' || nombre). validar.mjs recalcula cada uuid de esta lista con esa fórmula y falla si no coincide.",
+  "curado_por": "desarrollo-fullstack (F0). Revisión pendiente: director-proyecto.",
+  "fecha_curaduria": "2026-10-06",
+  "numerales_contenedor_excluidos": {
+    "numerales": ["11.3.4"],
+    "motivo": "11.3.4 Imágenes diagnósticas es un contenedor sin criterios propios (seleccionable = false); las dos prácticas de imágenes se mapean solo a su subnumeral 11.3.4.1 / 11.3.4.2."
+  },
+  "divisiones": [
+    {
+      "practica_original": "49e50cf6-f3be-4c3c-9e95-2a53f2290b05",
+      "nombre_original": "Cuidado Intermedio (Adultos, Pediátrico, Neonatal)",
+      "conserva_uuid_como": { "nombre": "Cuidado Intermedio Adulto", "numeral": "11.4.8" },
+      "nuevas": [
+        { "id": "3673c387-2801-50f0-8a00-927c8981a1a9", "nombre": "Cuidado Intermedio Pediátrico", "numeral": "11.4.6" },
+        { "id": "289d037a-58b5-5064-b9b2-edb4b3d87107", "nombre": "Cuidado Intermedio Neonatal", "numeral": "11.4.4" }
+      ]
+    },
+    {
+      "practica_original": "cfcbd41c-2354-427c-913a-b40fd638c766",
+      "nombre_original": "Cuidado Intensivo (UCI Adultos, UCI Pediátrica, UCI Neonatal)",
+      "conserva_uuid_como": { "nombre": "Cuidado Intensivo Adultos", "numeral": "11.4.9" },
+      "nuevas": [
+        { "id": "9de2eef7-0330-5f70-b491-6e6e7b502a57", "nombre": "Cuidado Intensivo Pediátrico", "numeral": "11.4.7" },
+        { "id": "9067fd2f-72ac-5e98-a8ac-1f93007a9581", "nombre": "Cuidado Intensivo Neonatal", "numeral": "11.4.5" }
+      ]
+    }
+  ],
+  "eleccion": [
+    {
+      "practica": "65b71b1a-dfcc-4aa2-8fae-03fbb30158ef",
+      "nombre": "Obstetricia",
+      "opciones": [
+        { "numeral": "11.4.1", "confianza": "alta", "nota": "Internación obstétrica → Hospitalización." },
+        { "numeral": "11.6.4", "confianza": "alta", "nota": "Atención del parto." }
+      ]
+    },
+    {
+      "practica": "b9335740-ad76-451e-b604-19f13bca16f2",
+      "nombre": "Atención a Consumidor de Sustancias Psicoactivas",
+      "opciones": [
+        { "numeral": "11.4.12", "confianza": "alta", "nota": "Internación no hospitalaria con pernoctada (cuidado básico)." },
+        { "numeral": "11.4.10", "confianza": "alta", "nota": "Hospitalización en salud mental o consumo de SPA." },
+        { "numeral": "11.4.11", "confianza": "inferida", "nota": "Si es hospitalización parcial (nota del mapeo fuente: 'si es parcial → 11.4.11'). Se ofrece como opción adicional; interpretación de F0." }
+      ]
+    },
+    {
+      "practica": "c1b09b07-739e-4ecb-a074-268d2de81b91",
+      "nombre": "Unidad de Quemados (Adultos y Pediátrica)",
+      "opciones": [
+        { "numeral": "11.4.9", "confianza": "alta", "nota": "Paciente quemado crítico adulto (11.4.9 lo menciona en su descripción)." },
+        { "numeral": "11.4.7", "confianza": "alta", "nota": "Paciente quemado crítico pediátrico (11.4.7 lo menciona en su descripción)." },
+        { "numeral": "11.4.1", "confianza": "inferida", "nota": "Quemado no crítico (nota del mapeo fuente: 'el quemado no crítico iría a 11.4.1'). Opción adicional; interpretación de F0." }
+      ]
+    },
+    {
+      "practica": "345c5f07-4aab-4115-a91a-19a34db3a2f7",
+      "nombre": "Trasplantes (Renal, Hígado, Corazón, Médula, etc.)",
+      "opciones": [
+        { "numeral": "11.5.1", "confianza": "alta", "nota": "Trasplante de órganos y tejidos (criterios dentro de 11.5.1)." },
+        { "numeral": "11.4.1", "confianza": "alta", "nota": "Trasplante de células progenitoras hematopoyéticas (11.4.1 alta complejidad)." }
+      ],
+      "motivo": "No estaba en la lista D2 del usuario, pero el mapeo fuente le asigna dos numerales y la regla de §1.2 exige requiere_eleccion cuando hay varios. La clínica puede elegir ambos (dos filas)."
+    }
+  ],
+  "inferidas": {
+    "practicas": [
+      "66f0e259-bda1-4da2-a2ec-ed1862310cad",
+      "7d80642f-4ddc-4696-86bd-98b2d995c32c",
+      "8b636bd9-e1c3-4689-81be-b2ca766ed41d",
+      "92801779-5797-415c-b2d4-0940d3f961c4"
+    ],
+    "motivo": "Enfermería, Nutrición, Psicología y Optometría → 11.2.1 por inferencia (la norma no enumera profesiones por servicio). confianza = 'inferida'; la UI muestra la nota."
+  },
+  "terapias_al_grupo_de_la_norma": {
+    "practicas": [
+      "ca345094-484f-4862-abfa-bee60fe80288",
+      "b1a73f46-6a9a-4969-b9f8-b002cb8a3466",
+      "98b32dcc-2710-450d-a680-90fd025fbce6",
+      "98fb0ad4-fa98-40e8-8ed0-3b9a3f3aa75e"
+    ],
+    "nota": "El cambio de grupo (practicas_medicas.codigo → 'Apoyo Diagnóstico') lo hace 0061 (F1). El mapeo no cambia: 11.3.1 Terapias."
+  }
+}
