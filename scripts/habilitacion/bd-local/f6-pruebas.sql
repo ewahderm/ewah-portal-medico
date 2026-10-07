@@ -51,6 +51,7 @@ select clinica_actual(), id, 99, clinica_actual() || '/protocolos/' || id || '/a
 insert into documentos_normativos (clinica_id, tipo_documento_id, version, storage_path, nombre_archivo)
 select clinica_actual(), id, 1, clinica_actual() || '/protocolos/' || id || '/b.pdf', 'bioseguridad v2.pdf' from tipos_documento_normativo where codigo = 'HAB_BIOSEGURIDAD';
 select t.ok(array_agg(version order by version) = '{1,2}', 'versiones 1 y 2 asignadas por la BD (ignora la que manda la app)') from documentos_normativos;
+select t.ok(bool_and(vigente_desde = (now() at time zone 'America/Bogota')::date), 'vigente_desde en fecha de Colombia, no UTC') from documentos_normativos;
 select t.ok(version = 2 and nombre_archivo = 'bioseguridad v2.pdf', 'la vista de vigentes da la última versión') from hab_protocolos_vigentes where codigo = 'HAB_BIOSEGURIDAD';
 select t.debe_fallar($q$insert into documentos_normativos (clinica_id, tipo_documento_id, version, storage_path, nombre_archivo)
   select clinica_actual(), id, 1, clinica_actual() || '/normativos/x.pdf', 'x.pdf' from tipos_documento_normativo where codigo = 'MANUAL_FUNCIONES'$q$, 'row-level security');

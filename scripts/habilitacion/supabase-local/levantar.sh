@@ -21,7 +21,15 @@ SR=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6
 docker info > /dev/null 2>&1 || { (dockerd > /tmp/dockerd.log 2>&1 &); until docker info > /dev/null 2>&1; do sleep 1; done; }
 mkdir -p "$TMP_SB/supabase/migrations"
 sed 's/^project_id = .*/project_id = "ewah-local"/' "$R/supabase/config.toml" > "$TMP_SB/supabase/config.toml"
-npx -y supabase@latest start --workdir "$TMP_SB" -x studio,imgproxy,mailpit,edge-runtime,logflare,vector,supavisor,realtime,postgres-meta
+# `start` a veces revisa el estado antes de que Postgres termine de
+# arrancar y sale con StatusDbNotReadyError: se tolera y se espera aquí.
+npx -y supabase@latest start --workdir "$TMP_SB" -x studio,imgproxy,mailpit,edge-runtime,logflare,vector,supavisor,realtime,postgres-meta || true
+until psql -q "$DBURL" -c 'select 1' > /dev/null 2>&1; do sleep 2; done
+until curl -sf http://127.0.0.1:54321/auth/v1/health -H "apikey: $SR" > /dev/null; do sleep 2; done
+# Siempre desde cero (la carpeta de migraciones del workdir está vacía):
+# idempotente aunque una corrida anterior haya quedado a medias.
+npx -y supabase@latest db reset --workdir "$TMP_SB" > /dev/null
+until curl -sf http://127.0.0.1:54321/auth/v1/health -H "apikey: $SR" > /dev/null; do sleep 2; done
 
 curl -s -X POST http://127.0.0.1:54321/auth/v1/admin/users -H "apikey: $SR" -H "Authorization: Bearer $SR" \
   -H 'Content-Type: application/json' -d '{"email":"admin@ewah.local","password":"Prueba-local-123!","email_confirm":true}' > /dev/null

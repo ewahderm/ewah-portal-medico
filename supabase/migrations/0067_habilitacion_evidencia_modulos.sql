@@ -621,7 +621,9 @@ begin
   where clinica_id = new.clinica_id and tipo_documento_id = new.tipo_documento_id;
   new.created_by := coalesce(auth.uid(), new.created_by);
   new.created_at := now();
-  new.vigente_desde := coalesce(new.vigente_desde, fn_hab_hoy());
+  -- La columna trae default current_date (fecha UTC: después de las 7 p. m.
+  -- ya es "mañana"); la fecha de una versión es la de Colombia.
+  new.vigente_desde := fn_hab_hoy();
   return new;
 end;
 $$;
