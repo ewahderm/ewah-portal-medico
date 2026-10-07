@@ -3,6 +3,7 @@ import { es } from "date-fns/locale";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getResendClient, construirRemitente } from "@/lib/email/resend";
 import { nombreCompleto } from "@/lib/pacientes/nombre";
+import { escapeHtml } from "@/lib/texto";
 
 type FilaRecordatorio = {
   hora_inicio: string;
@@ -38,15 +39,7 @@ function fechaDeManana(): string {
 // nombres/sedes/tratamientos en teoría también podrían llevar un carácter
 // raro — sin escapar, un "<" o "&" suelto rompería el HTML del correo, y en
 // el peor caso alguien podría inyectar markup. Siempre se escapa antes de
-// interpolar.
-function escapeHtml(texto: string): string {
-  return texto
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
+// interpolar (escapeHtml de lib/texto.ts).
 
 function construirHtmlRecordatorio(
   nombreProfesional: string,

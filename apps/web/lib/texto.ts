@@ -8,3 +8,14 @@ export function normalizarBusqueda(texto: string): string {
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "");
 }
+
+// Todo texto variable que va dentro del HTML de un correo (nombres de
+// clínica, de personas, de documentos) pasa por aquí.
+export function escapeHtml(texto: string): string {
+  return texto
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}

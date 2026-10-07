@@ -37,6 +37,16 @@ const NAV_GROUPS = [
   },
 ];
 
+// Insignia de Habilitación (§4.4): vencidas + ≤ 7 días + documentos
+// vencidos, solo si el usuario tiene habilitacion/VIEW. Todos los planes.
+// Cualquier error (p. ej. la migración aún no aplicada) = sin insignia.
+async function contarUrgentesHabilitacion(supabase: Awaited<ReturnType<typeof createClient>>): Promise<number> {
+  const { data: puedeVer } = await supabase.rpc("has_permission", { modulo_code: "habilitacion", permiso_code: "VIEW" });
+  if (!puedeVer) return 0;
+  const { data, error } = await supabase.rpc("fn_hab_conteo_urgentes");
+  return error || typeof data !== "number" ? 0 : data;
+}
+
 export default async function ProtectedLayout({
   children,
 }: {
@@ -48,13 +58,18 @@ export default async function ProtectedLayout({
   // sesión (no el admin) — es la bandera cross-tenant del equipo de EWAH
   // Tech, nunca asignable desde ninguna pantalla de la app.
   const supabaseSesion = await createClient();
-  const { data: esSuperAdmin } = await supabaseSesion.rpc("es_super_admin");
+  const [{ data: esSuperAdmin }, urgentesHabilitacion] = await Promise.all([
+    supabaseSesion.rpc("es_super_admin"),
+    contarUrgentesHabilitacion(supabaseSesion),
+  ]);
   const navGroups = NAV_GROUPS.map((grupo) =>
     grupo.label === "Administración"
       ? {
           ...grupo,
           items: [
-            ...grupo.items,
+            ...grupo.items.map((item) =>
+              item.href === "/habilitacion" && urgentesHabilitacion > 0 ? { ...item, badge: urgentesHabilitacion } : item,
+            ),
             ...(esAdministrador(usuario) ? [{ href: "/exportar", label: "Exportar datos" }] : []),
             ...(esSuperAdmin ? [{ href: "/plataforma", label: "Plataforma" }] : []),
           ],

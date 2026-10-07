@@ -9,7 +9,8 @@ import { cn } from "cn";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogPortal, DialogOverlay, DialogClose, DialogTrigger } from "@/components/ui/dialog";
 
-type NavItem = { href: string; label: string };
+import { NavBadge, type NavItem } from "./nav-group";
+
 type NavGroup = { label: string; items: NavItem[] };
 
 // Mismo <Dialog> que el resto de la app (overlay + cierre solo por X, nunca
@@ -29,13 +30,15 @@ export function MobileNav({
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const totalBadges = groups.reduce((n, g) => n + g.items.reduce((m, i) => m + (i.badge ?? 0), 0), 0);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger
         render={
-          <Button variant="ghost" size="icon" className="md:hidden" aria-label="Abrir menú">
+          <Button variant="ghost" size="icon" className="relative md:hidden" aria-label="Abrir menú">
             <MenuIcon />
+            {totalBadges > 0 ? <NavBadge n={totalBadges} className="absolute -top-1 -right-1" /> : null}
           </Button>
         }
       />
@@ -72,11 +75,12 @@ export function MobileNav({
                     href={item.href}
                     onClick={() => setOpen(false)}
                     className={cn(
-                      "rounded-lg px-3 py-2.5 font-medium text-muted-foreground hover:bg-muted hover:text-foreground",
+                      "flex items-center justify-between gap-2 rounded-lg px-3 py-2.5 font-medium text-muted-foreground hover:bg-muted hover:text-foreground",
                       pathname.startsWith(item.href) && "bg-muted text-foreground",
                     )}
                   >
                     {item.label}
+                    {item.badge ? <NavBadge n={item.badge} /> : null}
                   </Link>
                 ))}
               </div>

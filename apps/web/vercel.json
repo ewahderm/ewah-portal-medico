@@ -5,7 +5,7 @@
       "schedule": "0 23 * * 0-5"
     },
     {
-      "path": "/api/cron/alertas-rrhh",
+      "path": "/api/cron/diario",
       "schedule": "0 12 * * *"
     }
   ]

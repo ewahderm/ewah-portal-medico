@@ -2,17 +2,9 @@ import { format, addDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getResendClient, construirRemitente } from "@/lib/email/resend";
+import { escapeHtml } from "@/lib/texto";
 
 const VENTANA_DIAS = 30;
-
-function escapeHtml(texto: string): string {
-  return texto
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
 
 // Aproximación de días hábiles (lunes-viernes) — suficiente para una
 // alerta ("¿ya venció o está por vencer el plazo de la ARL?"), no un
