@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/table";
 import { EmpleadoDialog } from "./empleado-dialog";
 import type { Opcion } from "@/lib/forms/opciones";
+import { exigirExito } from "@/lib/forms/resultado";
 
 type EmpleadoRow = {
   id: string;
@@ -66,7 +67,7 @@ export function EmpleadosTabla({
     setError(null);
     startTransition(async () => {
       try {
-        await toggleEmpleado(id, next);
+        exigirExito(await toggleEmpleado(id, next));
       } catch (e) {
         setEstados((prev) => new Map(prev).set(id, !next));
         setError(e instanceof Error ? e.message : "No se pudo actualizar.");

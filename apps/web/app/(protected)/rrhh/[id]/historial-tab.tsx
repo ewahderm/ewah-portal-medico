@@ -31,6 +31,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { exigirExito } from "@/lib/forms/resultado";
 
 function CambioCargoDialog({ empleadoId, cargos, onCreado }: { empleadoId: string; cargos: Opcion[]; onCreado: () => void }) {
   const [open, setOpen] = useState(false);
@@ -41,7 +42,7 @@ function CambioCargoDialog({ empleadoId, cargos, onCreado }: { empleadoId: strin
     setError(null);
     startTransition(async () => {
       try {
-        await registrarCambioCargo(empleadoId, formData);
+        exigirExito(await registrarCambioCargo(empleadoId, formData));
         onCreado();
         toast.add({ title: "Cambio de cargo registrado", type: "success" });
         setOpen(false);
@@ -86,7 +87,7 @@ function CambioSalarioDialog({ empleadoId, onCreado }: { empleadoId: string; onC
     setError(null);
     startTransition(async () => {
       try {
-        await registrarCambioSalario(empleadoId, formData);
+        exigirExito(await registrarCambioSalario(empleadoId, formData));
         onCreado();
         toast.add({ title: "Cambio de salario registrado", type: "success" });
         setOpen(false);
@@ -147,8 +148,12 @@ export function HistorialTab({ empleadoId, cargos, puedeCrear }: { empleadoId: s
   }, []);
 
   async function descargar(path: string) {
-    const url = await urlFirmadaDocumentoRrhh(path);
-    window.open(url, "_blank");
+    const resultado = await urlFirmadaDocumentoRrhh(path);
+    if ("error" in resultado) {
+      toast.add({ title: resultado.error, type: "error" });
+      return;
+    }
+    window.open(resultado.url, "_blank");
   }
 
   return (

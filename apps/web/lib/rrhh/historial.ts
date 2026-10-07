@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requirePermiso as requirePermisoBase } from "@/lib/auth/requirePermiso";
 import { formatoMoneda } from "@/lib/format";
 import { MINIMO_SMLV_SALARIO_INTEGRAL } from "./calculo";
+import type { ResultadoAccion } from "@/lib/forms/resultado";
 
 function requirePermiso() {
   return requirePermisoBase("rrhh", "CREATE");
@@ -15,31 +16,33 @@ async function subirActaOpcional(
   clinicaId: string,
   empleadoId: string,
   formData: FormData,
-): Promise<string | null> {
+): Promise<{ error: string } | { path: string | null }> {
   const acta = formData.get("acta");
-  if (!(acta instanceof File) || acta.size === 0) return null;
-  if (acta.size > 10 * 1024 * 1024) throw new Error("El acta no puede pesar más de 10 MB.");
+  if (!(acta instanceof File) || acta.size === 0) return { path: null };
+  if (acta.size > 10 * 1024 * 1024) return { error: "El acta no puede pesar más de 10 MB." };
 
   const extension = acta.name.split(".").pop() ?? "pdf";
   const path = `${clinicaId}/empleados/${empleadoId}/acta-${Date.now()}.${extension}`;
   const { error } = await supabase.storage
     .from("documentos-rrhh")
     .upload(path, acta, { contentType: acta.type });
-  if (error) throw new Error("No se pudo subir el acta.");
-  return path;
+  if (error) return { error: "No se pudo subir el acta." };
+  return { path };
 }
 
-export async function registrarCambioCargo(empleadoId: string, formData: FormData) {
+export async function registrarCambioCargo(empleadoId: string, formData: FormData): Promise<ResultadoAccion> {
   const cargoId = String(formData.get("cargoId") ?? "");
   const fechaInicio = String(formData.get("fechaInicio") ?? "");
-  if (!cargoId) throw new Error("Selecciona el cargo.");
-  if (!fechaInicio) throw new Error("La fecha de inicio es obligatoria.");
+  if (!cargoId) return { error: "Selecciona el cargo." };
+  if (!fechaInicio) return { error: "La fecha de inicio es obligatoria." };
 
   const check = await requirePermiso();
-  if (!check.ok) throw new Error(check.error);
+  if (!check.ok) return { error: check.error };
 
   const supabase = await createClient();
-  const actaStoragePath = await subirActaOpcional(supabase, check.usuario.clinica_id, empleadoId, formData);
+  const acta = await subirActaOpcional(supabase, check.usuario.clinica_id, empleadoId, formData);
+  if ("error" in acta) return { error: acta.error };
+  const actaStoragePath = acta.path;
 
   const { error } = await supabase.from("historial_cargos_empleado").insert({
     clinica_id: check.usuario.clinica_id,
@@ -49,20 +52,21 @@ export async function registrarCambioCargo(empleadoId: string, formData: FormDat
     acta_storage_path: actaStoragePath,
     created_by: check.usuario.id,
   });
-  if (error) throw new Error("No se pudo registrar el cambio de cargo.");
+  if (error) return { error: "No se pudo registrar el cambio de cargo." };
 
   revalidatePath(`/rrhh/${empleadoId}`);
+  return {};
 }
 
-export async function registrarCambioSalario(empleadoId: string, formData: FormData) {
+export async function registrarCambioSalario(empleadoId: string, formData: FormData): Promise<ResultadoAccion> {
   const salario = Number(formData.get("salario"));
   const fechaInicio = String(formData.get("fechaInicio") ?? "");
   const tipoSalario = formData.get("tipoSalario") === "integral" ? "integral" : "ordinario";
-  if (!Number.isFinite(salario) || salario <= 0) throw new Error("El salario debe ser mayor a cero.");
-  if (!fechaInicio) throw new Error("La fecha de inicio es obligatoria.");
+  if (!Number.isFinite(salario) || salario <= 0) return { error: "El salario debe ser mayor a cero." };
+  if (!fechaInicio) return { error: "La fecha de inicio es obligatoria." };
 
   const check = await requirePermiso();
-  if (!check.ok) throw new Error(check.error);
+  if (!check.ok) return { error: check.error };
 
   const supabase = await createClient();
 
@@ -82,14 +86,14 @@ export async function registrarCambioSalario(empleadoId: string, formData: FormD
       .eq("anio", Number(fechaInicio.slice(0, 4)))
       .maybeSingle();
     if (valores?.smlv && salario < valores.smlv * MINIMO_SMLV_SALARIO_INTEGRAL) {
-      throw new Error(
-        `El salario integral debe ser de al menos ${MINIMO_SMLV_SALARIO_INTEGRAL} salarios mínimos ` +
-          `(${formatoMoneda(valores.smlv * MINIMO_SMLV_SALARIO_INTEGRAL)} en ${fechaInicio.slice(0, 4)}).`,
-      );
+      return { error: `El salario integral debe ser de al menos ${MINIMO_SMLV_SALARIO_INTEGRAL} salarios mínimos ` +
+          `(${formatoMoneda(valores.smlv * MINIMO_SMLV_SALARIO_INTEGRAL)} en ${fechaInicio.slice(0, 4)}).`, };
     }
   }
 
-  const actaStoragePath = await subirActaOpcional(supabase, check.usuario.clinica_id, empleadoId, formData);
+  const acta = await subirActaOpcional(supabase, check.usuario.clinica_id, empleadoId, formData);
+  if ("error" in acta) return { error: acta.error };
+  const actaStoragePath = acta.path;
 
   const { error } = await supabase.from("historial_salarios_empleado").insert({
     clinica_id: check.usuario.clinica_id,
@@ -100,9 +104,10 @@ export async function registrarCambioSalario(empleadoId: string, formData: FormD
     acta_storage_path: actaStoragePath,
     created_by: check.usuario.id,
   });
-  if (error) throw new Error("No se pudo registrar el cambio de salario.");
+  if (error) return { error: "No se pudo registrar el cambio de salario." };
 
   revalidatePath(`/rrhh/${empleadoId}`);
+  return {};
 }
 
 export async function listarHistorialEmpleado(empleadoId: string) {

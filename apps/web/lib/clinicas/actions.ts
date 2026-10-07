@@ -10,9 +10,17 @@ const TAMANO_MAXIMO_LOGO = 2 * 1024 * 1024;
 
 // Datos de marca para imprimir en un PDF (comprobantes de nómina/honorarios,
 // etc.) — mismo bucket público ya usado para el logo en el navbar/correos.
-export async function obtenerClinicaParaPdf() {
+export type ClinicaParaPdf = {
+  nombre: string;
+  nombreComercial: string | null;
+  nit: string;
+  telefonoContacto: string | null;
+  logoUrl: string | null;
+};
+
+export async function obtenerClinicaParaPdf(): Promise<{ error: string } | ClinicaParaPdf> {
   const usuario = await getCurrentUsuario();
-  if (!usuario) throw new Error("Sesión inválida.");
+  if (!usuario) return { error: "Sesión inválida." };
 
   const supabase = await createClient();
   const { data: clinica } = await supabase
@@ -20,7 +28,7 @@ export async function obtenerClinicaParaPdf() {
     .select("nombre, nombre_comercial, nit, telefono_contacto, logo_storage_path")
     .eq("id", usuario.clinica_id)
     .single();
-  if (!clinica) throw new Error("No se pudo cargar la información de la clínica.");
+  if (!clinica) return { error: "No se pudo cargar la información de la clínica." };
 
   const logoUrl = clinica.logo_storage_path
     ? supabase.storage.from("clinica-logos").getPublicUrl(clinica.logo_storage_path).data.publicUrl

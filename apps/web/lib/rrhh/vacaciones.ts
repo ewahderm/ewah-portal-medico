@@ -4,36 +4,37 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requirePermiso as requirePermisoBase } from "@/lib/auth/requirePermiso";
 import { esAdministrador } from "@/lib/auth/session";
+import type { ResultadoAccion } from "@/lib/forms/resultado";
 
 function requirePermiso() {
   return requirePermisoBase("rrhh", "CREATE");
 }
 
-export async function crearVacaciones(empleadoId: string, formData: FormData) {
+export async function crearVacaciones(empleadoId: string, formData: FormData): Promise<ResultadoAccion> {
   const fechaInicio = String(formData.get("fechaInicio") ?? "");
   const fechaFin = String(formData.get("fechaFin") ?? "");
   const diasTomados = Number(formData.get("diasTomados"));
-  if (!fechaInicio || !fechaFin) throw new Error("Las fechas son obligatorias.");
-  if (fechaFin < fechaInicio) throw new Error("La fecha de fin no puede ser anterior a la de inicio.");
+  if (!fechaInicio || !fechaFin) return { error: "Las fechas son obligatorias." };
+  if (fechaFin < fechaInicio) return { error: "La fecha de fin no puede ser anterior a la de inicio." };
   if (!Number.isFinite(diasTomados) || diasTomados <= 0) {
-    throw new Error("Los días tomados deben ser mayores a cero.");
+    return { error: "Los días tomados deben ser mayores a cero." };
   }
 
   const check = await requirePermiso();
-  if (!check.ok) throw new Error(check.error);
+  if (!check.ok) return { error: check.error };
 
   const supabase = await createClient();
 
   let cartaStoragePath: string | null = null;
   const carta = formData.get("cartaSolicitud");
   if (carta instanceof File && carta.size > 0) {
-    if (carta.size > 10 * 1024 * 1024) throw new Error("La carta no puede pesar más de 10 MB.");
+    if (carta.size > 10 * 1024 * 1024) return { error: "La carta no puede pesar más de 10 MB." };
     const extension = carta.name.split(".").pop() ?? "pdf";
     const path = `${check.usuario.clinica_id}/empleados/${empleadoId}/vacaciones-${Date.now()}.${extension}`;
     const { error: uploadError } = await supabase.storage
       .from("documentos-rrhh")
       .upload(path, carta, { contentType: carta.type });
-    if (uploadError) throw new Error("No se pudo subir la carta de solicitud.");
+    if (uploadError) return { error: "No se pudo subir la carta de solicitud." };
     cartaStoragePath = path;
   }
 
@@ -51,24 +52,26 @@ export async function crearVacaciones(empleadoId: string, formData: FormData) {
     // contrato es "por servicios" — se traduce a un mensaje claro en vez
     // del texto crudo de Postgres.
     if (error.message.includes("prestación de servicios")) {
-      throw new Error("Un contrato por prestación de servicios no genera vacaciones.");
+      return { error: "Un contrato por prestación de servicios no genera vacaciones." };
     }
-    throw new Error("No se pudo registrar las vacaciones.");
+    return { error: "No se pudo registrar las vacaciones." };
   }
 
   revalidatePath(`/rrhh/${empleadoId}`);
+  return {};
 }
 
-export async function eliminarVacaciones(id: string, empleadoId: string) {
+export async function eliminarVacaciones(id: string, empleadoId: string): Promise<ResultadoAccion> {
   const check = await requirePermiso();
-  if (!check.ok) throw new Error(check.error);
-  if (!esAdministrador(check.usuario)) throw new Error("Solo un administrador puede eliminar este registro.");
+  if (!check.ok) return { error: check.error };
+  if (!esAdministrador(check.usuario)) return { error: "Solo un administrador puede eliminar este registro." };
 
   const supabase = await createClient();
   const { error } = await supabase.from("vacaciones_empleado").delete().eq("id", id);
-  if (error) throw new Error("No se pudo eliminar el registro.");
+  if (error) return { error: "No se pudo eliminar el registro." };
 
   revalidatePath(`/rrhh/${empleadoId}`);
+  return {};
 }
 
 export async function listarVacacionesEmpleado(empleadoId: string) {

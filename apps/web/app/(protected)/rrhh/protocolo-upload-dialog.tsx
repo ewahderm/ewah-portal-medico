@@ -15,6 +15,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { exigirExito } from "@/lib/forms/resultado";
 
 export function ProtocoloUploadDialog({
   tipoDocumentoId,
@@ -35,7 +36,7 @@ export function ProtocoloUploadDialog({
     setError(null);
     startTransition(async () => {
       try {
-        await subirDocumentoNormativo(formData);
+        exigirExito(await subirDocumentoNormativo(formData));
         onSubido();
         toast.add({ title: "Documento guardado", type: "success" });
         setOpen(false);

@@ -16,6 +16,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { exigirExito } from "@/lib/forms/resultado";
 
 export type AccidenteRow = {
   id: string;
@@ -56,7 +57,7 @@ export function AccidenteDetalleDialog({
     setError(null);
     startTransition(async () => {
       try {
-        await actualizarAccidenteTrabajo(accidente.id, formData);
+        exigirExito(await actualizarAccidenteTrabajo(accidente.id, formData));
         onActualizado();
         toast.add({ title: "Accidente actualizado", type: "success" });
         setOpen(false);

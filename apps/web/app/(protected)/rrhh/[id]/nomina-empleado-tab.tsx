@@ -36,6 +36,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { exigirExito } from "@/lib/forms/resultado";
 
 export function NominaEmpleadoTab({
   empleadoId,
@@ -73,8 +74,8 @@ export function NominaEmpleadoTab({
 
   async function aprobar(id: string) {
     try {
-      if (esLaboral) await aprobarComprobanteNomina(id, empleadoId);
-      else await aprobarComprobanteHonorarios(id, empleadoId);
+      if (esLaboral) exigirExito(await aprobarComprobanteNomina(id, empleadoId));
+      else exigirExito(await aprobarComprobanteHonorarios(id, empleadoId));
       cargar();
       toast.add({ title: "Comprobante aprobado — ya no se puede editar", type: "success" });
     } catch (e) {
@@ -89,8 +90,8 @@ export function NominaEmpleadoTab({
     }
     setConfirmandoId(null);
     try {
-      if (esLaboral) await eliminarComprobanteNomina(id, empleadoId);
-      else await eliminarComprobanteHonorarios(id, empleadoId);
+      if (esLaboral) exigirExito(await eliminarComprobanteNomina(id, empleadoId));
+      else exigirExito(await eliminarComprobanteHonorarios(id, empleadoId));
       cargar();
       toast.add({ title: "Borrador eliminado", type: "success" });
     } catch (e) {
@@ -100,7 +101,7 @@ export function NominaEmpleadoTab({
 
   async function descargarPdf(id: string) {
     try {
-      const clinica = await obtenerClinicaParaPdf();
+      const clinica = exigirExito(await obtenerClinicaParaPdf());
       if (esLaboral) {
         const comprobante = await obtenerComprobanteNomina(id);
         if (!comprobante) throw new Error("No se encontró el comprobante.");
