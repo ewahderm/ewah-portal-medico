@@ -263,6 +263,12 @@ export function TratamientoDialog({
               />
             </div>
           </div>
+          {mediosPago.length === 0 ? (
+            <AvisoCatalogoVacio>
+              Todavía no tienes medios de pago (efectivo, tarjeta, transferencia...). Créalos en Tratamientos → Medios
+              de pago para poder registrar el tratamiento.
+            </AvisoCatalogoVacio>
+          ) : null}
 
           <div className="space-y-2">
             <Label htmlFor="costo">Valor</Label>

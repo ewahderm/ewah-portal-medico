@@ -15,16 +15,18 @@ async function pasosIniciales(supabase: Awaited<ReturnType<typeof createClient>>
     const { count } = await supabase.from(tabla).select("id", { count: "exact", head: true }).eq("activo", true);
     return count ?? 0;
   };
-  const [sedes, consultorios, tipos, { data: clinica }] = await Promise.all([
+  const [sedes, consultorios, tipos, medios, { data: clinica }] = await Promise.all([
     contar("sedes"),
     contar("consultorios"),
     contar("tipos_tratamiento"),
+    contar("medios_pago"),
     supabase.from("clinicas").select("direccion, telefono").eq("id", clinicaId).maybeSingle(),
   ]);
   return [
     { texto: "Crea tu sede (Parámetros → Generales → Sedes)", hecho: sedes > 0 },
     { texto: "Crea al menos un consultorio (Parámetros → Generales → Consultorios)", hecho: consultorios > 0 },
     { texto: "Crea tus tipos de tratamiento (Parámetros → Tratamientos)", hecho: tipos > 0 },
+    { texto: "Crea tus medios de pago (Parámetros → Tratamientos → Medios de pago)", hecho: medios > 0 },
     { texto: "Completa los datos básicos de la clínica: dirección, teléfono y actividad económica", hecho: !!(clinica?.direccion && clinica?.telefono) },
   ];
 }
