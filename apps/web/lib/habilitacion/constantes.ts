@@ -210,6 +210,22 @@ export const MAX_ARCHIVO_BYTES = 10 * 1024 * 1024;
 export const FORMATOS_ARCHIVO = "PDF, JPG, PNG, WEBP, Word (.docx) o Excel (.xlsx)";
 export const ACCEPT_ARCHIVO = ".pdf,.jpg,.jpeg,.png,.webp,.docx,.xlsx";
 
+// Fuentes de evidencia de otros módulos (F6, 0067): lista cerrada, igual al
+// check de hab_evidencias.fuente_codigo y al `case` del dispatcher.
+export const FUENTES_EVIDENCIA = [
+  { value: "rrhh_talento_humano", label: "Talento humano", modulo: "RRHH" },
+  { value: "ma_temperatura_nevera", label: "Temperatura de neveras", modulo: "Medio Ambiente" },
+  { value: "ma_temperatura_ambiente", label: "Temperatura y humedad de consultorios", modulo: "Medio Ambiente" },
+  { value: "ma_residuos", label: "Registro de residuos", modulo: "Medio Ambiente" },
+  { value: "ma_limpieza", label: "Registro de limpieza", modulo: "Medio Ambiente" },
+  { value: "ma_extintores", label: "Extintores", modulo: "Medio Ambiente" },
+  { value: "inv_registro_sanitario", label: "Registro sanitario de insumos", modulo: "Inventario" },
+  { value: "inv_lotes_vencidos", label: "Vencimiento de lotes", modulo: "Inventario" },
+  { value: "sistema_consentimientos", label: "Consentimientos informados", modulo: "Tratamientos" },
+  { value: "sistema_historia_clinica", label: "Historia clínica electrónica", modulo: "Pacientes" },
+] as const satisfies readonly { value: string; label: string; modulo: string }[];
+export type FuenteEvidencia = (typeof FUENTES_EVIDENCIA)[number]["value"];
+
 // PDF oficial de la norma (hab_normas.url_fuente); la página del criterio
 // se abre con #page=N.
 export const URL_PDF_RES3100 = "https://www.minsalud.gov.co/sites/rid/Lists/BibliotecaDigital/RIDE/DE/DIJ/resolucion-3100-de-2019.pdf";

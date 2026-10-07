@@ -6,6 +6,7 @@ import type {
   CodigoEstandar,
   EstadoEvaluacion,
   EstadoPlanMejora,
+  FuenteEvidencia,
   EstadoReps,
   EstadoServicio,
   GrupoSupersalud,
@@ -222,7 +223,10 @@ export type UsuarioClinica = { id: string; nombre: string };
 
 export type Evidencia = {
   id: string;
-  tipo: "archivo" | "nota" | "enlace";
+  tipo: "archivo" | "nota" | "enlace" | "registro_modulo" | "documento_normativo";
+  fuente_codigo: FuenteEvidencia | null;
+  tipo_documento_normativo_id: string | null;
+  sugerida_por_sistema: boolean;
   descripcion: string;
   nombre_archivo: string | null;
   mime: string | null;
@@ -257,9 +261,45 @@ export type PlanMejora = {
   created_at: string;
 };
 
+// Resumen vivo de una fuente (fn_hab_resumen_evidencia, 0067).
+export type ResumenEvidencia = {
+  fuente: FuenteEvidencia;
+  estado: "ok" | "alerta" | "falta";
+  titulo: string;
+  detalle: string;
+  sugerencia: "cumple" | "no_cumple" | null;
+  enlace: string;
+  filas?: { nombre: string; titulo: "ok" | "falta"; tarjeta: "ok" | "falta"; vacunas: "vigente" | "vencida" | "falta" }[];
+  calculado_en: string;
+};
+
+// Última versión de un protocolo de habilitación (vista hab_protocolos_vigentes).
+export type ProtocoloVigente = {
+  id: string;
+  tipo_documento_id: string;
+  nombre: string;
+  version: number;
+  nombre_archivo: string;
+  vigente_desde: string | null;
+  created_at: string;
+};
+
+// Sugerencia curada para el criterio (hab_criterio_fuentes_sugeridas):
+// una fuente de otro módulo con su resumen vivo, o un tipo de protocolo
+// con su versión vigente (null = todavía no se ha cargado).
+export type SugerenciaEvidencia =
+  | { clase: "fuente"; fuente: FuenteEvidencia; nota: string | null; resumen: ResumenEvidencia | null; enUso: boolean }
+  | { clase: "protocolo"; tipoId: string; nombre: string; vigente: ProtocoloVigente | null; enUso: boolean };
+
 // Lo que abre el panel de detalle de un criterio.
 export type DetalleCriterio = {
   evidencias: Evidencia[];
   historial: EvaluacionHistorial[];
   planes: PlanMejora[];
+  sugerencias: SugerenciaEvidencia[];
+  // Resumen vivo de cada evidencia registro_modulo (por fuente) y versión
+  // vigente de cada protocolo usado como evidencia (por tipo).
+  resumenes: Partial<Record<FuenteEvidencia, ResumenEvidencia>>;
+  protocolos: Record<string, ProtocoloVigente | null>;
+  nombresProtocolo: Record<string, string>;
 };

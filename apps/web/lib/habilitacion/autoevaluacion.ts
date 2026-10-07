@@ -22,7 +22,19 @@ import {
   type EstadoEvaluacion,
 } from "@/lib/habilitacion/constantes";
 import { detectarTipoArchivo, sha256Hex } from "@/lib/habilitacion/archivos";
-import type { DetalleCriterio, Evidencia, EvaluacionHistorial, PlanMejora } from "@/lib/habilitacion/tipos";
+import {
+  FUENTES_EVIDENCIA,
+  type FuenteEvidencia,
+} from "@/lib/habilitacion/constantes";
+import type {
+  DetalleCriterio,
+  Evidencia,
+  EvaluacionHistorial,
+  PlanMejora,
+  ProtocoloVigente,
+  ResumenEvidencia,
+  SugerenciaEvidencia,
+} from "@/lib/habilitacion/tipos";
 
 const BUCKET = "habilitacion";
 const FECHA_ISO = /^\d{4}-\d{2}-\d{2}$/;
@@ -124,14 +136,14 @@ type EvidenciaJson = {
 // la fila, descarga el objeto con la sesión y verifica tamaño y FIRMA.
 // ------------------------------------------------------------
 const EXTENSIONES = ["pdf", "jpg", "png", "webp", "docx", "xlsx"] as const;
-type AreaArchivo = "evidencias" | "planes";
+type AreaArchivo = "evidencias" | "planes" | "protocolos";
 
 export async function prepararSubida(
   area: AreaArchivo,
   entidadId: string,
   extension: string,
 ): Promise<{ error?: string; path?: string; token?: string }> {
-  if (area !== "evidencias" && area !== "planes") return { error: "Destino inválido." };
+  if (area !== "evidencias" && area !== "planes" && area !== "protocolos") return { error: "Destino inválido." };
   if (!esUuid(entidadId)) return { error: "Destino inválido." };
   if (!(EXTENSIONES as readonly string[]).includes(extension)) return { error: "Formato no soportado." };
 
@@ -472,10 +484,12 @@ export async function obtenerDetalleCriterio(
   if (!check.ok) return { error: check.error };
 
   const supabase = await createClient();
-  const [evidencias, historial, planes] = await Promise.all([
+  const [evidencias, historial, planes, sugeridas] = await Promise.all([
     supabase
       .from("hab_evidencias")
-      .select("id, tipo, descripcion, nombre_archivo, mime, tamano_bytes, url, created_at, created_by, retirada_en, retiro_motivo")
+      .select(
+        "id, tipo, fuente_codigo, tipo_documento_normativo_id, sugerida_por_sistema, descripcion, nombre_archivo, mime, tamano_bytes, url, created_at, created_by, retirada_en, retiro_motivo",
+      )
       .eq("sede_id", sedeId)
       .eq("criterio_id", criterioId)
       .order("created_at", { ascending: false }),
@@ -492,15 +506,194 @@ export async function obtenerDetalleCriterio(
       .eq("sede_id", sedeId)
       .eq("criterio_id", criterioId)
       .order("created_at", { ascending: false }),
+    supabase
+      .from("hab_criterio_fuentes_sugeridas")
+      .select("fuente_codigo, nota, tipo_documento_normativo_id, tipos_documento_normativo(nombre)")
+      .eq("criterio_id", criterioId),
   ]);
   const error = evidencias.error ?? historial.error ?? planes.error;
   if (error) return { error: mensajeError("obtenerDetalleCriterio", error, "No se pudo cargar el detalle del criterio.") };
 
+  const lista = (evidencias.data ?? []) as Evidencia[];
+  const activas = lista.filter((e) => !e.retirada_en);
+  type FilaSugerida = {
+    fuente_codigo: FuenteEvidencia | null;
+    nota: string | null;
+    tipo_documento_normativo_id: string | null;
+    tipos_documento_normativo: { nombre: string } | null;
+  };
+  const filasSugeridas = (sugeridas.data ?? []) as unknown as FilaSugerida[];
+
+  // Fuentes a resumir: las sugeridas + las ya usadas como evidencia.
+  const fuentes = new Set<FuenteEvidencia>();
+  for (const f of filasSugeridas) if (f.fuente_codigo) fuentes.add(f.fuente_codigo);
+  for (const e of lista) if (e.fuente_codigo) fuentes.add(e.fuente_codigo);
+  const resumenes: Partial<Record<FuenteEvidencia, ResumenEvidencia>> = {};
+  await Promise.all(
+    [...fuentes].map(async (fuente) => {
+      const r = await resumirFuente(supabase, fuente, sedeId);
+      if (r) resumenes[fuente] = r;
+    }),
+  );
+
+  // Protocolos: los sugeridos + los usados como evidencia.
+  const tiposProtocolo = new Set<string>();
+  for (const f of filasSugeridas) if (f.tipo_documento_normativo_id) tiposProtocolo.add(f.tipo_documento_normativo_id);
+  for (const e of lista) if (e.tipo_documento_normativo_id) tiposProtocolo.add(e.tipo_documento_normativo_id);
+  const protocolos: Record<string, ProtocoloVigente | null> = {};
+  const nombresProtocolo: Record<string, string> = {};
+  if (tiposProtocolo.size > 0) {
+    const [{ data: vigentes }, { data: tipos }] = await Promise.all([
+      supabase
+        .from("hab_protocolos_vigentes")
+        .select("id, tipo_documento_id, nombre, version, nombre_archivo, vigente_desde, created_at")
+        .in("tipo_documento_id", [...tiposProtocolo]),
+      supabase.from("tipos_documento_normativo").select("id, nombre").in("id", [...tiposProtocolo]),
+    ]);
+    for (const t of tipos ?? []) {
+      nombresProtocolo[t.id] = t.nombre;
+      protocolos[t.id] = null;
+    }
+    for (const v of (vigentes ?? []) as ProtocoloVigente[]) protocolos[v.tipo_documento_id] = v;
+  }
+
+  const sugerencias: SugerenciaEvidencia[] = filasSugeridas.map((f) =>
+    f.fuente_codigo
+      ? {
+          clase: "fuente" as const,
+          fuente: f.fuente_codigo,
+          nota: f.nota,
+          resumen: resumenes[f.fuente_codigo] ?? null,
+          enUso: activas.some((e) => e.fuente_codigo === f.fuente_codigo),
+        }
+      : {
+          clase: "protocolo" as const,
+          tipoId: f.tipo_documento_normativo_id!,
+          nombre: f.tipos_documento_normativo?.nombre ?? nombresProtocolo[f.tipo_documento_normativo_id!] ?? "Protocolo",
+          vigente: protocolos[f.tipo_documento_normativo_id!] ?? null,
+          enUso: activas.some((e) => e.tipo_documento_normativo_id === f.tipo_documento_normativo_id),
+        },
+  );
+
   return {
     detalle: {
-      evidencias: (evidencias.data ?? []) as Evidencia[],
+      evidencias: lista,
       historial: (historial.data ?? []) as EvaluacionHistorial[],
       planes: (planes.data ?? []) as PlanMejora[],
+      sugerencias,
+      resumenes,
+      protocolos,
+      nombresProtocolo,
     },
   };
+}
+
+// ============================================================
+// Evidencia de otros módulos (F6, §6): resumen vivo + referencia
+// ============================================================
+async function resumirFuente(supabase: Supabase, fuente: FuenteEvidencia, sedeId: string): Promise<ResumenEvidencia | null> {
+  const { data, error } = await supabase.rpc("fn_hab_resumen_evidencia", { p_fuente: fuente, p_sede_id: sedeId, p_parametros: {} });
+  if (error) {
+    console.error(`[habilitacion] fn_hab_resumen_evidencia ${fuente}`, error);
+    return null;
+  }
+  return data as ResumenEvidencia;
+}
+
+function esFuente(v: string): v is FuenteEvidencia {
+  return FUENTES_EVIDENCIA.some((f) => f.value === v);
+}
+
+// "Usar como evidencia": crea la REFERENCIA (no copia el dato). La
+// sugerencia del sistema nunca cambia el estado del criterio: el
+// responsable decide Cumple / No cumple (HU-4.7).
+export async function usarFuenteComoEvidencia(sedeId: string, criterioId: string, fuente: string): Promise<Resultado> {
+  if (!esUuid(sedeId) || !esUuid(criterioId)) return { error: "Criterio inválido." };
+  if (!esFuente(fuente)) return { error: "Fuente inválida." };
+
+  const check = await requireHabilitacion("CREATE", { gestion: true });
+  if (!check.ok) return { error: check.error };
+
+  const supabase = await createClient();
+  const etiqueta = FUENTES_EVIDENCIA.find((f) => f.value === fuente)!;
+  const { error } = await supabase.from("hab_evidencias").insert({
+    clinica_id: check.usuario.clinica_id,
+    sede_id: sedeId,
+    criterio_id: criterioId,
+    tipo: "registro_modulo",
+    fuente_codigo: fuente,
+    descripcion: `${etiqueta.label} (${etiqueta.modulo}) — resumen vivo`,
+    sugerida_por_sistema: true,
+    created_by: check.usuario.id,
+  });
+  if (error) return { error: mensajeError("usarFuenteComoEvidencia", error, "No se pudo agregar la evidencia.") };
+
+  revalidar();
+  return {};
+}
+
+export async function usarProtocoloComoEvidencia(sedeId: string, criterioId: string, tipoId: string): Promise<Resultado> {
+  if (!esUuid(sedeId) || !esUuid(criterioId) || !esUuid(tipoId)) return { error: "Protocolo inválido." };
+
+  const check = await requireHabilitacion("CREATE", { gestion: true });
+  if (!check.ok) return { error: check.error };
+
+  const supabase = await createClient();
+  const { data: tipo } = await supabase.from("tipos_documento_normativo").select("nombre").eq("id", tipoId).maybeSingle();
+  const { error } = await supabase.from("hab_evidencias").insert({
+    clinica_id: check.usuario.clinica_id,
+    sede_id: sedeId,
+    criterio_id: criterioId,
+    tipo: "documento_normativo",
+    tipo_documento_normativo_id: tipoId,
+    descripcion: `Protocolo: ${tipo?.nombre ?? "de habilitación"} (siempre la versión vigente)`,
+    sugerida_por_sistema: true,
+    created_by: check.usuario.id,
+  });
+  if (error) return { error: mensajeError("usarProtocoloComoEvidencia", error, "No se pudo agregar la evidencia.") };
+
+  revalidar();
+  return {};
+}
+
+// Carga una versión nueva de un protocolo de habilitación. El archivo ya
+// subió con prepararSubida("protocolos", tipoId, ext); la versión la pone
+// la BD (0067) y las versiones anteriores no se borran.
+export async function registrarVersionProtocolo(tipoId: string, storagePath: string, nombreArchivo: string): Promise<Resultado> {
+  if (!esUuid(tipoId)) return { error: "Protocolo inválido." };
+
+  const check = await requireHabilitacion("CREATE", { gestion: true });
+  if (!check.ok) return { error: check.error };
+
+  const supabase = await createClient();
+  const subido = await verificarArchivoSubido(supabase, check.usuario.clinica_id, "protocolos", tipoId, storagePath, nombreArchivo);
+  if ("error" in subido) return { error: subido.error };
+
+  const { error } = await supabase.from("documentos_normativos").insert({
+    clinica_id: check.usuario.clinica_id,
+    tipo_documento_id: tipoId,
+    version: 1, // la reemplaza el trigger fn_hab_version_siguiente
+    storage_path: subido.path,
+    nombre_archivo: subido.nombre,
+    created_by: check.usuario.id,
+  });
+  if (error) return { error: mensajeError("registrarVersionProtocolo", error, "No se pudo registrar el protocolo.") };
+
+  revalidar();
+  return {};
+}
+
+export async function urlProtocoloVigente(tipoId: string): Promise<{ error?: string; url?: string }> {
+  if (!esUuid(tipoId)) return { error: "Protocolo inválido." };
+  const check = await requireHabilitacion("VIEW", { gestion: true });
+  if (!check.ok) return { error: check.error };
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("hab_protocolos_vigentes")
+    .select("storage_path, nombre_archivo")
+    .eq("tipo_documento_id", tipoId)
+    .maybeSingle();
+  if (!data?.storage_path) return { error: "Ese protocolo todavía no se ha cargado." };
+  return firmar(supabase, data.storage_path, data.nombre_archivo);
 }

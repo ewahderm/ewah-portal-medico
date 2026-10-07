@@ -10,7 +10,7 @@ import { MAX_ARCHIVO_BYTES } from "@/lib/habilitacion/constantes";
 
 export async function subirArchivoHabilitacion(
   archivo: File,
-  area: "evidencias" | "planes",
+  area: "evidencias" | "planes" | "protocolos",
   entidadId: string,
 ): Promise<{ error: string } | { path: string; nombre: string }> {
   if (archivo.size === 0) return { error: "El archivo está vacío." };

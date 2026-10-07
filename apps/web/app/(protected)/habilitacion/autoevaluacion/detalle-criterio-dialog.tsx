@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { DownloadIcon, ExternalLinkIcon, FileIcon, LinkIcon, PlusIcon, StickyNoteIcon } from "lucide-react";
+import { BookOpenIcon, BoxesIcon, DownloadIcon, ExternalLinkIcon, FileIcon, LinkIcon, PlusIcon, StickyNoteIcon } from "lucide-react";
 import {
   actualizarPlanMejora,
   asignarResponsable,
@@ -21,7 +21,15 @@ import {
 } from "@/lib/habilitacion/constantes";
 import { fechaLegible } from "@/lib/habilitacion/ruta";
 import { dateLocalHoy } from "@/lib/medio-ambiente/fecha-local";
-import type { DetalleCriterio, Evidencia, FilaCriterio, PlanMejora, UsuarioClinica } from "@/lib/habilitacion/tipos";
+import type {
+  DetalleCriterio,
+  Evidencia,
+  FilaCriterio,
+  PlanMejora,
+  ProtocoloVigente,
+  ResumenEvidencia,
+  UsuarioClinica,
+} from "@/lib/habilitacion/tipos";
 import { toast } from "@/components/ui/toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -34,6 +42,7 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { EstadoChip } from "./criterio-card";
+import { ResumenFuente, SugerenciasEvidencia, VersionVigente } from "./evidencia-modulos";
 
 const SIN_RESPONSABLE = "__sin_responsable__";
 
@@ -112,6 +121,19 @@ export function DetalleCriterioDialog({
 
         {puedeEditar ? <Asignacion sedeId={sedeId} fila={fila} usuarios={usuarios} onGuardado={recargar} /> : null}
 
+        {detalle && detalle.sugerencias.length > 0 ? (
+          <>
+            <Separator />
+            <SugerenciasEvidencia
+              sedeId={sedeId}
+              criterioId={fila.criterio_id}
+              sugerencias={detalle.sugerencias}
+              puedeEditar={puedeEditar}
+              onCambio={recargar}
+            />
+          </>
+        ) : null}
+
         <Separator />
 
         <section className="space-y-2" aria-labelledby="titulo-evidencias">
@@ -134,7 +156,15 @@ export function DetalleCriterioDialog({
           ) : (
             <ul className="space-y-2">
               {activas.map((e) => (
-                <EvidenciaItem key={e.id} evidencia={e} autor={nombre(e.created_by)} puedeEditar={puedeEditar} onRetirada={recargar} />
+                <EvidenciaItem
+                  key={e.id}
+                  evidencia={e}
+                  autor={nombre(e.created_by)}
+                  puedeEditar={puedeEditar}
+                  onRetirada={recargar}
+                  resumen={e.fuente_codigo ? detalle.resumenes[e.fuente_codigo] : undefined}
+                  protocolo={e.tipo_documento_normativo_id ? detalle.protocolos[e.tipo_documento_normativo_id] : undefined}
+                />
               ))}
             </ul>
           )}
@@ -266,16 +296,29 @@ function EvidenciaItem({
   autor,
   puedeEditar,
   onRetirada,
+  resumen,
+  protocolo,
 }: {
   evidencia: Evidencia;
   autor: string;
   puedeEditar: boolean;
   onRetirada: () => void;
+  resumen?: ResumenEvidencia;
+  protocolo?: ProtocoloVigente | null;
 }) {
   const [retirando, setRetirando] = useState(false);
   const [motivo, setMotivo] = useState("");
   const [pendiente, setPendiente] = useState(false);
-  const Icono = e.tipo === "archivo" ? FileIcon : e.tipo === "enlace" ? LinkIcon : StickyNoteIcon;
+  const Icono =
+    e.tipo === "archivo"
+      ? FileIcon
+      : e.tipo === "enlace"
+        ? LinkIcon
+        : e.tipo === "registro_modulo"
+          ? BoxesIcon
+          : e.tipo === "documento_normativo"
+            ? BookOpenIcon
+            : StickyNoteIcon;
 
   async function retirar() {
     setPendiente(true);
@@ -293,7 +336,18 @@ function EvidenciaItem({
       <div className="flex items-start gap-2">
         <Icono className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
         <div className="min-w-0 flex-1 space-y-1">
-          <p className="whitespace-pre-line">{e.descripcion}</p>
+          {e.tipo === "registro_modulo" && resumen && !e.retirada_en ? (
+            <ResumenFuente resumen={resumen} compacto />
+          ) : (
+            <p className="whitespace-pre-line">{e.descripcion}</p>
+          )}
+          {e.tipo === "documento_normativo" && e.tipo_documento_normativo_id && !e.retirada_en ? (
+            protocolo ? (
+              <VersionVigente tipoId={e.tipo_documento_normativo_id} vigente={protocolo} />
+            ) : (
+              <p className="text-xs text-destructive">El protocolo todavía no tiene versión cargada.</p>
+            )
+          ) : null}
           {e.tipo === "archivo" && e.nombre_archivo ? (
             <button
               type="button"

@@ -84,6 +84,9 @@ export async function listarDocumentosNormativosVigentes() {
     .from("tipos_documento_normativo")
     .select("id, nombre, categoria")
     .eq("activo", true)
+    // Los protocolos de habilitación se gestionan desde Habilitación (0067):
+    // otro bucket, sin borrado y con versión asignada por la BD.
+    .neq("categoria", "habilitacion")
     .order("orden");
 
   const { data: documentosData } = await supabase
