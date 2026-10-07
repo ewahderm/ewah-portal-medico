@@ -14,6 +14,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { exigirExito } from "@/lib/forms/resultado";
 
 export function CancelarDialog({ id }: { id: string }) {
   const [open, setOpen] = useState(false);
@@ -25,7 +26,7 @@ export function CancelarDialog({ id }: { id: string }) {
     setError(null);
     startTransition(async () => {
       try {
-        await cancelarCita(id, motivo);
+        exigirExito(await cancelarCita(id, motivo));
         setOpen(false);
         setMotivo("");
         toast.add({ title: "Cita cancelada", type: "success" });

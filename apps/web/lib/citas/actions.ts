@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requirePermiso as requirePermisoBase } from "@/lib/auth/requirePermiso";
 import { valorOpcionalSelect, campoOpcional } from "@/lib/forms/opcional";
 import { nombreCompleto } from "@/lib/pacientes/nombre";
+import type { ResultadoAccion } from "@/lib/forms/resultado";
 import { enviarCorreoCita, type TipoCorreoCita } from "@/lib/email/citaCorreo";
 
 export type CitaActionState =
@@ -13,7 +14,7 @@ export type CitaActionState =
   | { ok: true; error?: undefined; conflicto?: undefined }
   | null;
 
-export type ReprogramarResultado = { conflicto: string } | { ok: true };
+export type ReprogramarResultado = { conflicto: string } | { ok: true } | { error: string };
 
 function requirePermiso(permiso: "CREATE" | "EDIT") {
   return requirePermisoBase("citas", permiso);
@@ -262,10 +263,10 @@ async function cambiarEstado(
   id: string,
   estado: string,
   opciones: { motivo?: string | null; tipoCorreo?: TipoCorreoCita } = {},
-) {
+): Promise<ResultadoAccion> {
   const { motivo, tipoCorreo } = opciones;
   const check = await requirePermiso("EDIT");
-  if (!check.ok) throw new Error(check.error);
+  if (!check.ok) return { error: check.error };
 
   const supabase = await createClient();
   const { error } = await supabase
@@ -273,29 +274,30 @@ async function cambiarEstado(
     .update({ estado, motivo: motivo ?? undefined })
     .eq("id", id);
 
-  if (error) throw new Error("No se pudo actualizar la cita.");
+  if (error) return { error: "No se pudo actualizar la cita." };
 
   revalidatePath("/citas");
 
   if (tipoCorreo) {
     await enviarCorreoCitaPorId(supabase, id, tipoCorreo, motivo);
   }
+  return {};
 }
 
-export async function confirmarCita(id: string) {
-  await cambiarEstado(id, "confirmada", { tipoCorreo: "actualizada" });
+export async function confirmarCita(id: string): Promise<ResultadoAccion> {
+  return cambiarEstado(id, "confirmada", { tipoCorreo: "actualizada" });
 }
 
-export async function cancelarCita(id: string, motivo: string) {
-  if (!motivo.trim()) throw new Error("El motivo de cancelación es obligatorio.");
-  await cambiarEstado(id, "cancelada", { motivo: motivo.trim(), tipoCorreo: "cancelada" });
+export async function cancelarCita(id: string, motivo: string): Promise<ResultadoAccion> {
+  if (!motivo.trim()) return { error: "El motivo de cancelación es obligatorio." };
+  return cambiarEstado(id, "cancelada", { motivo: motivo.trim(), tipoCorreo: "cancelada" });
 }
 
 // No se envía correo al marcar "no asistió": es un registro interno de que
 // el paciente no llegó, no un cambio sobre la cita que el paciente necesite
 // que le confirmen (la cita ya pasó).
-export async function marcarNoAsistio(id: string) {
-  await cambiarEstado(id, "no_asistio");
+export async function marcarNoAsistio(id: string): Promise<ResultadoAccion> {
+  return cambiarEstado(id, "no_asistio");
 }
 
 // Reprogramar no es solo cambiar la fecha de la cita existente: la
@@ -309,14 +311,14 @@ export async function reprogramarCita(
   forzar = false,
 ): Promise<ReprogramarResultado> {
   if (!datos.fecha || !datos.horaInicio || !datos.horaFin) {
-    throw new Error("Fecha, hora de inicio y hora de fin son obligatorias.");
+    return { error: "Fecha, hora de inicio y hora de fin son obligatorias." };
   }
   if (datos.horaFin <= datos.horaInicio) {
-    throw new Error("La hora de fin debe ser posterior a la hora de inicio.");
+    return { error: "La hora de fin debe ser posterior a la hora de inicio." };
   }
 
   const check = await requirePermiso("EDIT");
-  if (!check.ok) throw new Error(check.error);
+  if (!check.ok) return { error: check.error };
 
   const supabase = await createClient();
   const { data: original } = await supabase
@@ -325,7 +327,7 @@ export async function reprogramarCita(
     .eq("id", id)
     .maybeSingle();
 
-  if (!original) throw new Error("La cita no existe.");
+  if (!original) return { error: "La cita no existe." };
 
   const conflicto = await detectarChoque({
     clinicaId: original.clinica_id,
@@ -353,13 +355,13 @@ export async function reprogramarCita(
     })
     .select("id")
     .single();
-  if (nuevaError) throw new Error("No se pudo crear la nueva cita.");
+  if (nuevaError) return { error: "No se pudo crear la nueva cita." };
 
   const { error: anteriorError } = await supabase
     .from("citas")
     .update({ estado: "reprogramada" })
     .eq("id", id);
-  if (anteriorError) throw new Error("La cita nueva ya se creó, pero no se pudo marcar la original como reprogramada.");
+  if (anteriorError) return { error: "La cita nueva ya se creó, pero no se pudo marcar la original como reprogramada." };
 
   revalidatePath("/citas");
 

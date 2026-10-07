@@ -13,6 +13,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { CancelarDialog } from "./cancelar-dialog";
 import { AtencionDetalleDialog } from "../atenciones/atencion-detalle-dialog";
 import type { Opcion } from "@/lib/forms/opciones";
+import { exigirExito } from "@/lib/forms/resultado";
 
 const OPCIONES_HORA = opcionesHora();
 
@@ -99,7 +100,7 @@ export function EstadoAcciones({
     }
     startTransition(async () => {
       try {
-        const id = await crearAtencionDesdeCita(cita.id);
+        const { atencionId: id } = exigirExito(await crearAtencionDesdeCita(cita.id));
         setAtencionId(id);
         setDetalleAbierto(true);
         onAtendida?.();
@@ -119,7 +120,7 @@ export function EstadoAcciones({
     setError(null);
     startTransition(async () => {
       try {
-        await confirmarCita(cita.id);
+        exigirExito(await confirmarCita(cita.id));
         toast.add({ title: "Cita confirmada", type: "success" });
       } catch (e) {
         setError(e instanceof Error ? e.message : "No se pudo confirmar.");
@@ -131,7 +132,7 @@ export function EstadoAcciones({
     setError(null);
     startTransition(async () => {
       try {
-        await marcarNoAsistio(cita.id);
+        exigirExito(await marcarNoAsistio(cita.id));
         toast.add({ title: "Cita marcada como no asistió", type: "success" });
       } catch (e) {
         setError(e instanceof Error ? e.message : "No se pudo actualizar.");
@@ -143,11 +144,11 @@ export function EstadoAcciones({
     setError(null);
     startTransition(async () => {
       try {
-        const resultado = await reprogramarCita(
+        const resultado = exigirExito(await reprogramarCita(
           cita.id,
           { fecha: nuevaFecha, horaInicio: nuevaHoraInicio, horaFin: nuevaHoraFin },
           forzar,
-        );
+        ));
         if ("conflicto" in resultado) {
           setConflicto(resultado.conflicto);
           return;
