@@ -47,18 +47,6 @@ export default async function SstPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start gap-3">
-        <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-          <HardHatIcon className="size-6" />
-        </div>
-        <div className="min-w-0">
-          <h1 className="text-2xl font-semibold">SG-SST</h1>
-          <p className="text-sm text-muted-foreground">
-            Seguridad y salud en el trabajo: Decreto 1072 de 2015 y estándares mínimos de la Resolución 0312 de 2019.
-          </p>
-        </div>
-      </div>
-
       {!conteo || !d ? (
         <Alert>
           <TriangleAlertIcon />

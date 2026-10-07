@@ -81,20 +81,23 @@ export type Carpeta = (typeof CARPETAS)[number];
 
 export type ArchivoVerificado = { path: string; nombre: string; mime: string; tamano: number; sha256: string };
 
+// `bucket` permite reutilizarla desde otros módulos (SG-SST usa `sst`); la
+// carpeta la decide siempre el servidor que llama.
 export async function verificarArchivoSubido(
   supabase: Supabase,
   clinicaId: string,
-  carpeta: Carpeta,
+  carpeta: Carpeta | string,
   entidadId: string,
   path: string,
   nombre: string,
+  bucket: string = BUCKET,
 ): Promise<{ error: string } | ArchivoVerificado> {
   const prefijo = `${clinicaId}/${carpeta}/${entidadId.toLowerCase()}/`;
   const resto = path.startsWith(prefijo) ? path.slice(prefijo.length) : "";
   const forma = /^[0-9a-f-]{36}\.([a-z]+)$/.exec(resto);
   if (!forma || !(EXTENSIONES as readonly string[]).includes(forma[1])) return { error: "Archivo inválido." };
 
-  const { data, error } = await supabase.storage.from(BUCKET).download(path);
+  const { data, error } = await supabase.storage.from(bucket).download(path);
   if (error || !data) {
     console.error("[habilitacion] download", error);
     return { error: "No encontramos el archivo subido. Intenta de nuevo." };
@@ -104,7 +107,7 @@ export async function verificarArchivoSubido(
   if (bytes.length === 0 || bytes.length > MAX_ARCHIVO_BYTES || !tipo || tipo.extension !== forma[1]) {
     // No hay política de delete en el bucket (ni admin): el archivo
     // inválido lo retira el service role.
-    await createAdminClient().storage.from(BUCKET).remove([path]);
+    await createAdminClient().storage.from(bucket).remove([path]);
     return {
       error:
         bytes.length > MAX_ARCHIVO_BYTES
@@ -132,9 +135,9 @@ export function nombreSeguro(nombre: string): string {
 }
 
 // URL firmada de 60 s; quien llama ya leyó la fila con RLS.
-export async function firmar(supabase: Supabase, path: string, nombre: string | null) {
+export async function firmar(supabase: Supabase, path: string, nombre: string | null, bucket: string = BUCKET) {
   const { data, error } = await supabase.storage
-    .from(BUCKET)
+    .from(bucket)
     .createSignedUrl(path, SEGUNDOS_URL_FIRMADA, nombre ? { download: nombre } : undefined);
   if (error || !data) {
     console.error("[habilitacion] createSignedUrl", error);
