@@ -87,6 +87,8 @@ export type EvolucionDeAtencion = {
   fecha: string;
   evolucion: string;
   tipo: string;
+  tratamiento_id: string | null;
+  tratamiento: { fecha: string; tipos_tratamiento: { nombre: string } | null } | null;
   profesional: { nombre: string } | null;
 };
 
@@ -98,7 +100,7 @@ export async function listarEvolucionesDeAtencion(atencionId: string): Promise<E
   const { data } = await supabase
     .from("evoluciones_paciente")
     .select(
-      "id, fecha, evolucion, tipo, profesional:usuarios!evoluciones_paciente_profesional_id_fkey(nombre)",
+      "id, fecha, evolucion, tipo, tratamiento_id, tratamiento:tratamientos(fecha, tipos_tratamiento(nombre)), profesional:usuarios!evoluciones_paciente_profesional_id_fkey(nombre)",
     )
     .eq("atencion_id", atencionId)
     .eq("clinica_id", usuario.clinica_id)

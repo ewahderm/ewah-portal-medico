@@ -8,6 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { TratamientoDetalleDialog } from "./tratamiento-detalle-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { obtenerAtencion, type AtencionDetalle as AtencionDetalleTipo } from "@/lib/atenciones/actions";
@@ -442,6 +443,18 @@ export function AtencionDetalleDialog({
                           <span>{e.profesional?.nombre ?? "—"}</span>
                         </div>
                       </div>
+                      {e.tratamiento_id ? (
+                        <div className="my-1 flex items-center justify-between gap-2 rounded-md bg-muted/50 px-2 py-1">
+                          <span className="text-xs text-muted-foreground">
+                            Seguimiento de:{" "}
+                            <span className="font-medium text-foreground">
+                              {e.tratamiento?.tipos_tratamiento?.nombre ?? "Tratamiento"}
+                            </span>
+                            {e.tratamiento ? ` (${e.tratamiento.fecha})` : ""}
+                          </span>
+                          <TratamientoDetalleDialog tratamientoId={e.tratamiento_id} />
+                        </div>
+                      ) : null}
                       <p className="whitespace-normal break-words">{e.evolucion}</p>
                     </div>
                   ))}

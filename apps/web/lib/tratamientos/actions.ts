@@ -676,6 +676,39 @@ export async function listarTratamientosDelPaciente(pacienteId: string): Promise
   return (data ?? []) as unknown as TratamientoDePaciente[];
 }
 
+export type TratamientoDetalle = {
+  id: string;
+  fecha: string;
+  costo: number | null;
+  notas: string | null;
+  anulado: boolean;
+  anulado_motivo: string | null;
+  tipos_tratamiento: { nombre: string } | null;
+  sedes: { nombre: string } | null;
+  profesional: { nombre: string } | null;
+};
+
+// Detalle de solo lectura de un tratamiento, para consultarlo desde una
+// evolución que lo referencia (puede ser de una atención anterior).
+export async function obtenerTratamientoDetalle(tratamientoId: string): Promise<TratamientoDetalle | null> {
+  const usuario = await getCurrentUsuario();
+  if (!usuario) return null;
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("tratamientos")
+    .select(
+      `id, fecha, costo, notas, anulado, anulado_motivo,
+       tipos_tratamiento(nombre), sedes(nombre),
+       profesional:usuarios!tratamientos_profesional_id_fkey(nombre)`,
+    )
+    .eq("id", tratamientoId)
+    .eq("clinica_id", usuario.clinica_id)
+    .maybeSingle();
+
+  return (data as unknown as TratamientoDetalle) ?? null;
+}
+
 export async function listarAnexosTratamiento(tratamientoId: string) {
   const supabase = await createClient();
   const { data } = await supabase
