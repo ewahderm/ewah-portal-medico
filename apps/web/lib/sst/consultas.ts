@@ -345,3 +345,62 @@ export async function getProfesiograma(supabase: Supabase): Promise<{ cargos: { 
     periodicidad: Object.fromEntries(((filas.data ?? []) as { cargo_id: string; periodicidad_meses: number }[]).map((f) => [f.cargo_id, f.periodicidad_meses])),
   };
 }
+
+// ============================================================
+// F7 · Plan anual, comités e indicadores
+// ============================================================
+export type ActividadPlan = {
+  id: string;
+  anio: number;
+  mes: number;
+  ciclo: "planear" | "hacer" | "verificar" | "actuar";
+  actividad: string;
+  meta: string | null;
+  recursos: string | null;
+  responsable_id: string | null;
+  estado: "pendiente" | "ejecutada" | "cancelada";
+  fecha_ejecucion: string | null;
+  observacion: string | null;
+};
+
+export async function getPlan(supabase: Supabase, anio: number): Promise<ActividadPlan[]> {
+  const { data, error } = await supabase
+    .from("sst_plan_actividades")
+    .select("id, anio, mes, ciclo, actividad, meta, recursos, responsable_id, estado, fecha_ejecucion, observacion")
+    .eq("anio", anio)
+    .order("mes")
+    .order("created_at");
+  if (error) console.error("[sst] getPlan", error);
+  return (data ?? []) as ActividadPlan[];
+}
+
+export type ComiteSst = {
+  id: string;
+  tipo: "vigia" | "copasst" | "convivencia";
+  fecha_inicio: string;
+  fecha_fin: string;
+  integrantes: { nombre: string; representa: string; rol: string }[];
+  acta_nombre_archivo: string | null;
+  sst_comite_reuniones: { id: string; fecha: string; temas: string; compromisos: string | null; acta_nombre_archivo: string | null }[];
+};
+
+export async function getComites(supabase: Supabase): Promise<ComiteSst[]> {
+  const { data, error } = await supabase
+    .from("sst_comites")
+    .select("id, tipo, fecha_inicio, fecha_fin, integrantes, acta_nombre_archivo, sst_comite_reuniones(id, fecha, temas, compromisos, acta_nombre_archivo)")
+    .order("fecha_inicio", { ascending: false });
+  if (error) console.error("[sst] getComites", error);
+  return ((data ?? []) as ComiteSst[]).map((c) => ({
+    ...c,
+    sst_comite_reuniones: [...c.sst_comite_reuniones].sort((a, b) => b.fecha.localeCompare(a.fecha)),
+  }));
+}
+
+export async function getInsumosIndicadores(supabase: Supabase, anio: number) {
+  const { data, error } = await supabase.rpc("fn_sst_indicadores", { p_anio: anio });
+  if (error) {
+    console.error("[sst] fn_sst_indicadores", error);
+    return null;
+  }
+  return (data ?? []) as import("@/lib/sst/indicadores").InsumoMes[];
+}
