@@ -42,7 +42,7 @@ done
 for datos in f*-datos.sql; do
   fase=${datos%-datos.sql}
   echo "Pruebas $fase:"
-  PSQL < "$datos" > /dev/null 2>&1
+  PSQL < "$datos" > /dev/null
   PSQL < "$fase-pruebas.sql" 2>&1 >/dev/null | sed -n 's/^NOTICE:  /  /p; /ERROR/p'
 done
 echo "Todo en verde."
