@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PerfilSstForm } from "./perfil-form";
 
 const FUENTE: Record<NonNullable<Diagnostico["fuenteClase"]>, string> = {
-  actividad: "tu código de actividad económica",
+  actividad: "el código de actividad de 7 dígitos de tu ARL",
   clinica: "la clase de riesgo de la clínica (Datos básicos)",
   cargos: "el cargo de mayor riesgo de tu personal (RRHH)",
 };
@@ -90,7 +90,7 @@ export default async function SstPage() {
                   icono={ShieldAlertIcon}
                   titulo="Clase de riesgo"
                   valor={d.clase ?? "—"}
-                  detalle={d.fuenteClase ? `Según ${FUENTE[d.fuenteClase]}` : "Escribe tu código de actividad"}
+                  detalle={d.fuenteClase ? `Según ${FUENTE[d.fuenteClase]}` : "Elige tu nivel de riesgo ARL"}
                   tono={d.clase === "IV" || d.clase === "V" ? "rojo" : !d.clase ? "alerta" : undefined}
                 />
                 <Cifra

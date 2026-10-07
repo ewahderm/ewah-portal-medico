@@ -48,11 +48,16 @@ export function MarcaDialog({
     setError(null);
     startDatosTransition(async () => {
       try {
-        await actualizarMarcaClinica(formData);
+        const resultado = await actualizarMarcaClinica(formData);
+        if (resultado.error) {
+          setError(resultado.error);
+          return;
+        }
         router.refresh();
         toast.add({ title: "Marca actualizada", type: "success" });
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "No se pudo actualizar la marca.");
+      } catch {
+        // Falla de red o excepción inesperada (su mensaje llega ofuscado).
+        setError("No se pudo actualizar la marca. Revisa tu conexión e intenta de nuevo.");
       }
     });
   }
@@ -66,14 +71,19 @@ export function MarcaDialog({
     setError(null);
     startLogoTransition(async () => {
       try {
-        await subirLogoClinica(formData);
+        const resultado = await subirLogoClinica(formData);
+        if (resultado.error) {
+          setError(resultado.error);
+          return;
+        }
         router.refresh();
         setPreviewLogo(null);
         if (inputLogoRef.current) inputLogoRef.current.value = "";
         toast.add({ title: "Logo actualizado", type: "success" });
         setOpen(false);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "No se pudo subir el logo.");
+      } catch {
+        // Falla de red o cuerpo mayor al límite de las server actions.
+        setError("No se pudo subir el logo. Revisa tu conexión e intenta de nuevo.");
       }
     });
   }
