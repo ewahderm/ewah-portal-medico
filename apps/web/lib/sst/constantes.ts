@@ -15,7 +15,7 @@ export const MODOS_SST = [
 export const SECCIONES_SST = [
   { href: "/sst", label: "Diagnóstico", disponible: true },
   { href: "/sst/eventos", label: "Incidentes y accidentes", disponible: true },
-  { href: "/sst/documentos", label: "Documentos", disponible: false },
+  { href: "/sst/documentos", label: "Documentos", disponible: true },
   { href: "/sst/peligros", label: "Peligros", disponible: false },
   { href: "/sst/personas", label: "Capacitación y EPP", disponible: false },
   { href: "/sst/comites", label: "Comités y plan", disponible: false },

@@ -179,3 +179,36 @@ export async function getSedes(supabase: Supabase): Promise<{ id: string; nombre
   const { data } = await supabase.from("sedes").select("id, nombre").eq("activo", true).order("orden");
   return (data ?? []) as { id: string; nombre: string }[];
 }
+
+// ============================================================
+// F4 · Documentos del sistema
+// ============================================================
+export type VersionDocumentoSst = {
+  id: string;
+  tipo_documento_id: string;
+  version: number;
+  nombre_archivo: string;
+  vigente_desde: string;
+  created_by: string | null;
+  created_at: string;
+};
+
+export type DocumentosSst = {
+  tipos: { id: string; codigo: string; nombre: string }[];
+  versiones: VersionDocumentoSst[];
+};
+
+export async function getDocumentosSst(supabase: Supabase): Promise<DocumentosSst> {
+  const [tipos, versiones] = await Promise.all([
+    supabase.from("tipos_documento_normativo").select("id, codigo, nombre").eq("categoria", "sgsst").eq("activo", true).order("orden"),
+    supabase
+      .from("documentos_normativos")
+      .select("id, tipo_documento_id, version, nombre_archivo, vigente_desde, created_by, created_at, tipos_documento_normativo!inner(categoria)")
+      .eq("tipos_documento_normativo.categoria", "sgsst")
+      .order("version", { ascending: false }),
+  ]);
+  return {
+    tipos: (tipos.data ?? []) as DocumentosSst["tipos"],
+    versiones: (versiones.data ?? []) as unknown as VersionDocumentoSst[],
+  };
+}

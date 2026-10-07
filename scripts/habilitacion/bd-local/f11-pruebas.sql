@@ -58,7 +58,7 @@ where n.nspname = 'public' and p.prosecdef and p.proname ~ '(hab|servicio_habili
 select t.ok(coalesce(array_agg(p.proname::text order by p.proname), '{}') = array[
   'fn_hab_actualizar_codigo_prestador', 'fn_hab_actualizar_edificacion_sede', 'fn_hab_anular_novedad',
   'fn_hab_anular_ocurrencia', 'fn_hab_cerrar_autoevaluacion', 'fn_hab_pais_clinica', 'fn_hab_recalcular_mis_obligaciones',
-  'fn_hab_resumen_evidencia', 'fn_tipo_normativo_es_habilitacion'],
+  'fn_hab_resumen_evidencia', 'fn_tipo_normativo_es_habilitacion', 'fn_tipo_normativo_es_sgsst'],
   'authenticated solo ejecuta las RPC definer previstas: ' || coalesce(string_agg(p.proname, ', ' order by p.proname), ''))
 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
 where n.nspname = 'public' and p.prosecdef and p.proname ~ '(hab|servicio_habilitado|tipo_normativo)'

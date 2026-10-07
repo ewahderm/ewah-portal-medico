@@ -3,8 +3,9 @@ import { HardHatIcon, TriangleAlertIcon, UsersRoundIcon, ShieldAlertIcon, Clipbo
 import { cn } from "cn";
 import { createClient } from "@/lib/supabase/server";
 import { requireUsuario } from "@/lib/auth/session";
-import { getAccesoSst, getConteoTrabajadores, getPerfilSst } from "@/lib/sst/consultas";
-import { diagnosticar, type Diagnostico } from "@/lib/sst/grupo";
+import { getAccesoSst } from "@/lib/sst/consultas";
+import { getDiagnostico } from "@/lib/sst/diagnostico";
+import type { Diagnostico } from "@/lib/sst/grupo";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PerfilSstForm } from "./perfil-form";
@@ -29,21 +30,7 @@ export default async function SstPage() {
   }
 
   const supabase = await createClient();
-  const [perfil, conteo] = await Promise.all([getPerfilSst(supabase), getConteoTrabajadores(supabase)]);
-
-  const d = conteo
-    ? diagnosticar({
-        modo: perfil?.modo ?? "empleador",
-        dependientes: conteo.dependientes,
-        contratistas: conteo.contratistas,
-        sinCategoria: conteo.sin_categoria,
-        otros: perfil?.otros_trabajadores ?? 0,
-        excluyeContratistas: perfil?.excluye_contratistas ?? false,
-        codigoActividad: perfil?.codigo_actividad ?? null,
-        claseClinica: conteo.clase_clinica,
-        claseCargosMax: conteo.clase_cargos_max,
-      })
-    : null;
+  const { perfil, conteo, d } = await getDiagnostico(supabase);
 
   return (
     <div className="space-y-6">
