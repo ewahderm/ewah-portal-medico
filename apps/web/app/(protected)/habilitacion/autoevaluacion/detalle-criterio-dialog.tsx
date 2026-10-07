@@ -19,8 +19,7 @@ import {
   MIN_MOTIVO_RETIRO,
   etiquetaDe,
 } from "@/lib/habilitacion/constantes";
-import { fechaLegible } from "@/lib/habilitacion/ruta";
-import { dateLocalHoy } from "@/lib/medio-ambiente/fecha-local";
+import { fechaLegible, hoyColombiaCliente } from "@/lib/habilitacion/ruta";
 import type {
   DetalleCriterio,
   Evidencia,
@@ -425,7 +424,7 @@ function PlanItem({
   const [cerrando, setCerrando] = useState(false);
   const [pendiente, setPendiente] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const vencido = p.estado !== "cerrada" && p.fecha_compromiso < dateLocalHoy();
+  const vencido = p.estado !== "cerrada" && p.fecha_compromiso < hoyColombiaCliente();
 
   async function enviar(fd: FormData) {
     setPendiente(true);
@@ -535,7 +534,7 @@ function PlanItem({
               <Label htmlFor={`cierre-fecha-${p.id}`} className="text-xs">
                 Fecha de cierre
               </Label>
-              <Input id={`cierre-fecha-${p.id}`} name="fechaCierre" type="date" required defaultValue={dateLocalHoy()} max={dateLocalHoy()} />
+              <Input id={`cierre-fecha-${p.id}`} name="fechaCierre" type="date" required defaultValue={hoyColombiaCliente()} max={hoyColombiaCliente()} />
             </div>
             <div className="space-y-1">
               <Label htmlFor={`cierre-archivo-${p.id}`} className="text-xs">

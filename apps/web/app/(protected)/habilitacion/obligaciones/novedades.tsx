@@ -7,10 +7,9 @@ import { DownloadIcon, PlusIcon } from "lucide-react";
 import { anularNovedad, registrarNovedad, urlNovedad } from "@/lib/habilitacion/obligaciones";
 import { subirArchivoHabilitacion } from "@/lib/habilitacion/subida-cliente";
 import { ACCEPT_ARCHIVO } from "@/lib/habilitacion/constantes";
-import { fechaLegible } from "@/lib/habilitacion/ruta";
+import { fechaLegible, hoyColombiaCliente } from "@/lib/habilitacion/ruta";
 import type { NovedadCatalogo, NovedadReportada } from "@/lib/habilitacion/tipos";
 import { SIN_SELECCION } from "@/lib/forms/opcional";
-import { dateLocalHoy } from "@/lib/medio-ambiente/fecha-local";
 import { toast } from "@/components/ui/toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -255,7 +254,7 @@ function NovedadDialog({ catalogo, sedes, onCerrar }: { catalogo: NovedadCatalog
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1">
                 <Label htmlFor="fecha-nov">Fecha del reporte</Label>
-                <Input id="fecha-nov" name="fecha" type="date" defaultValue={dateLocalHoy()} max={dateLocalHoy()} required />
+                <Input id="fecha-nov" name="fecha" type="date" defaultValue={hoyColombiaCliente()} max={hoyColombiaCliente()} required />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="radicado-nov">Radicado (opcional)</Label>

@@ -26,6 +26,7 @@ export function mensajesCalendario({ evento, sinEventos }: { evento: string; sin
     agenda: "Agenda",
     date: "Fecha",
     time: "Hora",
+    allDay: "Todo el día",
     event: evento,
     noEventsInRange: sinEventos,
     showMore: (total: number) => `+${total} más`,

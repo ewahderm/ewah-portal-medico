@@ -29,6 +29,13 @@ select t.ok(count(*) = 0, 'D2 no recibe FT006 ni FT018 (son de B–D1)') from ha
   join hab_obligaciones_catalogo c on c.id = o.obligacion_id
   where o.clinica_id = (select id from clinicas where nombre = 'Clinica D2') and c.codigo in ('FT006', 'FT018');
 
+select t.ok(count(*) = 0, 'sin inscribir: ninguna fecha anterior a hoy (no se deben periodos previos a la inscripción)')
+  from hab_obligacion_ocurrencias o join clinicas c on c.id = o.clinica_id
+  where c.nombre in ('Clinica D2', 'Clinica C2', 'Clinica D1') and o.fecha_limite < (now() at time zone 'America/Bogota')::date;
+select t.ok(count(*) = 0, 'inscrita: ninguna fecha anterior a su fecha de inscripción')
+  from hab_obligacion_ocurrencias o join hab_perfil_prestador p on p.clinica_id = o.clinica_id
+  where p.estado_reps = 'inscrito' and o.generada_por = 'sistema' and o.fecha_limite < p.fecha_inscripcion_inicial;
+
 -- 2. Configuración: una fila por obligación del catálogo; día no hábil
 select t.ok(count(*) = (select count(*) from hab_obligaciones_catalogo), 'el perfil crea una fila de configuración por obligación')
   from hab_obligaciones_clinica where clinica_id = (select id from clinicas where nombre = 'Clinica D2');

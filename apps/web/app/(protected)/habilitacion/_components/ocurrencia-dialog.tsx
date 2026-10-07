@@ -7,10 +7,9 @@ import { cn } from "cn";
 import { anularOcurrencia, noAplicaPeriodo, presentarOcurrencia, urlAcuse } from "@/lib/habilitacion/obligaciones";
 import { subirArchivoHabilitacion } from "@/lib/habilitacion/subida-cliente";
 import { ACCEPT_ARCHIVO } from "@/lib/habilitacion/constantes";
-import { fechaLegible } from "@/lib/habilitacion/ruta";
+import { fechaLegible, hoyColombiaCliente } from "@/lib/habilitacion/ruta";
 import { estadoOcurrencia } from "@/lib/habilitacion/semaforo";
 import type { ObligacionCatalogo, Ocurrencia } from "@/lib/habilitacion/tipos";
-import { dateLocalHoy } from "@/lib/medio-ambiente/fecha-local";
 import { toast } from "@/components/ui/toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -53,7 +52,7 @@ export function OcurrenciaDialog({
   const [error, setError] = useState<string | null>(null);
   const [pendiente, setPendiente] = useState(false);
   const [texto, setTexto] = useState("");
-  const hoy = dateLocalHoy();
+  const hoy = hoyColombiaCliente();
   const e = estadoOcurrencia(o, hoy, porConfirmar);
 
   async function ejecutar(f: () => Promise<{ error?: string }>, exito: string) {

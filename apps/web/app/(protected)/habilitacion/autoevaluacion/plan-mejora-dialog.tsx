@@ -4,8 +4,7 @@ import { useActionState } from "react";
 import { useRouter } from "next/navigation";
 import { crearPlanMejora } from "@/lib/habilitacion/autoevaluacion";
 import { useCerrarAlExito } from "@/lib/forms/cerrarAlExito";
-import { dateLocalHoy } from "@/lib/medio-ambiente/fecha-local";
-import { sumarDias } from "@/lib/habilitacion/ruta";
+import { sumarDias, hoyColombiaCliente } from "@/lib/habilitacion/ruta";
 import { MAX_JUSTIFICACION } from "@/lib/habilitacion/constantes";
 import type { FilaCriterio, UsuarioClinica } from "@/lib/habilitacion/tipos";
 import { toast } from "@/components/ui/toast";
@@ -95,8 +94,8 @@ export function PlanMejoraDialog({
                 name="fechaCompromiso"
                 type="date"
                 required
-                min={dateLocalHoy()}
-                defaultValue={sumarDias(dateLocalHoy(), 30)}
+                min={hoyColombiaCliente()}
+                defaultValue={sumarDias(hoyColombiaCliente(), 30)}
               />
             </div>
           </div>

@@ -7,11 +7,10 @@ import { CalendarIcon, ExternalLinkIcon, PlusIcon, RefreshCwIcon, Settings2Icon,
 import { configurarObligacion, recalcularObligaciones, registrarEnvio } from "@/lib/habilitacion/obligaciones";
 import { subirArchivoHabilitacion } from "@/lib/habilitacion/subida-cliente";
 import { ACCEPT_ARCHIVO } from "@/lib/habilitacion/constantes";
-import { fechaLegible } from "@/lib/habilitacion/ruta";
+import { fechaLegible, hoyColombiaCliente } from "@/lib/habilitacion/ruta";
 import { estadoOcurrencia, porConfirmar } from "@/lib/habilitacion/semaforo";
 import type { ObligacionClinica, Ocurrencia, UsuarioClinica } from "@/lib/habilitacion/tipos";
 import { SIN_SELECCION } from "@/lib/forms/opcional";
-import { dateLocalHoy } from "@/lib/medio-ambiente/fecha-local";
 import { toast } from "@/components/ui/toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -315,7 +314,7 @@ function ConfigurarDialog({ c, usuarios, onCerrar }: { c: ObligacionClinica; usu
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1">
               <Label htmlFor="fecha-asesor">Consulté con mi asesor el (opcional)</Label>
-              <Input id="fecha-asesor" type="date" value={fechaAsesor} max={dateLocalHoy()} onChange={(e) => setFechaAsesor(e.target.value)} />
+              <Input id="fecha-asesor" type="date" value={fechaAsesor} max={hoyColombiaCliente()} onChange={(e) => setFechaAsesor(e.target.value)} />
             </div>
             <div className="space-y-1">
               <Label htmlFor="dias-aviso">Avisarme estos días antes</Label>
@@ -405,7 +404,7 @@ function RegistrarEnvioDialog({ c, onCerrar }: { c: ObligacionClinica; onCerrar:
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1">
               <Label htmlFor="fecha-envio">Fecha del envío</Label>
-              <Input id="fecha-envio" name="fecha" type="date" defaultValue={dateLocalHoy()} max={dateLocalHoy()} required />
+              <Input id="fecha-envio" name="fecha" type="date" defaultValue={hoyColombiaCliente()} max={hoyColombiaCliente()} required />
             </div>
             <div className="space-y-1">
               <Label htmlFor="radicado-envio">Número de radicado</Label>

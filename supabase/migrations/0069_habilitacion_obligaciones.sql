@@ -534,7 +534,8 @@ create policy "hab_alertas_enviadas_select" on hab_alertas_enviadas
 -- 6. Generación de ocurrencias (§4.1)
 -- ============================================================
 -- Conjunto DESEADO de ocurrencias de sistema para una clínica, en la
--- ventana [hoy − 400 días, hoy + 18 meses]:
+-- ventana [desde, hoy + 18 meses], con desde = hoy si no está inscrita (o
+-- en trámite) y, si lo está, su fecha de inscripción (máximo hoy − 400):
 --   calendario       reglas de hab_obligacion_vencimientos que coinciden con
 --                    el tipo y el grupo del perfil. corte = (año, mes_corte,
 --                    dia_corte o último día); límite = día `dia_limite` del
@@ -561,7 +562,7 @@ security definer
 set search_path = public
 as $$
   with perfil as (
-    select p.tipo_prestador, p.grupo_supersalud, p.fecha_vencimiento_reps
+    select p.tipo_prestador, p.grupo_supersalud, p.fecha_vencimiento_reps, p.estado_reps, p.fecha_inscripcion_inicial
     from hab_perfil_prestador p
     where p.clinica_id = p_clinica_id and p.tipo_prestador is not null
   ),
@@ -571,8 +572,17 @@ as $$
     join hab_obligaciones_catalogo c on c.id = oc.obligacion_id
     where oc.clinica_id = p_clinica_id and oc.activa
   ),
+  -- No se deben periodos anteriores a la inscripción: quien no está
+  -- inscrito (o está en trámite) solo ve fechas desde hoy; el inscrito, desde
+  -- su fecha de inscripción (y como máximo 400 días atrás).
   ventana as (
-    select p_hoy - 400 as desde, (p_hoy + interval '18 months')::date as hasta
+    select
+      case
+        when p.estado_reps in ('no_inscrito', 'en_tramite') then p_hoy
+        else greatest(p_hoy - 400, coalesce(p.fecha_inscripcion_inicial, p_hoy - 400))
+      end as desde,
+      (p_hoy + interval '18 months')::date as hasta
+    from perfil p
   ),
   anios as (
     select generate_series(extract(year from p_hoy)::int - 2, extract(year from p_hoy)::int + 2) as anio

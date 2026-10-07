@@ -6,9 +6,8 @@ import { CalendarClockIcon, DownloadIcon, PlusIcon } from "lucide-react";
 import { anularHito, registrarHito, urlHito } from "@/lib/habilitacion/documentos";
 import { subirArchivoHabilitacion } from "@/lib/habilitacion/subida-cliente";
 import { ACCEPT_ARCHIVO, TIPOS_HITO, etiquetaDe } from "@/lib/habilitacion/constantes";
-import { fechaLegible, sugerirVencimientoReps } from "@/lib/habilitacion/ruta";
+import { fechaLegible, sugerirVencimientoReps, hoyColombiaCliente } from "@/lib/habilitacion/ruta";
 import type { HitoTramite } from "@/lib/habilitacion/tipos";
-import { dateLocalHoy } from "@/lib/medio-ambiente/fecha-local";
 import { toast } from "@/components/ui/toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -142,7 +141,7 @@ function HitoItem({ hito: h, autor, puedeAnular }: { hito: HitoTramite; autor?: 
 function HitoDialog({ onCerrar }: { onCerrar: () => void }) {
   const router = useRouter();
   const [tipo, setTipo] = useState<string>("radicado");
-  const [fecha, setFecha] = useState(dateLocalHoy());
+  const [fecha, setFecha] = useState(hoyColombiaCliente());
   const [subsanables, setSubsanables] = useState(false);
   const [vencimiento, setVencimiento] = useState("");
   const [error, setError] = useState<string | null>(null);

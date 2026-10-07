@@ -184,6 +184,13 @@ export function sugerirVencimientoReps(fechaInscripcion: string): string {
   return `${anio}-${m}-${String(dia).padStart(2, "0")}`;
 }
 
+// Hoy en Colombia ("YYYY-MM-DD"), sin importar la zona horaria del equipo:
+// las fechas de la norma y las validaciones del servidor cortan por día en
+// Bogotá (un navegador en UTC ya estaría en "mañana" desde las 7 p. m.).
+export function hoyColombiaCliente(): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Bogota" }).format(new Date());
+}
+
 // "2026-10-06" + 30 → "2026-11-05", sin zona horaria.
 export function sumarDias(fecha: string, dias: number): string {
   const [a, m, d] = fecha.slice(0, 10).split("-").map(Number);
