@@ -311,14 +311,14 @@ export function ServicioSedeDialog({
                     <Label htmlFor="fechaHabilitacion" className="text-xs text-muted-foreground">
                       Fecha de habilitación (opcional)
                     </Label>
-                    <Input id="fechaHabilitacion" type="date" value={fechaHabilitacion} onChange={(e) => setFechaHabilitacion(e.target.value)} />
+                    <Input id="fechaHabilitacion" type="date" value={fechaHabilitacion} onDateChange={setFechaHabilitacion} />
                   </div>
                 ) : estado === "cierre_temporal" ? (
                   <div className="space-y-1">
                     <Label htmlFor="fechaCierre" className="text-xs text-muted-foreground">
                       Fecha del cierre temporal
                     </Label>
-                    <Input id="fechaCierre" type="date" value={fechaCierre} onChange={(e) => setFechaCierre(e.target.value)} />
+                    <Input id="fechaCierre" type="date" value={fechaCierre} onDateChange={setFechaCierre} />
                   </div>
                 ) : null}
               </div>

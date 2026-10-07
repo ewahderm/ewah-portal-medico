@@ -2,6 +2,7 @@
 
 Ver `docs/spec-ewah-app.md` para la especificación funcional completa por módulo.
 Reconstrucción módulo por módulo, con confirmación en cada decisión grande.
+El requerimiento aprobado de RRHH está en `docs/rrhh-requerimiento.md`; los ajustes de implementación están documentados en las tareas completadas de este archivo.
 
 ## Hecho
 

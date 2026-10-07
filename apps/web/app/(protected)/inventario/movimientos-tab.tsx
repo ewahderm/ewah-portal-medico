@@ -185,11 +185,11 @@ export function MovimientosTab({
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label>Desde</Label>
-                <Input type="date" value={desde} onChange={(e) => setDesde(e.target.value)} />
+                <Input type="date" value={desde} onDateChange={setDesde} />
               </div>
               <div className="space-y-1.5">
                 <Label>Hasta</Label>
-                <Input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} />
+                <Input type="date" value={hasta} onDateChange={setHasta} />
               </div>
             </div>
           </div>

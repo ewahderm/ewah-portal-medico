@@ -281,7 +281,7 @@ function Asignacion({
       </div>
       <div className="space-y-1">
         <Label htmlFor="fecha-objetivo">Verificar antes del</Label>
-        <Input id="fecha-objetivo" type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} />
+        <Input id="fecha-objetivo" type="date" value={fecha} onDateChange={setFecha} />
       </div>
       <Button size="sm" onClick={guardar} disabled={!cambiado || pendiente}>
         {pendiente ? "Guardando…" : "Guardar"}

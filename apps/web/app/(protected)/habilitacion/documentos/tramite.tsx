@@ -215,9 +215,9 @@ function HitoDialog({ onCerrar }: { onCerrar: () => void }) {
                 id="fecha-hito"
                 type="date"
                 value={fecha}
-                onChange={(e) => {
-                  setFecha(e.target.value);
-                  if (tipo === "constancia_expedida" && e.target.value) setVencimiento(sugerirVencimientoReps(e.target.value));
+                onDateChange={(value) => {
+                  setFecha(value);
+                  if (tipo === "constancia_expedida" && value) setVencimiento(sugerirVencimientoReps(value));
                 }}
                 required
               />
@@ -236,7 +236,7 @@ function HitoDialog({ onCerrar }: { onCerrar: () => void }) {
           {tipo === "constancia_expedida" ? (
             <div className="space-y-1">
               <Label htmlFor="vencimiento-reps">¿Hasta cuándo es válida tu inscripción?</Label>
-              <Input id="vencimiento-reps" type="date" value={vencimiento} onChange={(e) => setVencimiento(e.target.value)} required />
+              <Input id="vencimiento-reps" type="date" value={vencimiento} onDateChange={setVencimiento} required />
               <p className="text-xs text-muted-foreground">Te sugerimos 4 años desde la constancia; copia la fecha exacta del REPS.</p>
             </div>
           ) : null}

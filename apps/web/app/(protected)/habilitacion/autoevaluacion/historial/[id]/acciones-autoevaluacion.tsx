@@ -41,7 +41,7 @@ export function DeclaracionReps({ id, fechaCierre }: { id: string; fechaCierre: 
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
         <div className="space-y-1">
           <Label htmlFor="fecha-declaracion">Fecha de declaración</Label>
-          <Input id="fecha-declaracion" type="date" value={fecha} min={fechaCierre} max={hoyColombiaCliente()} onChange={(e) => setFecha(e.target.value)} required />
+          <Input id="fecha-declaracion" type="date" value={fecha} min={fechaCierre} max={hoyColombiaCliente()} onDateChange={setFecha} required />
         </div>
         <Button type="submit" size="sm" disabled={pendiente}>
           {pendiente ? "Guardando…" : "Guardar fecha"}

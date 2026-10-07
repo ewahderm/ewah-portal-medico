@@ -86,7 +86,7 @@ export function Suficiencia({ registros, puedeCrear, puedeAnular }: { registros:
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1">
             <Label htmlFor="fecha-corte">Fecha de corte</Label>
-            <Input id="fecha-corte" type="date" value={fechaCorte} onChange={(e) => setFechaCorte(e.target.value)} />
+            <Input id="fecha-corte" type="date" value={fechaCorte} onDateChange={setFechaCorte} />
           </div>
           {CAMPOS.map((c) => (
             <div key={c.k} className="space-y-1">

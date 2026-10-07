@@ -241,7 +241,7 @@ export function AsistenteGrupoDialog({
             </div>
             <div className="space-y-2">
               <Label htmlFor="fechaClasificacion">Fecha de la clasificación</Label>
-              <Input id="fechaClasificacion" type="date" max={hoy} value={fecha} onChange={(e) => setFecha(e.target.value)} />
+              <Input id="fechaClasificacion" type="date" max={hoy} value={fecha} onDateChange={setFecha} />
             </div>
           </div>
 

@@ -182,7 +182,7 @@ export function PerfilForm({
                     type="date"
                     max={hoy}
                     value={fechaInscripcion}
-                    onChange={(e) => setFechaInscripcion(e.target.value)}
+                    onDateChange={setFechaInscripcion}
                   />
                 </div>
                 <div className="space-y-2">
@@ -194,7 +194,7 @@ export function PerfilForm({
                     name="fechaVencimiento"
                     type="date"
                     value={fechaVencimiento}
-                    onChange={(e) => setFechaVencimiento(e.target.value)}
+                    onDateChange={setFechaVencimiento}
                     required={estadoReps === "inscrito"}
                   />
                   <p className="text-xs text-muted-foreground">

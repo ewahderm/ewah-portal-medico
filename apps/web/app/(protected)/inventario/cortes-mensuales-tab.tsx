@@ -56,7 +56,7 @@ export function CortesMensualesTab({ sedes }: { sedes: Opcion[] }) {
                 id="fechaCorte"
                 type="date"
                 value={fechaCorte}
-                onChange={(e) => setFechaCorte(e.target.value)}
+                onDateChange={setFechaCorte}
               />
             </div>
             <div className="space-y-1.5">

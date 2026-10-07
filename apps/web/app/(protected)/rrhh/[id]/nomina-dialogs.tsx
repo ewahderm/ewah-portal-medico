@@ -228,11 +228,11 @@ export function GenerarNominaDialog({ empleadoId, onCreado }: { empleadoId: stri
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="fechaInicio">Fecha de inicio</Label>
-              <Input id="fechaInicio" name="fechaInicio" type="date" required value={fechaInicio} onChange={(e) => setFechaInicio(e.target.value)} />
+              <Input id="fechaInicio" name="fechaInicio" type="date" required value={fechaInicio} onDateChange={setFechaInicio} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="fechaFin">Fecha de fin</Label>
-              <Input id="fechaFin" name="fechaFin" type="date" required value={fechaFin} onChange={(e) => setFechaFin(e.target.value)} />
+              <Input id="fechaFin" name="fechaFin" type="date" required value={fechaFin} onDateChange={setFechaFin} />
             </div>
           </div>
           <div className="space-y-2">
@@ -458,11 +458,11 @@ export function GenerarHonorariosDialog({ empleadoId, onCreado }: { empleadoId: 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="fechaInicioHon">Fecha de inicio</Label>
-              <Input id="fechaInicioHon" name="fechaInicio" type="date" required value={fechaInicio} onChange={(e) => setFechaInicio(e.target.value)} />
+              <Input id="fechaInicioHon" name="fechaInicio" type="date" required value={fechaInicio} onDateChange={setFechaInicio} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="fechaFinHon">Fecha de fin</Label>
-              <Input id="fechaFinHon" name="fechaFin" type="date" required value={fechaFin} onChange={(e) => setFechaFin(e.target.value)} />
+              <Input id="fechaFinHon" name="fechaFin" type="date" required value={fechaFin} onDateChange={setFechaFin} />
             </div>
           </div>
           <div className="space-y-2">

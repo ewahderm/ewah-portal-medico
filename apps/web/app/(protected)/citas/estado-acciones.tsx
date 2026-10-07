@@ -187,8 +187,8 @@ export function EstadoAcciones({
               id={`reprogramarFecha-${cita.id}`}
               type="date"
               value={nuevaFecha}
-              onChange={(e) => {
-                setNuevaFecha(e.target.value);
+              onDateChange={(value) => {
+                setNuevaFecha(value);
                 setConflicto(null);
               }}
             />

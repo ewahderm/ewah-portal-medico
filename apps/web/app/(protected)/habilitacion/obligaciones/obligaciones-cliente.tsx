@@ -314,7 +314,7 @@ function ConfigurarDialog({ c, usuarios, onCerrar }: { c: ObligacionClinica; usu
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1">
               <Label htmlFor="fecha-asesor">Consulté con mi asesor el (opcional)</Label>
-              <Input id="fecha-asesor" type="date" value={fechaAsesor} max={hoyColombiaCliente()} onChange={(e) => setFechaAsesor(e.target.value)} />
+              <Input id="fecha-asesor" type="date" value={fechaAsesor} max={hoyColombiaCliente()} onDateChange={setFechaAsesor} />
             </div>
             <div className="space-y-1">
               <Label htmlFor="dias-aviso">Avisarme estos días antes</Label>
