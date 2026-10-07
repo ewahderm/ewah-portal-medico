@@ -650,6 +650,32 @@ export async function listarTratamientosDeAtencion(atencionId: string): Promise<
   });
 }
 
+// Tratamientos vigentes del paciente en cualquier atención — para que una
+// evolución de control pueda ligarse a un procedimiento hecho en una visita
+// anterior. Mismo filtro por clínica que el listado de la atención.
+export type TratamientoDePaciente = {
+  id: string;
+  fecha: string;
+  tipos_tratamiento: { nombre: string } | null;
+};
+
+export async function listarTratamientosDelPaciente(pacienteId: string): Promise<TratamientoDePaciente[]> {
+  const usuario = await getCurrentUsuario();
+  if (!usuario) return [];
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("tratamientos")
+    .select("id, fecha, tipos_tratamiento(nombre)")
+    .eq("paciente_id", pacienteId)
+    .eq("clinica_id", usuario.clinica_id)
+    .eq("anulado", false)
+    .order("fecha", { ascending: false })
+    .order("created_at", { ascending: false });
+
+  return (data ?? []) as unknown as TratamientoDePaciente[];
+}
+
 export async function listarAnexosTratamiento(tratamientoId: string) {
   const supabase = await createClient();
   const { data } = await supabase

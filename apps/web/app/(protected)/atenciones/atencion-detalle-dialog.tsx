@@ -11,7 +11,12 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { obtenerAtencion, type AtencionDetalle as AtencionDetalleTipo } from "@/lib/atenciones/actions";
-import { listarTratamientosDeAtencion, type TratamientoDeAtencion } from "@/lib/tratamientos/actions";
+import {
+  listarTratamientosDeAtencion,
+  listarTratamientosDelPaciente,
+  type TratamientoDeAtencion,
+  type TratamientoDePaciente,
+} from "@/lib/tratamientos/actions";
 import { listarEvolucionesDeAtencion, type EvolucionDeAtencion } from "@/lib/pacientes/evoluciones";
 import {
   obtenerAnamnesisDeAtencion,
@@ -93,6 +98,7 @@ export function AtencionDetalleDialog({
 }) {
   const [atencion, setAtencion] = useState<AtencionDetalleTipo | null>(null);
   const [tratamientos, setTratamientos] = useState<TratamientoDeAtencion[] | null>(null);
+  const [tratamientosPaciente, setTratamientosPaciente] = useState<TratamientoDePaciente[]>([]);
   const [evoluciones, setEvoluciones] = useState<EvolucionDeAtencion[] | null>(null);
   const [anamnesis, setAnamnesis] = useState<AnamnesisDeAtencion | null>(null);
   const [ultimaAnamnesis, setUltimaAnamnesis] = useState<AnamnesisDeAtencion | null>(null);
@@ -106,6 +112,9 @@ export function AtencionDetalleDialog({
     obtenerAtencion(atencionId).then((data) => {
       if (cancelado || !data) return;
       setAtencion(data);
+      listarTratamientosDelPaciente(data.paciente_id).then((t) => {
+        if (!cancelado) setTratamientosPaciente(t);
+      });
       obtenerUltimaAnamnesisPaciente(data.paciente_id).then((u) => {
         if (!cancelado) setUltimaAnamnesis(u);
       });
@@ -126,6 +135,7 @@ export function AtencionDetalleDialog({
 
   function refrescarTratamientos() {
     listarTratamientosDeAtencion(atencionId).then(setTratamientos);
+    if (atencion) listarTratamientosDelPaciente(atencion.paciente_id).then(setTratamientosPaciente);
     onCambio?.();
   }
   function refrescarEvoluciones() {
@@ -145,7 +155,9 @@ export function AtencionDetalleDialog({
     .filter((t) => !t.anulado)
     .reduce((suma, t) => suma + (t.costo ?? 0), 0);
 
-  const tratamientosParaEvolucion: Opcion[] = (tratamientos ?? []).map((t) => ({
+  // Todos los tratamientos vigentes del paciente, no solo los de esta
+  // atención: en un control se hace seguimiento a lo realizado antes.
+  const tratamientosParaEvolucion: Opcion[] = tratamientosPaciente.map((t) => ({
     id: t.id,
     nombre: `${t.fecha} — ${t.tipos_tratamiento?.nombre ?? "Tratamiento"}`,
   }));
