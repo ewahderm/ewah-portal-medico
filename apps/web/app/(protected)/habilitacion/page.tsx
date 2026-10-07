@@ -2,6 +2,7 @@ import Link from "next/link";
 import {
   Building2Icon,
   CalendarClockIcon,
+  HistoryIcon,
   ListChecksIcon,
   SparklesIcon,
   StethoscopeIcon,
@@ -20,9 +21,13 @@ import {
   getDocumentosClinica,
   getObligacionesClinica,
   getOcurrenciasPendientesHasta,
+  getOcurrencias,
+  getEstadosDeclaracion,
+  getAutoevaluaciones,
   getProgresoAutoevaluacion,
   hoyColombia,
 } from "@/lib/habilitacion/consultas";
+import { contarPorConfirmar, disciplinaReporte, estandaresDeProgreso, sumarProgreso } from "@/lib/habilitacion/tablero";
 import { armarChecklist, contextoDocumentos, resumenChecklist } from "@/lib/habilitacion/checklist";
 import { estadoOcurrencia, porConfirmar, resumenObligaciones, UMBRALES_SEMAFORO } from "@/lib/habilitacion/semaforo";
 import { SemaforoBadge } from "./_components/semaforo-badge";
@@ -41,6 +46,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RutaPasos } from "./_components/ruta-pasos";
+import { BarrasEstandar } from "./_components/barras-estandar";
+import { EstadoDeclaracionBadge } from "./_components/estado-declaracion-badge";
 
 const fmt = (n: number) => new Intl.NumberFormat("es-CO").format(n);
 
@@ -57,7 +64,18 @@ export default async function HabilitacionResumenPage() {
 
   const supabase = await createClient();
   const hoy = hoyColombia();
-  const [perfil, { sedes, serviciosSinSede }, progreso, clinica, documentos, configObligaciones, pendientes] = await Promise.all([
+  const [
+    perfil,
+    { sedes, serviciosSinSede },
+    progreso,
+    clinica,
+    documentos,
+    configObligaciones,
+    pendientes,
+    estadosDeclaracion,
+    autoevaluaciones,
+    ultimoAnio,
+  ] = await Promise.all([
     getPerfilPrestador(supabase),
     getSedesConServicios(supabase),
     acceso.gestion ? getProgresoAutoevaluacion(supabase) : Promise.resolve(null),
@@ -65,6 +83,9 @@ export default async function HabilitacionResumenPage() {
     acceso.gestion ? getDocumentosClinica(supabase) : Promise.resolve(null),
     getObligacionesClinica(supabase),
     getOcurrenciasPendientesHasta(supabase, sumarDias(hoy, UMBRALES_SEMAFORO.rojo)),
+    acceso.gestion ? getEstadosDeclaracion(supabase) : Promise.resolve(null),
+    acceso.gestion ? getAutoevaluaciones(supabase) : Promise.resolve(null),
+    getOcurrencias(supabase, sumarDias(hoy, -365), sumarDias(hoy, -1)),
   ]);
 
   // Paso 3: mismo checklist que la página de Documentos.
@@ -107,6 +128,14 @@ export default async function HabilitacionResumenPage() {
   });
   const todosServicios = [...sedes.flatMap((s) => s.servicios), ...serviciosSinSede];
   const incompletos = todosServicios.filter((s) => faltanteServicio(s) !== null).length;
+
+  // Indicadores de la autoevaluación y de reportes (§5.6).
+  const indAuto = progreso ? indicadoresDeProgreso(progreso) : null;
+  const sumas = progreso ? sumarProgreso(progreso) : null;
+  const ultimaCerrada = (autoevaluaciones ?? []).find((a) => !a.anulado) ?? null;
+  const disciplina = configObligaciones ? disciplinaReporte(configObligaciones, ultimoAnio, hoy) : null;
+  const porConfirmarN = configObligaciones ? contarPorConfirmar(configObligaciones) : 0;
+  const nombreSede = new Map(sedes.map((s) => [s.id, s.nombre]));
 
   const diasReps = perfil?.fecha_vencimiento_reps ? diasHasta(perfil.fecha_vencimiento_reps, hoy) : null;
   const nivelReps = diasReps === null ? null : nivelVencimientoReps(diasReps);
@@ -267,6 +296,110 @@ export default async function HabilitacionResumenPage() {
         />
       </div>
 
+      {acceso.gestion && indAuto && indAuto.evaluables > 0 ? (
+        <Card>
+          <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <CardTitle className="text-base font-semibold">Tu autoevaluación</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Un solo «No cumple» impide declarar el servicio en el REPS, aunque el resto esté al día.
+              </p>
+            </div>
+            <Button variant="outline" size="sm" className="shrink-0" nativeButton={false} render={<Link href="/habilitacion/autoevaluacion/historial" />}>
+              <HistoryIcon /> Historial
+            </Button>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <Mini titulo="Cumplimiento" valor={indAuto.porcentajeCumplimiento === null ? "—" : `${indAuto.porcentajeCumplimiento} %`} href="/habilitacion/autoevaluacion" />
+              <Mini titulo="Avance de evaluación" valor={`${indAuto.porcentajeAvance ?? 0} %`} detalle={`${fmt(indAuto.evaluados)} de ${fmt(indAuto.evaluables)}`} href="/habilitacion/autoevaluacion?estado=pendiente" />
+              <Mini
+                titulo="Por re-verificar"
+                valor={fmt(sumas?.reverificar ?? 0)}
+                detalle="Verificados hace más de 12 meses"
+                href="/habilitacion/autoevaluacion?reverificar=1"
+                tono={(sumas?.reverificar ?? 0) > 0 ? "alerta" : undefined}
+              />
+              <Mini titulo="Planes de mejora abiertos" valor={fmt(sumas?.planesAbiertos ?? 0)} href="/habilitacion/autoevaluacion?estado=no_cumple" />
+            </div>
+            <div className="grid gap-6 lg:grid-cols-2">
+              <section className="space-y-2">
+                <h2 className="text-sm font-semibold">Cumplimiento por estándar</h2>
+                <BarrasEstandar
+                  filas={estandaresDeProgreso(progreso ?? [])}
+                  href={(estandar, estado) => `/habilitacion/autoevaluacion?estandar=${estandar}${estado ? `&estado=${estado}` : ""}`}
+                />
+              </section>
+              <section className="space-y-2">
+                <h2 className="text-sm font-semibold">¿Qué puedes declarar?</h2>
+                {estadosDeclaracion === null ? (
+                  <p className="text-sm text-muted-foreground">Disponible pronto.</p>
+                ) : (
+                  <ul className="space-y-1.5">
+                    {estadosDeclaracion.map((e) => (
+                      <li key={`${e.sede_id}-${e.servicio_norma_id}`}>
+                        <Link
+                          href={`/habilitacion/autoevaluacion?sede=${e.sede_id}${e.estado === "con_incumplimientos" ? "&estado=no_cumple" : e.estado === "sin_evaluar" ? "&estado=pendiente" : ""}`}
+                          className="flex flex-col gap-1 rounded-lg border p-2 text-sm transition-colors hover:bg-muted sm:flex-row sm:items-center sm:justify-between"
+                        >
+                          <span className="min-w-0">
+                            <span className="font-medium">
+                              {e.servicio_clave} {e.servicio_nombre}
+                            </span>
+                            {sedesConServicios.length > 1 ? <span className="text-muted-foreground"> · {nombreSede.get(e.sede_id) ?? e.sede_nombre}</span> : null}
+                          </span>
+                          <EstadoDeclaracionBadge estado={e.estado} noCumple={e.no_cumple} pendientes={e.pendientes} />
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  {ultimaCerrada ? (
+                    <>
+                      Último cierre:{" "}
+                      <Link href={`/habilitacion/autoevaluacion/historial/${ultimaCerrada.id}`} className="text-primary underline-offset-4 hover:underline">
+                        {ultimaCerrada.nombre}
+                      </Link>
+                      {ultimaCerrada.fecha_declaracion_reps
+                        ? `, declarada en el REPS el ${fechaLegible(ultimaCerrada.fecha_declaracion_reps)}.`
+                        : ", sin fecha de declaración en el REPS."}
+                    </>
+                  ) : (
+                    "Todavía no has cerrado ninguna autoevaluación."
+                  )}
+                </p>
+              </section>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {configObligaciones && configObligaciones.some((c) => c.activa) ? (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Kpi
+            icono={CalendarClockIcon}
+            titulo="Reportes presentados a tiempo (último año)"
+            href="/habilitacion/calendario"
+            valor={disciplina?.porcentaje === null || !disciplina ? "—" : `${disciplina.porcentaje} %`}
+            detalle={
+              !disciplina || disciplina.total === 0
+                ? "Sin fechas vencidas en el último año."
+                : `${fmt(disciplina.aTiempo)} de ${fmt(disciplina.total)} a tiempo.`
+            }
+            tono={disciplina?.porcentaje !== null && disciplina && disciplina.porcentaje < 80 ? "alerta" : undefined}
+          />
+          <Kpi
+            icono={ListChecksIcon}
+            titulo="Obligaciones por confirmar con tu asesor"
+            href="/habilitacion/obligaciones"
+            valor={fmt(porConfirmarN)}
+            detalle={porConfirmarN > 0 ? "No te avisamos de ellas hasta que las confirmes." : "Todas confirmadas."}
+            tono={porConfirmarN > 0 ? "alerta" : undefined}
+          />
+        </div>
+      ) : null}
+
       {acceso.gestion && sedesConServicios.length > 0 ? (
         <Card>
           <CardHeader>
@@ -313,7 +446,7 @@ export default async function HabilitacionResumenPage() {
                 <p className="font-semibold">Gestiona tu habilitación completa con el plan Pro</p>
                 <p className="text-sm text-muted-foreground">
                   Declara tus servicios por sede y descubre exactamente qué criterios de la Resolución 3100 te
-                  aplican; pronto también documentos, autoevaluación con evidencias y alertas por correo.
+                  aplican; documentos, autoevaluación con evidencias, cierre e historial, y alertas por correo.
                 </p>
               </div>
             </div>
@@ -324,6 +457,16 @@ export default async function HabilitacionResumenPage() {
         </Card>
       ) : null}
     </div>
+  );
+}
+
+function Mini({ titulo, valor, detalle, href, tono }: { titulo: string; valor: string; detalle?: string; href: string; tono?: "alerta" }) {
+  return (
+    <Link href={href} className="block rounded-lg border p-3 transition-colors hover:bg-muted">
+      <p className="text-xs text-muted-foreground">{titulo}</p>
+      <p className={cn("text-xl font-semibold", tono === "alerta" && "text-amber-700")}>{valor}</p>
+      {detalle ? <p className="text-xs text-muted-foreground">{detalle}</p> : null}
+    </Link>
   );
 }
 

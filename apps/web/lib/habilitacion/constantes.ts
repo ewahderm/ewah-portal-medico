@@ -248,6 +248,26 @@ export const TIPOS_HITO = [
 export type TipoHito = (typeof TIPOS_HITO)[number]["value"];
 
 // Vencimiento del REPS: ámbar desde 90 días, rojo desde 30 (§5.6).
+// Cierre de la autoevaluación (F10, HU-4.6). Mismo check que
+// hab_autoevaluaciones.motivo.
+export const MOTIVOS_AUTOEVALUACION = [
+  { value: "renovacion_anual", label: "Renovación anual", ayuda: "La autoevaluación de cada año antes de que venza tu inscripción." },
+  { value: "inscripcion", label: "Inscripción inicial", ayuda: "La que presentas para inscribirte por primera vez en el REPS." },
+  { value: "cuarto_anio", label: "Renovación del cuarto año", ayuda: "Al terminar los 4 años de vigencia de la inscripción." },
+  { value: "novedad", label: "Novedad", ayuda: "Por apertura de un servicio u otra novedad que exige autoevaluar." },
+  { value: "levantamiento_medida", label: "Levantamiento de medida", ayuda: "Para levantar una medida de seguridad de la secretaría." },
+] as const satisfies Opciones<string>;
+export type MotivoAutoevaluacion = (typeof MOTIVOS_AUTOEVALUACION)[number]["value"];
+
+// Estado de declaración de un servicio en una sede (§5.6): un solo
+// "No cumple" impide declararlo aunque tenga 98 %.
+export const ESTADOS_DECLARACION = [
+  { value: "listo", label: "Listo para declarar" },
+  { value: "con_incumplimientos", label: "Con incumplimientos" },
+  { value: "sin_evaluar", label: "Sin evaluar del todo" },
+] as const satisfies Opciones<string>;
+export type EstadoDeclaracion = (typeof ESTADOS_DECLARACION)[number]["value"];
+
 export const UMBRALES_VENCIMIENTO_REPS = { ambar: 90, rojo: 30 } as const;
 
 export function etiquetaDe<T extends string>(opciones: Opciones<T>, valor: string | null | undefined) {

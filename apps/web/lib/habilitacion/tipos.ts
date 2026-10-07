@@ -17,6 +17,8 @@ import type {
 
 export type AccesoHabilitacion = {
   puedeVer: boolean;
+  // APPROVE: cerrar la autoevaluación y registrar su declaración en el REPS.
+  puedeAprobar: boolean;
   puedeEditar: boolean;
   puedeCrear: boolean;
   puedeAnular: boolean;
@@ -470,4 +472,91 @@ export type NovedadReportada = {
   anulado: boolean;
   motivo_anulacion: string | null;
   created_at: string;
+};
+
+// ============================================================
+// F10 · Estado de declaración, cierre e historial
+// ============================================================
+export type EstadoDeclaracionServicio = {
+  sede_id: string;
+  sede_nombre: string;
+  servicio_norma_id: string;
+  servicio_clave: string;
+  servicio_nombre: string;
+  servicio_orden: number;
+  evaluables: number;
+  cumple: number;
+  no_cumple: number;
+  no_aplica: number;
+  pendientes: number;
+  estado: "listo" | "con_incumplimientos" | "sin_evaluar";
+};
+
+type ConteoEstados = { cumple: number; no_cumple: number; no_aplica: number; pendientes: number };
+
+export type ResumenAutoevaluacion = {
+  totales: ConteoEstados & { evaluables: number };
+  estandares: (ConteoEstados & { estandar_codigo: string })[];
+  sedes: (ConteoEstados & { sede_id: string; sede: string })[];
+  servicios: {
+    sede_id: string;
+    sede: string;
+    servicio_clave: string;
+    servicio: string;
+    evaluables: number;
+    cumple: number;
+    no_cumple: number;
+    no_aplica: number;
+    pendientes: number;
+    estado: EstadoDeclaracionServicio["estado"];
+  }[];
+  criterios: number;
+  fecha: string;
+};
+
+export type Autoevaluacion = {
+  id: string;
+  nombre: string;
+  motivo: string;
+  fecha_cierre: string;
+  cerrado_por: string;
+  fecha_declaracion_reps: string | null;
+  confirmo_servicios_no_aptos: boolean;
+  servicios_no_aptos: { sede: string; servicio_clave: string; servicio: string; no_cumple: number }[];
+  resumen: ResumenAutoevaluacion;
+  ocurrencia_id: string | null;
+  anulado: boolean;
+  anulado_motivo: string | null;
+  anulado_en: string | null;
+};
+
+export const AUTOEVALUACION_SELECT =
+  "id, nombre, motivo, fecha_cierre, cerrado_por, fecha_declaracion_reps, confirmo_servicios_no_aptos, servicios_no_aptos, resumen, ocurrencia_id, anulado, anulado_motivo, anulado_en";
+
+export type EvidenciaFoto = {
+  tipo: string;
+  descripcion: string;
+  nombre_archivo: string | null;
+  url: string | null;
+  fuente: string | null;
+  resumen: Pick<ResumenEvidencia, "titulo" | "estado" | "detalle"> | null;
+  protocolo: { nombre: string; version: number; nombre_archivo: string } | null;
+  creada_en: string;
+};
+
+export type DetalleAutoevaluacion = {
+  sede_id: string;
+  criterio_id: string;
+  sede_nombre: string;
+  servicio_clave: string;
+  estandar_codigo: string;
+  criterio_codigo: string;
+  texto_literal: string;
+  estado: "cumple" | "no_cumple" | "no_aplica" | "pendiente";
+  origen: "directo" | "transversal" | "remision" | "autorresuelto" | "encabezado";
+  remitido_desde_codigo: string | null;
+  justificacion: string | null;
+  evaluado_por: string | null;
+  fecha_verificacion: string | null;
+  evidencias?: EvidenciaFoto[];
 };

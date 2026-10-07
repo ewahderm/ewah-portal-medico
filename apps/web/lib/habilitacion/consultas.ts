@@ -12,7 +12,11 @@ import {
   FILA_CRITERIO_SELECT,
   PERFIL_SELECT,
   SERVICIO_SEDE_SELECT,
+  AUTOEVALUACION_SELECT,
   type AccesoHabilitacion,
+  type Autoevaluacion,
+  type DetalleAutoevaluacion,
+  type EstadoDeclaracionServicio,
   type ClinicaRegulatoria,
   type ConteoCriterios,
   type DetalleServicioInput,
@@ -43,15 +47,23 @@ type Supabase = Awaited<ReturnType<typeof createClient>>;
 export const getAccesoHabilitacion = cache(async (): Promise<AccesoHabilitacion> => {
   const supabase = await createClient();
   const permiso = (permiso_code: string) => supabase.rpc("has_permission", { modulo_code: MODULO_HABILITACION, permiso_code });
-  const [{ data: puedeVer }, { data: puedeEditar }, { data: puedeCrear }, { data: puedeAnular }, { data: gestion }] =
+  const [{ data: puedeVer }, { data: puedeEditar }, { data: puedeCrear }, { data: puedeAnular }, { data: puedeAprobar }, { data: gestion }] =
     await Promise.all([
       permiso("VIEW"),
       permiso("EDIT"),
       permiso("CREATE"),
       permiso("VOID"),
+      permiso("APPROVE"),
       supabase.rpc("has_entitlement", { modulo_code: MODULO_HABILITACION, feature_code: FEATURE_GESTION }),
     ]);
-  return { puedeVer: !!puedeVer, puedeEditar: !!puedeEditar, puedeCrear: !!puedeCrear, puedeAnular: !!puedeAnular, gestion: !!gestion };
+  return {
+    puedeVer: !!puedeVer,
+    puedeEditar: !!puedeEditar,
+    puedeCrear: !!puedeCrear,
+    puedeAnular: !!puedeAnular,
+    puedeAprobar: !!puedeAprobar,
+    gestion: !!gestion,
+  };
 });
 
 export async function getPerfilPrestador(supabase: Supabase): Promise<PerfilPrestador | null> {
@@ -386,4 +398,57 @@ export async function getNovedades(supabase: Supabase): Promise<{ catalogo: Nove
     catalogo: (catalogo.data ?? []) as NovedadCatalogo[],
     reportadas: (reportadas.data ?? []) as NovedadReportada[],
   };
+}
+
+// ============================================================
+// F10 · Estado de declaración y autoevaluaciones cerradas
+// ============================================================
+// null = la RPC no existe todavía (0070 sin aplicar) o falló: la UI lo
+// muestra como "no disponible" en vez de romper el Resumen.
+export async function getEstadosDeclaracion(supabase: Supabase): Promise<EstadoDeclaracionServicio[] | null> {
+  const { data, error } = await supabase.rpc("fn_hab_estados_declaracion");
+  if (error) return null;
+  return (data ?? []) as EstadoDeclaracionServicio[];
+}
+
+export async function getAutoevaluaciones(supabase: Supabase): Promise<Autoevaluacion[] | null> {
+  const { data, error } = await supabase
+    .from("hab_autoevaluaciones")
+    .select(AUTOEVALUACION_SELECT)
+    .order("fecha_cierre", { ascending: false });
+  if (error) return null;
+  return (data ?? []) as unknown as Autoevaluacion[];
+}
+
+export async function getAutoevaluacion(supabase: Supabase, id: string): Promise<Autoevaluacion | null> {
+  const { data } = await supabase.from("hab_autoevaluaciones").select(AUTOEVALUACION_SELECT).eq("id", id).maybeSingle();
+  return (data as unknown as Autoevaluacion | null) ?? null;
+}
+
+const DETALLE_SELECT =
+  "sede_id, criterio_id, sede_nombre, servicio_clave, estandar_codigo, criterio_codigo, texto_literal, estado, origen, remitido_desde_codigo, justificacion, evaluado_por, fecha_verificacion";
+
+// ~465 filas por sede; PostgREST corta en 1.000 por defecto, así que se
+// pagina hasta traerlas todas (una clínica con varias sedes pasa de 1.000).
+export async function getDetalleAutoevaluacion(
+  supabase: Supabase,
+  id: string,
+  conEvidencias = false,
+): Promise<DetalleAutoevaluacion[]> {
+  const filas: DetalleAutoevaluacion[] = [];
+  const PAGINA = 1000;
+  for (let desde = 0; ; desde += PAGINA) {
+    const { data, error } = await supabase
+      .from("hab_autoevaluacion_detalle")
+      .select(conEvidencias ? `${DETALLE_SELECT}, evidencias` : DETALLE_SELECT)
+      .eq("autoevaluacion_id", id)
+      .order("sede_nombre")
+      .order("servicio_clave")
+      .order("criterio_codigo")
+      .range(desde, desde + PAGINA - 1);
+    if (error || !data) break;
+    filas.push(...(data as unknown as DetalleAutoevaluacion[]));
+    if (data.length < PAGINA) break;
+  }
+  return filas;
 }

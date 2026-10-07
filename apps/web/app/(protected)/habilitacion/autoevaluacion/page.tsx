@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Building2Icon, ClipboardCheckIcon, TriangleAlertIcon } from "lucide-react";
+import { Building2Icon, ClipboardCheckIcon, HistoryIcon, TriangleAlertIcon } from "lucide-react";
 import { cn } from "cn";
 import { createClient } from "@/lib/supabase/server";
 import { requireUsuario } from "@/lib/auth/session";
@@ -19,6 +19,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { UpsellPlan } from "../../_components/upsell-plan";
 import { AutoevaluacionCliente } from "./autoevaluacion-cliente";
 import { BarraProgreso } from "./barra-progreso";
+import { CerrarAutoevaluacionBoton } from "./cerrar-autoevaluacion-dialog";
 
 const fmt = (n: number) => new Intl.NumberFormat("es-CO").format(n);
 
@@ -155,8 +156,16 @@ export default async function AutoevaluacionPage({
               {ind.noCumple > 0 ? ` · ${fmt(ind.noCumple)} No cumple` : ""}
             </p>
           </div>
-          <div className="w-full sm:w-56">
-            <BarraProgreso valor={ind.porcentajeAvance ?? 0} etiqueta={`Avance de evaluación: ${ind.porcentajeAvance ?? 0} %`} />
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
+            <div className="w-full sm:w-56">
+              <BarraProgreso valor={ind.porcentajeAvance ?? 0} etiqueta={`Avance de evaluación: ${ind.porcentajeAvance ?? 0} %`} />
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/habilitacion/autoevaluacion/historial" />}>
+                <HistoryIcon /> Historial
+              </Button>
+              {acceso.puedeAprobar ? <CerrarAutoevaluacionBoton /> : null}
+            </div>
           </div>
         </div>
       </div>

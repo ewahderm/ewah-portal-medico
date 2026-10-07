@@ -204,3 +204,11 @@ export function fechaLegible(fecha: string | null | undefined): string {
   const meses = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
   return `${d} ${meses[m - 1]} ${a}`;
 }
+
+// Fecha (AAAA-MM-DD) en Colombia de un instante (timestamptz): cortar el ISO
+// daría el día UTC, que después de las 7 p. m. ya es mañana.
+export function fechaColombiaDe(instante: string): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Bogota", year: "numeric", month: "2-digit", day: "2-digit" }).format(
+    new Date(instante),
+  );
+}
