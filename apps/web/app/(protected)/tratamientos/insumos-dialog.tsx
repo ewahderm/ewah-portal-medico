@@ -32,6 +32,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { LoteScanner, type LoteEscaneado } from "../_components/lote-scanner";
+import { exigirExito } from "@/lib/forms/resultado";
 
 type Insumo = { id: string; nombre: string };
 type Lote = {
@@ -128,7 +129,7 @@ export function InsumosDialog({
     setErrorReversa(null);
     startTransition(async () => {
       try {
-        await revertirConsumo(id, motivo);
+        exigirExito(await revertirConsumo(id, motivo));
         setRevirtiendoId(null);
         setMotivoReversa("");
         const data = await listarConsumoTratamiento(tratamientoId);

@@ -30,6 +30,7 @@ import { AjusteDialog } from "./ajuste-dialog";
 import { TrasladoDialog } from "./traslado-dialog";
 import type { Opcion } from "@/lib/forms/opciones";
 import { formatoMoneda } from "@/lib/format";
+import { exigirExito } from "@/lib/forms/resultado";
 
 type LoteRow = {
   id: string;
@@ -100,7 +101,7 @@ export function InventarioActualTab({
     setErrorToggle(null);
     startToggle(async () => {
       try {
-        await toggleLote(id, next);
+        exigirExito(await toggleLote(id, next));
       } catch (e) {
         setEstados((prev) => new Map(prev).set(id, !next));
         setErrorToggle(e instanceof Error ? e.message : "No se pudo actualizar el lote.");

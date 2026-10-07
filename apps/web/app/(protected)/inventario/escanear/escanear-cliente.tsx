@@ -33,7 +33,7 @@ export function EscanearCliente({
     if (!lote) return;
     startRefresco(async () => {
       const actualizado = await buscarLotePorId(lote.id);
-      if (actualizado) setLote(actualizado);
+      if (actualizado && !("error" in actualizado)) setLote(actualizado);
     });
   }
 
