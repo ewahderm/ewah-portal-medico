@@ -28,6 +28,7 @@ import {
 import { Combobox } from "@/components/ui/combobox";
 import { toItems, toItemsOpcional, type Opcion } from "@/lib/forms/opciones";
 import { SIN_SELECCION } from "@/lib/forms/opcional";
+import { exigirExito } from "@/lib/forms/resultado";
 
 type Departamento = { id: string; nombre: string; pais_id: string };
 type Ciudad = { id: string; nombre: string; departamento_id: string };
@@ -435,7 +436,7 @@ function ServiciosHabilitadosSection({
     setError(null);
     startTransition(async () => {
       try {
-        const creado = await agregarServicioHabilitado(servicioId, sedeElegida, codigoNuevo || null);
+        const { servicio: creado } = exigirExito(await agregarServicioHabilitado(servicioId, sedeElegida, codigoNuevo || null));
         setServicios((actual) => [...actual, creado]);
         // Se cierra el formulario; para otro servicio se vuelve a abrir con
         // el botón. Se conserva la sede para agilizar el siguiente alta.
@@ -461,7 +462,7 @@ function ServiciosHabilitadosSection({
     );
     startTransition(async () => {
       try {
-        await actualizarSedeServicioHabilitado(id, sede?.id ?? null);
+        exigirExito(await actualizarSedeServicioHabilitado(id, sede?.id ?? null));
       } catch (e) {
         setServicios((actual) => actual.map((s) => (s.id === id ? anterior : s)));
         setError(e instanceof Error ? e.message : "No se pudo cambiar la sede.");
@@ -473,7 +474,7 @@ function ServiciosHabilitadosSection({
     setServicios((actual) => actual.map((s) => (s.id === id ? { ...s, codigo_habilitacion: codigo } : s)));
     startTransition(async () => {
       try {
-        await actualizarCodigoServicioHabilitado(id, codigo || null);
+        exigirExito(await actualizarCodigoServicioHabilitado(id, codigo || null));
       } catch (e) {
         setError(e instanceof Error ? e.message : "No se pudo actualizar el código.");
       }
@@ -484,7 +485,7 @@ function ServiciosHabilitadosSection({
     setError(null);
     startTransition(async () => {
       try {
-        await eliminarServicioHabilitado(id);
+        exigirExito(await eliminarServicioHabilitado(id));
         setServicios((actual) => actual.filter((s) => s.id !== id));
       } catch (e) {
         setError(e instanceof Error ? e.message : "No se pudo eliminar.");
