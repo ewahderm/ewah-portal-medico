@@ -14,6 +14,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { exigirExito } from "@/lib/forms/resultado";
 
 export function AnularDialog({ id }: { id: string }) {
   const [open, setOpen] = useState(false);
@@ -25,7 +26,7 @@ export function AnularDialog({ id }: { id: string }) {
     setError(null);
     startTransition(async () => {
       try {
-        await anularTratamiento(id, motivo);
+        exigirExito(await anularTratamiento(id, motivo));
         setOpen(false);
         setMotivo("");
       } catch (e) {

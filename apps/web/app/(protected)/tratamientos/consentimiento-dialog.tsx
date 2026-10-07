@@ -25,6 +25,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { exigirExito } from "@/lib/forms/resultado";
 
 type Consentimiento = {
   id: string;
@@ -230,7 +231,7 @@ export function ConsentimientoDialog({
         const formData = new FormData();
         formData.set("archivo", new File([pdfBlob], "consentimiento.pdf", { type: "application/pdf" }));
         formData.set("paginas", String(paginas.length));
-        await subirConsentimientoTratamiento(tratamientoId, formData);
+        exigirExito(await subirConsentimientoTratamiento(tratamientoId, formData));
         setPaginas([]);
         cargar();
       } catch (e) {
@@ -271,7 +272,7 @@ export function ConsentimientoDialog({
         const formData = new FormData();
         formData.set("archivo", new File([pdfBlob], nombreArchivo, { type: "application/pdf" }));
         formData.set("paginas", String(totalPaginas));
-        await subirConsentimientoTratamiento(tratamientoId, formData);
+        exigirExito(await subirConsentimientoTratamiento(tratamientoId, formData));
         cargar();
       } catch (e) {
         setError(e instanceof Error ? e.message : "No se pudo subir el archivo.");
@@ -285,7 +286,7 @@ export function ConsentimientoDialog({
     setError(null);
     startTransition(async () => {
       try {
-        await eliminarConsentimientoTratamiento(id, storagePath);
+        exigirExito(await eliminarConsentimientoTratamiento(id, storagePath));
         cargar();
       } catch (e) {
         setError(e instanceof Error ? e.message : "No se pudo eliminar.");

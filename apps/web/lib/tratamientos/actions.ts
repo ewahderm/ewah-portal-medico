@@ -9,6 +9,7 @@ import { campoOpcional } from "@/lib/forms/opcional";
 import { CATEGORIAS_ANEXO } from "./anexos";
 import { tieneInfoPendiente } from "@/lib/pacientes/completitud";
 import type { ActionState } from "@/lib/auth/actions";
+import type { ResultadoAccion } from "@/lib/forms/resultado";
 
 const MAX_FOTO_BYTES = 8 * 1024 * 1024;
 const TIPOS_FOTO_PERMITIDOS = ["image/jpeg", "image/png", "image/webp"];
@@ -268,11 +269,11 @@ export async function editarTratamiento(
   return null;
 }
 
-export async function anularTratamiento(id: string, motivo: string) {
-  if (!motivo.trim()) throw new Error("El motivo de anulación es obligatorio.");
+export async function anularTratamiento(id: string, motivo: string): Promise<ResultadoAccion> {
+  if (!motivo.trim()) return { error: "El motivo de anulación es obligatorio." };
 
   const check = await requirePermiso("VOID");
-  if (!check.ok) throw new Error(check.error);
+  if (!check.ok) return { error: check.error };
 
   const supabase = await createClient();
   const { error } = await supabase
@@ -285,19 +286,20 @@ export async function anularTratamiento(id: string, motivo: string) {
     })
     .eq("id", id);
 
-  if (error) throw new Error("No se pudo anular el tratamiento.");
+  if (error) return { error: "No se pudo anular el tratamiento." };
 
   revalidatePath("/tratamientos");
+  return {};
 }
 
 // Revertir una anulación queda restringido a un administrador — la base de
 // datos ya lo exige (fn_tratamientos_solo_anular), esto solo da un mensaje
 // claro en vez del error crudo de la policy.
-export async function revertirAnulacionTratamiento(id: string) {
+export async function revertirAnulacionTratamiento(id: string): Promise<ResultadoAccion> {
   const usuario = await getCurrentUsuario();
-  if (!usuario) throw new Error("Sesión inválida.");
+  if (!usuario) return { error: "Sesión inválida." };
   if (!esAdministrador(usuario)) {
-    throw new Error("Solo un administrador puede revertir la anulación de un tratamiento.");
+    return { error: "Solo un administrador puede revertir la anulación de un tratamiento." };
   }
 
   const supabase = await createClient();
@@ -311,7 +313,7 @@ export async function revertirAnulacionTratamiento(id: string) {
     })
     .eq("id", id);
 
-  if (error) throw new Error("No se pudo revertir la anulación.");
+  if (error) return { error: "No se pudo revertir la anulación." };
 
   // Si este tratamiento se había anulado al "Editarlo" o al "Corregirlo"
   // (ambos flujos crean un registro nuevo que apunta a este vía corrige_a),
@@ -335,31 +337,30 @@ export async function revertirAnulacionTratamiento(id: string) {
       })
       .eq("id", corregido.id);
     if (anularCorregidoError) {
-      throw new Error(
-        "Se revirtió la anulación, pero no se pudo anular el registro corregido que lo había reemplazado — quedaron los dos activos, anúlalo manualmente.",
-      );
+      return { error: "Se revirtió la anulación, pero no se pudo anular el registro corregido que lo había reemplazado — quedaron los dos activos, anúlalo manualmente.", };
     }
   }
 
   revalidatePath("/tratamientos");
+  return {};
 }
 
 function columnaFoto(etiqueta: "antes" | "despues") {
   return etiqueta === "antes" ? "storage_path_antes" : "storage_path_despues";
 }
 
-function validarArchivoFoto(formData: FormData) {
+function validarArchivoFoto(formData: FormData): { error: string } | { foto: File } {
   const foto = formData.get("foto");
   if (!(foto instanceof File) || foto.size === 0) {
-    throw new Error("Selecciona una foto.");
+    return { error: "Selecciona una foto." };
   }
   if (foto.size > MAX_FOTO_BYTES) {
-    throw new Error("La foto no puede pesar más de 8 MB.");
+    return { error: "La foto no puede pesar más de 8 MB." };
   }
   if (!TIPOS_FOTO_PERMITIDOS.includes(foto.type)) {
-    throw new Error("Formato no soportado. Usa JPG, PNG o WEBP.");
+    return { error: "Formato no soportado. Usa JPG, PNG o WEBP." };
   }
-  return foto;
+  return { foto };
 }
 
 // Un registro de fotos es un PAR (antes + después) con una sola
@@ -371,11 +372,13 @@ export async function crearRegistroFoto(
   tratamientoId: string,
   etiqueta: "antes" | "despues",
   formData: FormData,
-) {
+): Promise<ResultadoAccion> {
   const check = await requirePermiso("CREATE");
-  if (!check.ok) throw new Error(check.error);
+  if (!check.ok) return { error: check.error };
 
-  const foto = validarArchivoFoto(formData);
+  const validacion = validarArchivoFoto(formData);
+  if ("error" in validacion) return { error: validacion.error };
+  const foto = validacion.foto;
   const observaciones = campoOpcional(formData, "observaciones");
 
   const supabase = await createClient();
@@ -385,7 +388,7 @@ export async function crearRegistroFoto(
   const { error: uploadError } = await supabase.storage
     .from("tratamiento-fotos")
     .upload(path, foto, { contentType: foto.type });
-  if (uploadError) throw new Error("No se pudo subir la foto.");
+  if (uploadError) return { error: "No se pudo subir la foto." };
 
   const { error: insertError } = await supabase.from("tratamiento_fotos").insert({
     clinica_id: check.usuario.clinica_id,
@@ -394,9 +397,10 @@ export async function crearRegistroFoto(
     observaciones,
     created_by: check.usuario.id,
   });
-  if (insertError) throw new Error("No se pudo registrar la foto.");
+  if (insertError) return { error: "No se pudo registrar la foto." };
 
   revalidarPantallasDeArchivos();
+  return {};
 }
 
 // Agrega la foto que falta (antes o después) a un registro ya existente.
@@ -408,11 +412,13 @@ export async function completarFotoRegistro(
   tratamientoId: string,
   etiqueta: "antes" | "despues",
   formData: FormData,
-) {
+): Promise<ResultadoAccion> {
   const check = await requirePermiso("CREATE");
-  if (!check.ok) throw new Error(check.error);
+  if (!check.ok) return { error: check.error };
 
-  const foto = validarArchivoFoto(formData);
+  const validacion = validarArchivoFoto(formData);
+  if ("error" in validacion) return { error: validacion.error };
+  const foto = validacion.foto;
   const columna = columnaFoto(etiqueta);
 
   const supabase = await createClient();
@@ -423,8 +429,8 @@ export async function completarFotoRegistro(
     .eq("tratamiento_id", tratamientoId)
     .eq("clinica_id", check.usuario.clinica_id)
     .maybeSingle();
-  if (!registro) throw new Error("Registro no encontrado.");
-  if (registro[columna]) throw new Error("Este registro ya tiene una foto de este lado.");
+  if (!registro) return { error: "Registro no encontrado." };
+  if (registro[columna]) return { error: "Este registro ya tiene una foto de este lado." };
 
   const extension = foto.name.split(".").pop() ?? "jpg";
   const path = `${check.usuario.clinica_id}/${tratamientoId}/${etiqueta}-${Date.now()}.${extension}`;
@@ -432,24 +438,25 @@ export async function completarFotoRegistro(
   const { error: uploadError } = await supabase.storage
     .from("tratamiento-fotos")
     .upload(path, foto, { contentType: foto.type });
-  if (uploadError) throw new Error("No se pudo subir la foto.");
+  if (uploadError) return { error: "No se pudo subir la foto." };
 
   const { error: updateError } = await supabase
     .from("tratamiento_fotos")
     .update({ [columna]: path })
     .eq("id", fotoId);
-  if (updateError) throw new Error("No se pudo completar el registro.");
+  if (updateError) return { error: "No se pudo completar el registro." };
 
   revalidarPantallasDeArchivos();
+  return {};
 }
 
-export async function eliminarFotoTratamiento(id: string) {
+export async function eliminarFotoTratamiento(id: string): Promise<ResultadoAccion> {
   const usuario = await getCurrentUsuario();
-  if (!usuario) throw new Error("Sesión inválida.");
+  if (!usuario) return { error: "Sesión inválida." };
   // La política de RLS ya solo permite este DELETE a un administrador
   // (es_admin()) — se repite aquí para dar un mensaje claro en vez de
   // dejar que falle con el error crudo de la base de datos.
-  if (!esAdministrador(usuario)) throw new Error("Solo un administrador puede eliminar fotos.");
+  if (!esAdministrador(usuario)) return { error: "Solo un administrador puede eliminar fotos." };
 
   const supabase = await createClient();
   const { data: registro } = await supabase
@@ -457,20 +464,21 @@ export async function eliminarFotoTratamiento(id: string) {
     .select("storage_path_antes, storage_path_despues")
     .eq("id", id)
     .maybeSingle();
-  if (!registro) throw new Error("Registro no encontrado.");
+  if (!registro) return { error: "Registro no encontrado." };
 
   const paths = [registro.storage_path_antes, registro.storage_path_despues].filter(
     (p): p is string => Boolean(p),
   );
   if (paths.length > 0) {
     const { error: storageError } = await supabase.storage.from("tratamiento-fotos").remove(paths);
-    if (storageError) throw new Error("No se pudo eliminar el archivo.");
+    if (storageError) return { error: "No se pudo eliminar el archivo." };
   }
 
   const { error } = await supabase.from("tratamiento_fotos").delete().eq("id", id);
-  if (error) throw new Error("No se pudo eliminar la foto.");
+  if (error) return { error: "No se pudo eliminar la foto." };
 
   revalidarPantallasDeArchivos();
+  return {};
 }
 
 export async function urlFirmadaFoto(storagePath: string, descargar = false) {
@@ -506,26 +514,26 @@ export async function subirAnexoTratamiento(
   tratamientoId: string,
   categoria: string,
   formData: FormData,
-) {
+): Promise<ResultadoAccion> {
   if (!(CATEGORIAS_ANEXO as readonly string[]).includes(categoria)) {
-    throw new Error("Categoría inválida.");
+    return { error: "Categoría inválida." };
   }
 
   const check = await requirePermiso("CREATE");
-  if (!check.ok) throw new Error(check.error);
+  if (!check.ok) return { error: check.error };
 
   const checkPlan = await requireEntitlement("tratamientos", "anexos");
-  if (!checkPlan.ok) throw new Error(checkPlan.error);
+  if (!checkPlan.ok) return { error: checkPlan.error };
 
   const archivo = formData.get("archivo");
   if (!(archivo instanceof File) || archivo.size === 0) {
-    throw new Error("Selecciona un archivo.");
+    return { error: "Selecciona un archivo." };
   }
   if (archivo.size > MAX_ANEXO_BYTES) {
-    throw new Error("El archivo no puede pesar más de 15 MB.");
+    return { error: "El archivo no puede pesar más de 15 MB." };
   }
   if (!TIPOS_ANEXO_PERMITIDOS.includes(archivo.type)) {
-    throw new Error("Formato no soportado. Usa JPG, PNG, WEBP o PDF.");
+    return { error: "Formato no soportado. Usa JPG, PNG, WEBP o PDF." };
   }
 
   const observaciones = campoOpcional(formData, "observaciones");
@@ -537,7 +545,7 @@ export async function subirAnexoTratamiento(
   const { error: uploadError } = await supabase.storage
     .from("tratamiento-anexos")
     .upload(path, archivo, { contentType: archivo.type });
-  if (uploadError) throw new Error("No se pudo subir el archivo.");
+  if (uploadError) return { error: "No se pudo subir el archivo." };
 
   const { error: insertError } = await supabase.from("tratamiento_anexos").insert({
     clinica_id: check.usuario.clinica_id,
@@ -549,28 +557,30 @@ export async function subirAnexoTratamiento(
     observaciones,
     created_by: check.usuario.id,
   });
-  if (insertError) throw new Error("No se pudo registrar el anexo.");
+  if (insertError) return { error: "No se pudo registrar el anexo." };
 
   revalidarPantallasDeArchivos();
+  return {};
 }
 
-export async function eliminarAnexoTratamiento(id: string, storagePath: string) {
+export async function eliminarAnexoTratamiento(id: string, storagePath: string): Promise<ResultadoAccion> {
   const usuario = await getCurrentUsuario();
-  if (!usuario) throw new Error("Sesión inválida.");
+  if (!usuario) return { error: "Sesión inválida." };
   // Mismo motivo que en eliminarFotoTratamiento: RLS ya lo exige, esto solo
   // da un mensaje claro en vez de un error crudo.
-  if (!esAdministrador(usuario)) throw new Error("Solo un administrador puede eliminar anexos.");
+  if (!esAdministrador(usuario)) return { error: "Solo un administrador puede eliminar anexos." };
 
   const supabase = await createClient();
   const { error: storageError } = await supabase.storage
     .from("tratamiento-anexos")
     .remove([storagePath]);
-  if (storageError) throw new Error("No se pudo eliminar el archivo.");
+  if (storageError) return { error: "No se pudo eliminar el archivo." };
 
   const { error } = await supabase.from("tratamiento_anexos").delete().eq("id", id);
-  if (error) throw new Error("No se pudo eliminar el anexo.");
+  if (error) return { error: "No se pudo eliminar el anexo." };
 
   revalidarPantallasDeArchivos();
+  return {};
 }
 
 export async function urlFirmadaAnexo(storagePath: string, descargar = false) {
@@ -661,24 +671,24 @@ export async function listarAnexosTratamiento(tratamientoId: string) {
 // pago), un consentimiento informado es una necesidad clínica/legal
 // (decisión acordada con el usuario), disponible en cualquier plan igual
 // que el resto del núcleo de Tratamientos.
-export async function subirConsentimientoTratamiento(tratamientoId: string, formData: FormData) {
+export async function subirConsentimientoTratamiento(tratamientoId: string, formData: FormData): Promise<ResultadoAccion> {
   const check = await requirePermiso("CREATE");
-  if (!check.ok) throw new Error(check.error);
+  if (!check.ok) return { error: check.error };
 
   const archivo = formData.get("archivo");
   if (!(archivo instanceof File) || archivo.size === 0) {
-    throw new Error("No se generó ningún PDF para subir.");
+    return { error: "No se generó ningún PDF para subir." };
   }
   if (archivo.size > MAX_CONSENTIMIENTO_BYTES) {
-    throw new Error("El PDF no puede pesar más de 20 MB.");
+    return { error: "El PDF no puede pesar más de 20 MB." };
   }
   if (archivo.type !== "application/pdf") {
-    throw new Error("El consentimiento debe guardarse como PDF.");
+    return { error: "El consentimiento debe guardarse como PDF." };
   }
 
   const paginas = Number(formData.get("paginas") ?? 0);
   if (!Number.isInteger(paginas) || paginas < 1 || paginas > MAX_PAGINAS_CONSENTIMIENTO) {
-    throw new Error(`El consentimiento debe tener entre 1 y ${MAX_PAGINAS_CONSENTIMIENTO} páginas.`);
+    return { error: `El consentimiento debe tener entre 1 y ${MAX_PAGINAS_CONSENTIMIENTO} páginas.` };
   }
 
   const supabase = await createClient();
@@ -687,7 +697,7 @@ export async function subirConsentimientoTratamiento(tratamientoId: string, form
   const { error: uploadError } = await supabase.storage
     .from("tratamiento-consentimientos")
     .upload(path, archivo, { contentType: "application/pdf" });
-  if (uploadError) throw new Error("No se pudo subir el consentimiento.");
+  if (uploadError) return { error: "No se pudo subir el consentimiento." };
 
   const { error: insertError } = await supabase.from("tratamiento_consentimientos").insert({
     clinica_id: check.usuario.clinica_id,
@@ -697,28 +707,30 @@ export async function subirConsentimientoTratamiento(tratamientoId: string, form
     paginas,
     created_by: check.usuario.id,
   });
-  if (insertError) throw new Error("No se pudo registrar el consentimiento.");
+  if (insertError) return { error: "No se pudo registrar el consentimiento." };
 
   revalidarPantallasDeArchivos();
+  return {};
 }
 
-export async function eliminarConsentimientoTratamiento(id: string, storagePath: string) {
+export async function eliminarConsentimientoTratamiento(id: string, storagePath: string): Promise<ResultadoAccion> {
   const usuario = await getCurrentUsuario();
-  if (!usuario) throw new Error("Sesión inválida.");
+  if (!usuario) return { error: "Sesión inválida." };
   if (!esAdministrador(usuario)) {
-    throw new Error("Solo un administrador puede eliminar un consentimiento.");
+    return { error: "Solo un administrador puede eliminar un consentimiento." };
   }
 
   const supabase = await createClient();
   const { error: storageError } = await supabase.storage
     .from("tratamiento-consentimientos")
     .remove([storagePath]);
-  if (storageError) throw new Error("No se pudo eliminar el archivo.");
+  if (storageError) return { error: "No se pudo eliminar el archivo." };
 
   const { error } = await supabase.from("tratamiento_consentimientos").delete().eq("id", id);
-  if (error) throw new Error("No se pudo eliminar el consentimiento.");
+  if (error) return { error: "No se pudo eliminar el consentimiento." };
 
   revalidarPantallasDeArchivos();
+  return {};
 }
 
 export async function urlFirmadaConsentimiento(storagePath: string, descargar = false) {
