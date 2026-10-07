@@ -1,7 +1,7 @@
 # Diseño técnico: módulo SG-SST (Decreto 1072 de 2015 · Res. 0312 de 2019)
 
-Fecha: 2026-10-07. Estado: **F1 en construcción**. Las demás fases se diseñan aquí y se
-construyen una a una, como en Habilitación.
+Fecha: 2026-10-07. Estado: **F1 a F9 construidas** (migraciones 0072 a 0079; ver §6). Los
+textos de los estándares (F2) siguen pendientes de cotejo con el PDF oficial.
 
 ## 0. Objetivo
 
@@ -43,9 +43,9 @@ hasta cotejarlo. En la interfaz se muestra como «por confirmar».
 | Registro de la autoevaluación en sgrl.mintrabajo.gov.co: 31 de julio de 2026 (Circular 027/2026) | [V] | F7: fecha anual parametrizable, no fija |
 | Reporte de AT y EL a la ARL y la EPS en 2 días hábiles; AT grave o mortal a MinTrabajo en 2 días hábiles; investigación en 15 días | [M] (los plazos coinciden en todas las fuentes) | F3 |
 | Indicadores del Art. 30 de la Res. 0312 (frecuencia, severidad, mortalidad, prevalencia, incidencia, ausentismo) | [M] alta | F7 |
-| Texto literal de los 7, los 21 y los 60 ítems con sus pesos | [M] | **F2 queda bloqueada hasta tener el PDF oficial** |
+| Texto literal de los 7, los 21 y los 60 ítems con sus pesos | [M] | F2 se construyó con redacción propia (`verificado = false`); falta cotejar |
 
-**Para desbloquear F2:** habilitar esos dominios en la red del entorno, o dejar en
+**Para cotejar F2:** habilitar esos dominios en la red del entorno, o dejar en
 `scripts/sgsst/fuentes/` los PDF oficiales:
 - Res. 0312/2019
 - anexo del Dec. 768/2022
@@ -125,8 +125,51 @@ Si la clase de riesgo no está definida, el grupo queda «sin calcular» y se pi
 
 1. **Plan**: el módulo se ve en todos los planes; perfil, diagnóstico y reporte de accidentes
    son gratis. Gestión documental, autoevaluación, matriz y alertas por correo son Pro
-   (`gestion`), igual que Habilitación.
+   (`gestion`), igual que Habilitación. **Excepción (F8):** los avisos de reporte a la ARL y
+   de investigación de eventos llegan también al plan Gratis: son plazos legales de días.
 2. **Menú**: «Operación → SG-SST», junto a RRHH y Medio Ambiente.
 3. **Contratistas**: cuentan para el tamaño por defecto. Excluirlos exige una justificación
    (rastro en la BD), igual que apartarse del perfil en las obligaciones de Habilitación.
 4. **Clase de riesgo**: la mayor de las tres fuentes (§3).
+
+## 6. Estado de construcción (2026-10-07)
+
+| Fase | Migración | Pruebas de BD | Recorrido en navegador |
+|---|---|---|---|
+| F1 · Cimientos | 0072 | `bd-local/sst1-*` | `scripts/sgsst/recorrido-sst1.mjs` |
+| F2 · Estándares | 0078 | `bd-local/sst8-*` | `recorrido-sst2.mjs` |
+| F3 · Eventos | 0073 | `bd-local/sst3-*` | `recorrido-sst3.mjs` |
+| F4 · Documentos | 0074 | `bd-local/sst4-*` | `recorrido-sst4.mjs` |
+| F5 · Peligros | 0075 | `bd-local/sst5-*` | `recorrido-sst5.mjs` |
+| F6 · Personas | 0076 | `bd-local/sst6-*` | `recorrido-sst6.mjs` |
+| F7 · Plan, comités e indicadores | 0077 | `bd-local/sst7-*` | `recorrido-sst7.mjs` |
+| F8 · Alertas y tablero | 0079 | `bd-local/sst9-*` | `recorrido-sst8.mjs` |
+| F9 · Endurecimiento | — | `bd-local/sst10-*` | `scripts/sgsst/regresion.sh` (F1→F8 desde BD limpia) |
+
+**F2 · Estándares mínimos.** Catálogo global de 60 ítems (`sst_estandares`) con ciclo,
+peso y a qué grupo de 7 y 21 pertenece; la migración verifica 60 ítems, 100 puntos, 7 y 21.
+La autoevaluación es una por año y la crea `fn_sst_iniciar_autoevaluacion` (definer: los
+ítems los pone la BD según el grupo; no hay políticas de insert). «No aplica» exige
+justificación. Al cerrar (APPROVE) la BD calcula puntaje = Σ peso de cumple y no aplica ÷
+Σ peso del grupo × 100 y el nivel (< 60 crítico; 60–85 moderadamente aceptable; > 85
+aceptable); desde ahí nada cambia. Plan de mejoramiento con `sst_acciones` origen
+`autoevaluacion`. **Por confirmar:** la redacción de cada ítem y si para los grupos de 7 y
+21 la norma usa pesos propios (hoy se normaliza sobre los pesos de la tabla de 60).
+
+**F8 · Alertas.** `fn_sst_alertas_pendientes` (solo service role) con idempotencia por
+(objeto, umbral) en `sst_alertas_enviadas`: reporte ARL/EPS (1 y 0 días), investigación (5 y
+0), y con gestión: acciones (7 y 0), examen periódico según el profesiograma (30 y 0),
+actividades del plan del mes (7 y 0), licencia del responsable (60/30/0), fin del periodo
+de cada comité (60/30/0), autoevaluación del año antes del 31 de diciembre (60/30/7) y
+registro anual con la fecha de `sst_fechas_anuales` (30/7/0; 2026-07-31 por la Circular
+027/2026, a cotejar). El aviso de la ARL salió de las alertas de RRHH (lo cubre SG-SST con
+festivos). Insignia del menú: accidentes por reportar + investigaciones y acciones vencidas.
+Tablero «Pendientes» en Diagnóstico (`lib/sst/tablero.ts`).
+
+**F9 · Endurecimiento.** `sst10-pruebas.sql`: las 15 tablas por clínica con RLS, ninguna
+fila ajena visible ni modificable desde otra clínica, nada sin permiso de SST ni para anon,
+lista cerrada de RPC definer para `authenticated` (`fn_sst_conteo_trabajadores`,
+`fn_sst_estado_personas`, `fn_sst_indicadores`, `fn_sst_iniciar_autoevaluacion`, todas
+validan sesión y permiso), funciones de trigger sin EXECUTE, bucket `sst` privado con tope
+de 10 MB y 6 formatos, sin modificar ni borrar archivos por la API, y autoría forzada. Las
+acciones de servidor usan el cliente de sesión (RLS); el cliente admin solo lo usa el cron.

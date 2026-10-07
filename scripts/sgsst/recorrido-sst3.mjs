@@ -38,8 +38,8 @@ await paso("reporte a la ARL con FURAT y a la EPS", async () => {
   await page.fill("#seguimientoBiologico", "Fuente negativa para VIH y VHB; control a los 3 meses");
   await page.getByRole("button", { name: "Guardar seguimiento" }).click();
   await page.getByText("Seguimiento guardado").waitFor();
-  await page.waitForTimeout(800);
-  if (await page.getByText(/Reportar a la ARL: vence/).count()) throw new Error("sigue pendiente el reporte a la ARL");
+  // Tras el refresh el aviso desaparece; si no, waitFor agota el tiempo.
+  await page.getByText(/Reportar a la ARL: vence/).waitFor({ state: "detached", timeout: 10000 });
 });
 await paso("investigación: guardar, subir informe y cerrar", async () => {
   await page.locator('input[aria-label="Nombre del integrante 1"]').fill("Jefe de enfermería");
