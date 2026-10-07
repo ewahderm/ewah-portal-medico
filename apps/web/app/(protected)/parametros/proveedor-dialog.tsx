@@ -1,6 +1,8 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
+import { useCerrarAlExito } from "@/lib/forms/cerrarAlExito";
+import { toast } from "@/components/ui/toast";
 import { crearProveedor, editarProveedor } from "@/lib/parametros/proveedores";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,6 +42,11 @@ export function ProveedorDialog({
 }) {
   const accion = editando ? editarProveedor : crearProveedor;
   const [state, formAction, pending] = useActionState(accion, null);
+  const [open, setOpen] = useState(false);
+  useCerrarAlExito(pending, !state?.error, () => {
+    setOpen(false);
+    toast.add({ title: editando ? "Proveedor actualizado" : "Proveedor creado", type: "success" });
+  });
   const itemsTipoIdentificacion = toItemsOpcional(
     tiposIdentificacion,
     SIN_SELECCION,
@@ -48,7 +55,7 @@ export function ProveedorDialog({
   const itemsTipoPersona = toItemsOpcional(tiposPersona, SIN_SELECCION, "Sin especificar");
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={trigger} />
       <DialogContent>
         <DialogHeader>

@@ -325,6 +325,7 @@ function ItemCard({
     const r = await calificarItem({ id: item.id, estado, justificacion, observacion });
     setPendiente(false);
     if (r.error) return toast.add({ title: "No se guardó", description: r.error, type: "error" });
+    toast.add({ title: `${e.codigo}: calificación guardada`, type: "success" });
     router.refresh();
   }
 

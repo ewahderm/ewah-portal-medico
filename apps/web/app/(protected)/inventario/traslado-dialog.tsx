@@ -1,6 +1,8 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
+import { useCerrarAlExito } from "@/lib/forms/cerrarAlExito";
+import { toast } from "@/components/ui/toast";
 import { ArrowLeftRightIcon } from "lucide-react";
 import { registrarTraslado } from "@/lib/inventario/actions";
 import { Button } from "@/components/ui/button";
@@ -32,9 +34,14 @@ export function TrasladoDialog({
   sedesDestino: Opcion[];
 }) {
   const [state, formAction, pending] = useActionState(registrarTraslado, null);
+  const [open, setOpen] = useState(false);
+  useCerrarAlExito(pending, !state?.error, () => {
+    setOpen(false);
+    toast.add({ title: "Traslado registrado", type: "success" });
+  });
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger
         render={
           <Button variant="outline" size="sm">

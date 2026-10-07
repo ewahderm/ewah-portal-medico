@@ -1,6 +1,8 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { useCerrarAlExito } from "@/lib/forms/cerrarAlExito";
+import { toast } from "@/components/ui/toast";
 import { crearInsumo, editarInsumo } from "@/lib/parametros/insumos";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,6 +50,11 @@ export function InsumoDialog({
 }) {
   const accion = editando ? editarInsumo : crearInsumo;
   const [state, formAction, pending] = useActionState(accion, null);
+  const [open, setOpen] = useState(false);
+  useCerrarAlExito(pending, !state?.error, () => {
+    setOpen(false);
+    toast.add({ title: editando ? "Insumo actualizado" : "Insumo creado", type: "success" });
+  });
   const itemsProveedores = toItemsOpcional(proveedores, SIN_SELECCION, "Sin especificar");
   // Controla si se muestran los campos de reporte regulatorio — la mayoría
   // de insumos de consumo (agujas, batas) no aplican y no tiene sentido
@@ -57,7 +64,7 @@ export function InsumoDialog({
   );
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={trigger} />
       <DialogContent>
         <DialogHeader>

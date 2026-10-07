@@ -1,6 +1,8 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
+import { useCerrarAlExito } from "@/lib/forms/cerrarAlExito";
+import { toast } from "@/components/ui/toast";
 import { crearCampana, actualizarCampana } from "@/lib/campanas/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,9 +41,14 @@ export function CampanaDialog({
 }) {
   const action = campana ? actualizarCampana : crearCampana;
   const [state, formAction, pending] = useActionState(action, null);
+  const [open, setOpen] = useState(false);
+  useCerrarAlExito(pending, !state?.error, () => {
+    setOpen(false);
+    toast.add({ title: campana ? "Campaña actualizada" : "Campaña creada", type: "success" });
+  });
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={trigger as React.ReactElement} />
       <DialogContent>
         <DialogHeader>

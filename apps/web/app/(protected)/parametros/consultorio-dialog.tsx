@@ -1,6 +1,8 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
+import { useCerrarAlExito } from "@/lib/forms/cerrarAlExito";
+import { toast } from "@/components/ui/toast";
 import { crearConsultorio, editarConsultorio } from "@/lib/parametros/consultorios";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,10 +36,15 @@ export function ConsultorioDialog({
 }) {
   const accion = editando ? editarConsultorio : crearConsultorio;
   const [state, formAction, pending] = useActionState(accion, null);
+  const [open, setOpen] = useState(false);
+  useCerrarAlExito(pending, !state?.error, () => {
+    setOpen(false);
+    toast.add({ title: editando ? "Consultorio actualizado" : "Consultorio creado", type: "success" });
+  });
   const itemsSedes = toItems(sedes);
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={trigger} />
       <DialogContent>
         <DialogHeader>

@@ -1,10 +1,33 @@
 import Link from "next/link";
-import { LockIcon } from "lucide-react";
-import { requireUsuario } from "@/lib/auth/session";
+import { CircleCheckIcon, CircleIcon, LockIcon } from "lucide-react";
+import { esAdministrador, requireUsuario } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { REGISTRO_MODULOS } from "@/lib/modulos/registro";
+
+// Primeros pasos de una clínica nueva: sin sede, consultorio y tipos de
+// tratamiento no se puede agendar ni registrar nada, y los formularios
+// quedaban con listas vacías sin explicar por qué. Cada paso lleva a
+// Parámetros; la tarjeta desaparece cuando todo está listo.
+async function pasosIniciales(supabase: Awaited<ReturnType<typeof createClient>>, clinicaId: string) {
+  const contar = async (tabla: string) => {
+    const { count } = await supabase.from(tabla).select("id", { count: "exact", head: true }).eq("activo", true);
+    return count ?? 0;
+  };
+  const [sedes, consultorios, tipos, { data: clinica }] = await Promise.all([
+    contar("sedes"),
+    contar("consultorios"),
+    contar("tipos_tratamiento"),
+    supabase.from("clinicas").select("direccion, telefono").eq("id", clinicaId).maybeSingle(),
+  ]);
+  return [
+    { texto: "Crea tu sede (Parámetros → Generales → Sedes)", hecho: sedes > 0 },
+    { texto: "Crea al menos un consultorio (Parámetros → Generales → Consultorios)", hecho: consultorios > 0 },
+    { texto: "Crea tus tipos de tratamiento (Parámetros → Tratamientos)", hecho: tipos > 0 },
+    { texto: "Completa los datos básicos de la clínica: dirección, teléfono y actividad económica", hecho: !!(clinica?.direccion && clinica?.telefono) },
+  ];
+}
 
 export default async function DashboardPage() {
   const usuario = await requireUsuario();
@@ -21,6 +44,8 @@ export default async function DashboardPage() {
   );
 
   const modulosVisibles = chequeos.filter((c) => c.puedeVer);
+  const pasos = esAdministrador(usuario) ? await pasosIniciales(supabase, usuario.clinica_id) : [];
+  const faltan = pasos.filter((p) => !p.hecho).length;
 
   return (
     <div className="space-y-6">
@@ -34,6 +59,37 @@ export default async function DashboardPage() {
           <p>Rol: {usuario.roles?.nombre}</p>
         </CardContent>
       </Card>
+
+      {faltan > 0 ? (
+        <Card className="border-primary/40 bg-accent/30">
+          <CardHeader>
+            <CardTitle>Primeros pasos</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            <p className="text-muted-foreground">
+              Te faltan {faltan} de {pasos.length} pasos para poder agendar citas y registrar tratamientos.
+            </p>
+            <ul className="space-y-2">
+              {pasos.map((p) => (
+                <li key={p.texto} className="flex items-start gap-2">
+                  {p.hecho ? (
+                    <CircleCheckIcon className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
+                  ) : (
+                    <CircleIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
+                  )}
+                  <span className={p.hecho ? "text-muted-foreground line-through" : undefined}>
+                    {p.texto}
+                    <span className="sr-only">{p.hecho ? " (listo)" : " (pendiente)"}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <Link href="/parametros" className="inline-block font-medium text-primary underline underline-offset-4">
+              Ir a Parámetros
+            </Link>
+          </CardContent>
+        </Card>
+      ) : null}
 
       {modulosVisibles.length > 0 ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

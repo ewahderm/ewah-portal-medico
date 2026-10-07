@@ -1,6 +1,8 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { useCerrarAlExito } from "@/lib/forms/cerrarAlExito";
+import { toast } from "@/components/ui/toast";
 import { crearValorCatalogo } from "@/lib/parametros/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +19,10 @@ import {
 export function AddValorDialog({ tabla, nombre }: { tabla: string; nombre: string }) {
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState(crearValorCatalogo, null);
+  useCerrarAlExito(pending, !state?.error, () => {
+    setOpen(false);
+    toast.add({ title: "Valor agregado", type: "success" });
+  });
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>

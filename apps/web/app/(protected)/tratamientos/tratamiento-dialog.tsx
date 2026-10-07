@@ -19,6 +19,7 @@ import {
 import { Combobox } from "@/components/ui/combobox";
 import { toItems, type Opcion } from "@/lib/forms/opciones";
 import { hoy } from "@/lib/format";
+import { AvisoCatalogoVacio } from "../_components/aviso-catalogo-vacio";
 
 type Correccion = {
   id: string;
@@ -206,6 +207,12 @@ export function TratamientoDialog({
               defaultValue={prefill?.tipo_tratamiento_id ?? desdeAtencion?.tipo_tratamiento_id ?? undefined}
               placeholder="Selecciona un tratamiento"
             />
+            {tiposTratamiento.length === 0 ? (
+              <AvisoCatalogoVacio>
+                Todavía no tienes tipos de tratamiento. Créalos en Tratamientos → Tipos de tratamiento para poder
+                registrar uno.
+              </AvisoCatalogoVacio>
+            ) : null}
           </div>
 
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">

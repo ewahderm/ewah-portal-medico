@@ -1,6 +1,8 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
+import { useCerrarAlExito } from "@/lib/forms/cerrarAlExito";
+import { toast } from "@/components/ui/toast";
 import { crearTipoTratamiento, editarTipoTratamiento } from "@/lib/parametros/tipos-tratamiento";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,12 +42,17 @@ export function TipoTratamientoDialog({
 }) {
   const accion = editando ? editarTipoTratamiento : crearTipoTratamiento;
   const [state, formAction, pending] = useActionState(accion, null);
+  const [open, setOpen] = useState(false);
+  useCerrarAlExito(pending, !state?.error, () => {
+    setOpen(false);
+    toast.add({ title: editando ? "Tipo de tratamiento actualizado" : "Tipo de tratamiento creado", type: "success" });
+  });
   const opcionesCups: Opcion[] = cups.map((c) => ({ id: c.id, nombre: `${c.codigo} — ${c.descripcion}` }));
   const itemsCups = toItemsOpcional(opcionesCups, SIN_SELECCION, "Sin especificar");
   const itemsServicios = toItemsOpcional(servicios, SIN_SELECCION, "Sin especificar");
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={trigger} />
       <DialogContent>
         <DialogHeader>

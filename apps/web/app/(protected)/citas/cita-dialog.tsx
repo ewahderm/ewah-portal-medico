@@ -19,6 +19,7 @@ import {
 import { Combobox } from "@/components/ui/combobox";
 import { toItems, type Opcion } from "@/lib/forms/opciones";
 import { PacienteRapidoDialog } from "../pacientes/paciente-rapido-dialog";
+import { AvisoCatalogoVacio } from "../_components/aviso-catalogo-vacio";
 
 type Consultorio = { id: string; nombre: string; sede_id: string };
 type DesdePaciente = { id: string };
@@ -212,6 +213,12 @@ export function CitaDialog({
               items={toItems(tiposTratamiento)}
               placeholder="Selecciona un tratamiento"
             />
+            {tiposTratamiento.length === 0 ? (
+              <AvisoCatalogoVacio>
+                Todavía no tienes tipos de tratamiento. Créalos en Tratamientos → Tipos de tratamiento para poder
+                agendar una cita.
+              </AvisoCatalogoVacio>
+            ) : null}
           </div>
 
           <div className="space-y-2">
@@ -260,6 +267,11 @@ export function CitaDialog({
               />
             </div>
           </div>
+          {consultorios.length === 0 ? (
+            <AvisoCatalogoVacio>
+              Todavía no tienes consultorios. Crea la sede y sus consultorios en Parámetros para poder agendar.
+            </AvisoCatalogoVacio>
+          ) : null}
 
           <div className="grid grid-cols-3 gap-6">
             <div className="space-y-2">
