@@ -22,10 +22,20 @@ select t.debe_fallar('delete from sst_comite_reuniones', 'no se modifica');
 
 -- Indicadores de agosto 2026: el accidente de sst3 (14-ago) y la incapacidad 28-ago a 1-sep (4 días en agosto).
 select t.como('00000000-0000-0000-0000-0000000005a5'); set role authenticated;
-select t.ok(i.accidentes >= 1 and i.dias_ausencia = 4 and i.dias_programados = i.trabajadores * 19 and i.trabajadores >= 3,
-  format('agosto: %s AT, %s días de ausencia (de una incapacidad que cruza el mes), %s programados (19 hábiles: festivos 7 y 17 × %s)', i.accidentes, i.dias_ausencia, i.dias_programados, i.trabajadores))
+-- 0087: ausentismo en DÍAS HÁBILES en numerador y denominador. La incapacidad
+-- 28-ago a 1-sep (vie, sáb, dom, lun, mar) cubre 2 días hábiles en agosto (28 y 31) y 1 en septiembre.
+select t.ok(i.accidentes >= 1 and i.dias_ausencia = 2 and i.dias_programados = i.trabajadores * 19 and i.trabajadores >= 3,
+  format('agosto: %s AT, %s días hábiles de ausencia (de una incapacidad que cruza el mes), %s programados (19 hábiles: festivos 7 y 17 × %s)', i.accidentes, i.dias_ausencia, i.dias_programados, i.trabajadores))
   from fn_sst_indicadores(2026) i where i.mes = 8;
-select t.ok(dias_ausencia = 1, 'septiembre: el día restante de la incapacidad') from fn_sst_indicadores(2026) where mes = 9;
+select t.ok(dias_ausencia = 1, 'septiembre: el día hábil restante de la incapacidad') from fn_sst_indicadores(2026) where mes = 9;
+select t.ok(dias_ausencia = 5, 'julio: dos incapacidades que se cruzan cuentan 5 días hábiles distintos, no 8') from fn_sst_indicadores(2026) where mes = 7;
+select t.ok(bool_and(dias_ausencia <= dias_programados), 'el ausentismo nunca pasa de 100 %') from fn_sst_indicadores(2026);
+-- Severidad: con incapacidades ligadas al AT se usan esas (6 días en marzo, 4 en abril; el 99 digitado no pesa).
+select t.ok(dias_incapacidad_at = 6, 'marzo: 6 días de la incapacidad ligada al AT (no los 99 digitados)') from fn_sst_indicadores(2026) where mes = 3;
+select t.ok(dias_incapacidad_at = 4, 'abril: los 4 días restantes se atribuyen al mes en que ocurren') from fn_sst_indicadores(2026) where mes = 4;
+-- Sin incapacidades ligadas se usan los días digitados, contados desde la fecha del AT.
+select t.ok(dias_incapacidad_at = 4, 'mayo: 4 de los 5 días digitados (28 a 31)') from fn_sst_indicadores(2026) where mes = 5;
+select t.ok(dias_incapacidad_at = 1, 'junio: el día restante') from fn_sst_indicadores(2026) where mes = 6;
 select t.debe_fallar('select * from fn_sst_indicadores(1990)', 'Año inválido');
 reset role; select t.como('00000000-0000-0000-0000-0000000000a2'); set role authenticated;
 select t.debe_fallar('select * from fn_sst_indicadores(2026)', 'permiso');

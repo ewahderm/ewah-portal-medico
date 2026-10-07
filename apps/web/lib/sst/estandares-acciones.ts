@@ -24,7 +24,7 @@ async function requireGestion(permiso: string) {
 const revalidar = () => revalidatePath("/sst", "layout");
 
 // El grupo NO lo elige el cliente: lo decide el diagnóstico (trabajadores y
-// clase de riesgo) y la BD lo vuelve a calcular y rechaza uno menor (0086).
+// clase de riesgo) y la BD lo vuelve a calcular y rechaza uno menor (0087).
 export async function iniciarAutoevaluacion(anio: number): Promise<Resultado> {
   const actual = Number(hoyBogota().slice(0, 4));
   if (!Number.isInteger(anio) || anio < 2019 || anio > actual) return { error: "Año inválido." };

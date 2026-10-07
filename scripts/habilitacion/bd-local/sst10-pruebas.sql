@@ -79,7 +79,7 @@ select t.ok(count(*) = 0, 'anon no ejecuta ninguna función definer de SST: ' ||
 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
 where n.nspname = 'public' and p.prosecdef and p.proname like 'fn\_sst\_%' and has_function_privilege('anon', p.oid, 'execute');
 select t.ok(coalesce(array_agg(p.proname::text order by p.proname), '{}') = array[
-  'fn_sst_conteo_trabajadores', 'fn_sst_estado_personas', 'fn_sst_indicadores', 'fn_sst_iniciar_autoevaluacion'],
+  'fn_sst_conteo_trabajadores', 'fn_sst_estado_personas', 'fn_sst_indicadores', 'fn_sst_iniciar_autoevaluacion', 'fn_sst_refrescar_foto'],
   'authenticated solo ejecuta las RPC definer de SST previstas (validan sesión y permiso): ' || coalesce(string_agg(p.proname, ', ' order by p.proname), ''))
 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
 where n.nspname = 'public' and p.prosecdef and p.proname like 'fn\_sst\_%' and has_function_privilege('authenticated', p.oid, 'execute');
@@ -100,6 +100,23 @@ select t.ok(count(*) = 1, 'el responsable de SST de A sí los ve') from storage.
 update storage.objects set name = name || '.x' where bucket_id = 'sst';
 delete from storage.objects where bucket_id = 'sst';
 select t.ok(count(*) = 1 and bool_and(name like '%.pdf'), 'nadie modifica ni borra archivos SST por la API') from storage.objects where bucket_id = 'sst';
+
+-- 0087: subir archivos de gestión exige el plan Pro; el informe de investigación es del plan Gratis.
+select t.ok(has_entitlement('sst', 'gestion'), 'A (Pro) sube archivos de gestión');
+insert into storage.objects (bucket_id, name) values ('sst', clinica_actual() || '/documentos/z/pro.pdf');
+reset role;
+update clinicas set plan_id = (select id from planes where codigo = 'gratis') where id = :'a';
+select t.como('00000000-0000-0000-0000-0000000005a5'); set role authenticated;
+select t.ok(not has_entitlement('sst', 'gestion'), 'A pasó al plan Gratis');
+select t.debe_fallar(format($q$insert into storage.objects (bucket_id, name) values ('sst', %L || '/documentos/z/gratis.pdf')$q$, :'a'), 'row-level');
+select t.debe_fallar(format($q$insert into storage.objects (bucket_id, name) values ('sst', %L || '/personas/z/gratis.pdf')$q$, :'a'), 'row-level');
+insert into storage.objects (bucket_id, name) values ('sst', clinica_actual() || '/investigaciones/z/informe.pdf');
+select t.ok(true, 'el informe de la investigación sí se sube en el plan Gratis');
+reset role;
+update clinicas set plan_id = (select id from planes where codigo = 'pro') where id = :'a';
+select fn_sync_clinica_modulos(:'a');
+delete from storage.objects where name like '%/z/%';
+select t.como('00000000-0000-0000-0000-0000000005a5'); set role authenticated;
 
 -- Autoría forzada en eventos.
 insert into accidentes_trabajo (clinica_id, empleado_id, fecha, resumen, tipo_evento, created_by)

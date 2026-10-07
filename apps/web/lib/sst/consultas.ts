@@ -463,7 +463,7 @@ type FilaItem = {
   snap_verificado: boolean;
 };
 
-// Lee la FOTO del estándar que se guardó al iniciar la autoevaluación (0086),
+// Lee la FOTO del estándar que se guardó al iniciar la autoevaluación (0087),
 // no el catálogo vivo: una autoevaluación cerrada no cambia aunque el
 // catálogo se corrija después. (La abierta también usa su foto: el puntaje
 // que calcula la BD al cerrar usa esos mismos pesos.)

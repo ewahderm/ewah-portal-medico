@@ -1,32 +1,32 @@
-﻿-- ============================================================
--- 0086 Â· SG-SST Â· Correcciones de la auditorÃ­a
 -- ============================================================
--- Corrige lo que 0072â€“0079 dejaron mal (esas migraciones ya se aplicaron y
--- no se editan: todo va aquÃ­ con create or replace / alter).
+-- 0087 · SG-SST · Correcciones de la auditoría
+-- ============================================================
+-- Corrige lo que 0072–0079 dejaron mal (esas migraciones ya se aplicaron y
+-- no se editan: todo va aquí con create or replace / alter).
 --   1. Alertas y insignia: cada reporte pendiente (ARL, EPS y, si el evento
 --      es grave o mortal, MinTrabajo) alerta por su cuenta con su propia
 --      llave de idempotencia; un evento cerrado no alerta (igual que
---      lib/sst/plazos.ts â†’ pendientesEvento y lib/sst/tablero.ts).
---   2. AutoevaluaciÃ³n: el grupo (7/21/60) lo calcula la BD con la misma
---      regla de lib/sst/grupo.ts (docs/sgsst Â§3) y rechaza uno menor.
---   3. Ausentismo con la misma base (dÃ­as hÃ¡biles) en numerador y
---      denominador (Res. 0312, Art. 30) y dÃ­as de incapacidad por AT desde
+--      lib/sst/plazos.ts → pendientesEvento y lib/sst/tablero.ts).
+--   2. Autoevaluación: el grupo (7/21/60) lo calcula la BD con la misma
+--      regla de lib/sst/grupo.ts (docs/sgsst §3) y rechaza uno menor.
+--   3. Ausentismo con la misma base (días hábiles) en numerador y
+--      denominador (Res. 0312, Art. 30) y días de incapacidad por AT desde
 --      incapacidades_empleado cuando existen.
---   4. La autoevaluaciÃ³n guarda una FOTO de cada estÃ¡ndar (nombre, pesoâ€¦):
---      cerrada, no cambia aunque el catÃ¡logo se corrija despuÃ©s.
+--   4. La autoevaluación guarda una FOTO de cada estándar (nombre, peso…):
+--      cerrada, no cambia aunque el catálogo se corrija después.
 --   5. Capacitaciones: la asistencia y el cambio a "realizada" son una sola
---      operaciÃ³n atÃ³mica; solo se agrega o quita asistencia mientras la
---      capacitaciÃ³n estÃ¡ programada.
---   6. Fechas anuales del registro 2027â€“2030.
---   7. Storage: subir archivos de gestiÃ³n exige el plan Pro (gestion).
+--      operación atómica; solo se agrega o quita asistencia mientras la
+--      capacitación está programada.
+--   6. Fechas anuales del registro 2027–2030.
+--   7. Storage: subir archivos de gestión exige el plan Pro (gestion).
 
 -- ============================================================
 -- 1. Alertas y insignia: un aviso por cada reporte pendiente
 -- ============================================================
 -- Llaves (objeto_tipo, objeto_id, umbral): 'evento_reporte' sigue siendo la
 -- de la ARL (lo ya avisado no se repite); EPS y MinTrabajo tienen la suya.
--- Antes el aviso 'evento_reporte' decÃ­a "a la ARL y la EPS", asÃ­ que lo ya
--- avisado tambiÃ©n cuenta como avisado para la EPS (no se duplica el correo).
+-- Antes el aviso 'evento_reporte' decía "a la ARL y la EPS", así que lo ya
+-- avisado también cuenta como avisado para la EPS (no se duplica el correo).
 insert into sst_alertas_enviadas (clinica_id, objeto_tipo, objeto_id, umbral_dias, destinatarios, proveedor_id, created_at)
 select clinica_id, 'evento_reporte_eps', objeto_id, umbral_dias, destinatarios, proveedor_id, created_at
 from sst_alertas_enviadas
@@ -34,7 +34,7 @@ where objeto_tipo = 'evento_reporte'
 on conflict (objeto_tipo, objeto_id, umbral_dias) do nothing;
 
 -- security definer: lo llama solo el cron (service role) y lee de todas las
--- clÃ­nicas; se le revoca la ejecuciÃ³n a anon/authenticated (ver abajo).
+-- clínicas; se le revoca la ejecución a anon/authenticated (ver abajo).
 create or replace function fn_sst_alertas_pendientes(p_clinica_id uuid, p_gestion boolean, p_hoy date default null)
 returns table (
   objeto_tipo text,
@@ -54,11 +54,11 @@ as $$
   with hoy as (select coalesce(p_hoy, (now() at time zone 'America/Bogota')::date) as d),
   perfil as (select * from sst_perfil where clinica_id = p_clinica_id),
   candidatos as (
-    -- Reporte a la ARL: 2 dÃ­as hÃ¡biles. Un evento cerrado no alerta.
+    -- Reporte a la ARL: 2 días hábiles. Un evento cerrado no alerta.
     select 'evento_reporte'::text as tipo, a.id, a.fecha_limite_reporte as fecha, array[1, 0] as umbrales,
       case a.tipo_evento when 'enfermedad_laboral' then 'Reportar la enfermedad laboral a la ARL'
         else 'Reportar el accidente a la ARL (FURAT)' end as titulo,
-      concat_ws(' Â· ', e.nombre, 'evento del ' || to_char(a.fecha, 'DD/MM/YYYY')) as detalle,
+      concat_ws(' · ', e.nombre, 'evento del ' || to_char(a.fecha, 'DD/MM/YYYY')) as detalle,
       '/sst/eventos/' || a.id as ruta
     from accidentes_trabajo a
     left join empleados e on e.id = a.empleado_id
@@ -74,7 +74,7 @@ as $$
     select 'evento_reporte_eps', a.id, a.fecha_limite_reporte, array[1, 0],
       case a.tipo_evento when 'enfermedad_laboral' then 'Reportar la enfermedad laboral a la EPS'
         else 'Reportar el accidente a la EPS' end,
-      concat_ws(' Â· ', e.nombre, 'evento del ' || to_char(a.fecha, 'DD/MM/YYYY')),
+      concat_ws(' · ', e.nombre, 'evento del ' || to_char(a.fecha, 'DD/MM/YYYY')),
       '/sst/eventos/' || a.id
     from accidentes_trabajo a
     left join empleados e on e.id = a.empleado_id
@@ -90,7 +90,7 @@ as $$
     select 'evento_reporte_mintrabajo', a.id, a.fecha_limite_reporte, array[1, 0],
       case a.tipo_evento when 'enfermedad_laboral' then 'Reportar la enfermedad laboral a MinTrabajo'
         else 'Reportar el accidente grave o mortal a MinTrabajo' end,
-      concat_ws(' Â· ', e.nombre, 'evento del ' || to_char(a.fecha, 'DD/MM/YYYY')),
+      concat_ws(' · ', e.nombre, 'evento del ' || to_char(a.fecha, 'DD/MM/YYYY')),
       '/sst/eventos/' || a.id
     from accidentes_trabajo a
     left join empleados e on e.id = a.empleado_id
@@ -103,11 +103,11 @@ as $$
       and a.fecha >= hoy.d - 60
 
     union all
-    -- InvestigaciÃ³n: 15 dÃ­as (incidentes y accidentes). Un evento cerrado
+    -- Investigación: 15 días (incidentes y accidentes). Un evento cerrado
     -- no alerta (pendientesEvento devuelve [] para los cerrados).
     select 'evento_investigacion', a.id, a.fecha_limite_investigacion, array[5, 0],
-      'Terminar la investigaciÃ³n del ' || case a.tipo_evento when 'incidente' then 'incidente' when 'enfermedad_laboral' then 'caso de enfermedad laboral' else 'accidente' end,
-      concat_ws(' Â· ', e.nombre, 'evento del ' || to_char(a.fecha, 'DD/MM/YYYY')),
+      'Terminar la investigación del ' || case a.tipo_evento when 'incidente' then 'incidente' when 'enfermedad_laboral' then 'caso de enfermedad laboral' else 'accidente' end,
+      concat_ws(' · ', e.nombre, 'evento del ' || to_char(a.fecha, 'DD/MM/YYYY')),
       '/sst/eventos/' || a.id
     from accidentes_trabajo a
     left join empleados e on e.id = a.empleado_id
@@ -118,10 +118,10 @@ as $$
       and not exists (select 1 from sst_investigaciones i where i.accidente_id = a.id and i.estado = 'cerrada')
 
     union all
-    -- Acciones (de investigaciones, matriz o autoevaluaciÃ³n).
+    -- Acciones (de investigaciones, matriz o autoevaluación).
     select 'accion', x.id, x.fecha_compromiso, array[7, 0],
-      case x.origen when 'matriz' then 'Medida de intervenciÃ³n' when 'autoevaluacion' then 'AcciÃ³n de mejora (estÃ¡ndares)' else 'AcciÃ³n del plan' end,
-      concat_ws(' Â· ', left(x.descripcion, 140), 'responsable: ' || u.nombre),
+      case x.origen when 'matriz' then 'Medida de intervención' when 'autoevaluacion' then 'Acción de mejora (estándares)' else 'Acción del plan' end,
+      concat_ws(' · ', left(x.descripcion, 140), 'responsable: ' || u.nombre),
       case x.origen when 'investigacion' then coalesce('/sst/eventos/' || (select i.accidente_id from sst_investigaciones i where i.id = x.origen_id), '/sst/eventos')
         when 'matriz' then '/sst/peligros' when 'autoevaluacion' then '/sst/estandares' else '/sst' end
     from sst_acciones x
@@ -129,10 +129,10 @@ as $$
     where p_gestion and x.clinica_id = p_clinica_id and x.estado <> 'cerrada'
 
     union all
-    -- Examen periÃ³dico segÃºn el profesiograma.
+    -- Examen periódico según el profesiograma.
     select 'examen_periodico', ex.doc_id, (ex.fecha_evento + make_interval(months => ec.periodicidad_meses))::date, array[30, 0],
-      'Examen mÃ©dico ocupacional periÃ³dico',
-      concat_ws(' Â· ', emp.nombre, cg.nombre, 'Ãºltimo: ' || to_char(ex.fecha_evento, 'DD/MM/YYYY')),
+      'Examen médico ocupacional periódico',
+      concat_ws(' · ', emp.nombre, cg.nombre, 'último: ' || to_char(ex.fecha_evento, 'DD/MM/YYYY')),
       '/sst/personas'
     from empleados emp
     join lateral (
@@ -155,7 +155,7 @@ as $$
     -- Actividades del plan anual del mes que termina.
     select 'plan_actividad', pa.id, (make_date(pa.anio, pa.mes, 1) + interval '1 month - 1 day')::date, array[7, 0],
       'Actividad del plan anual',
-      concat_ws(' Â· ', left(pa.actividad, 140), 'responsable: ' || u.nombre),
+      concat_ws(' · ', left(pa.actividad, 140), 'responsable: ' || u.nombre),
       '/sst/plan'
     from sst_plan_actividades pa
     left join usuarios u on u.id = pa.responsable_id
@@ -173,11 +173,11 @@ as $$
     where p_gestion and p.responsable_licencia_vence is not null
 
     union all
-    -- Periodo vigente de cada comitÃ©.
+    -- Periodo vigente de cada comité.
     select 'comite', c.id, c.fecha_fin, array[60, 30, 0],
-      case c.tipo when 'vigia' then 'Termina el periodo del vigÃ­a de SST' when 'copasst' then 'Termina el periodo del COPASST'
-        else 'Termina el periodo del ComitÃ© de Convivencia' end,
-      'Conforma el nuevo periodo (elecciÃ³n y acta) antes del vencimiento',
+      case c.tipo when 'vigia' then 'Termina el periodo del vigía de SST' when 'copasst' then 'Termina el periodo del COPASST'
+        else 'Termina el periodo del Comité de Convivencia' end,
+      'Conforma el nuevo periodo (elección y acta) antes del vencimiento',
       '/sst/plan?tab=comites'
     from (
       select distinct on (tipo) * from sst_comites
@@ -186,10 +186,10 @@ as $$
     where p_gestion
 
     union all
-    -- AutoevaluaciÃ³n de estÃ¡ndares del aÃ±o (Res. 0312: cada aÃ±o).
+    -- Autoevaluación de estándares del año (Res. 0312: cada año).
     select 'autoevaluacion:' || extract(year from hoy.d)::int, p_clinica_id, make_date(extract(year from hoy.d)::int, 12, 31), array[60, 30, 7],
-      'AutoevaluaciÃ³n de estÃ¡ndares mÃ­nimos ' || extract(year from hoy.d)::int,
-      'Califica los estÃ¡ndares y arma el plan de mejoramiento',
+      'Autoevaluación de estándares mínimos ' || extract(year from hoy.d)::int,
+      'Califica los estándares y arma el plan de mejoramiento',
       '/sst/estandares'
     from hoy
     where p_gestion
@@ -200,9 +200,9 @@ as $$
       )
 
     union all
-    -- Registro anual de la autoevaluaciÃ³n y el plan ante el Ministerio.
+    -- Registro anual de la autoevaluación y el plan ante el Ministerio.
     select 'registro_anual:' || f.anio, p_clinica_id, f.fecha_limite_registro, array[30, 7, 0],
-      'Registrar la autoevaluaciÃ³n y el plan de mejoramiento ante el Ministerio del Trabajo',
+      'Registrar la autoevaluación y el plan de mejoramiento ante el Ministerio del Trabajo',
       f.fuente,
       '/sst/estandares'
     from sst_fechas_anuales f
@@ -231,7 +231,7 @@ $$;
 revoke execute on function fn_sst_alertas_pendientes(uuid, boolean, date) from public, anon, authenticated;
 grant execute on function fn_sst_alertas_pendientes(uuid, boolean, date) to service_role;
 
--- Insignia del menÃº (RLS del usuario: invoker). Cuenta cada reporte
+-- Insignia del menú (RLS del usuario: invoker). Cuenta cada reporte
 -- pendiente (ARL, EPS, MinTrabajo si es grave o mortal) de los eventos
 -- abiertos, las investigaciones vencidas de eventos abiertos y las
 -- acciones vencidas.
@@ -268,14 +268,14 @@ as $$
 $$;
 
 -- ============================================================
--- 2. Fechas anuales del registro (2027â€“2030)
+-- 2. Fechas anuales del registro (2027–2030)
 -- ============================================================
--- Sin fila para el aÃ±o, el aviso del registro (y el pendiente del tablero)
--- desaparecÃ­a en silencio al cambiar de aÃ±o. Se siembra 2027â€“2030 con la
+-- Sin fila para el año, el aviso del registro (y el pendiente del tablero)
+-- desaparecía en silencio al cambiar de año. Se siembra 2027–2030 con la
 -- misma regla de la Circular 027 de 2026 (31 de julio). NO es el texto de
 -- cada circular: queda verificado = false y la fuente lo dice; cuando el
--- Ministerio publique la circular de un aÃ±o se corrige la fila. AdemÃ¡s, el
--- tablero muestra un aviso visible si el aÃ±o en curso no tiene fecha.
+-- Ministerio publique la circular de un año se corrige la fila. Además, el
+-- tablero muestra un aviso visible si el año en curso no tiene fecha.
 insert into sst_fechas_anuales (anio, fecha_limite_registro, fuente, verificado) values
   (2027, '2027-07-31', 'Regla de la Circular 027 de 2026 (31 de julio); por cotejar con la circular de 2027', false),
   (2028, '2028-07-31', 'Regla de la Circular 027 de 2026 (31 de julio); por cotejar con la circular de 2028', false),
@@ -284,7 +284,7 @@ insert into sst_fechas_anuales (anio, fecha_limite_registro, fuente, verificado)
 on conflict (anio) do nothing;
 
 -- ============================================================
--- 3. AutoevaluaciÃ³n: grupo calculado por la BD
+-- 3. Autoevaluación: grupo calculado por la BD
 -- ============================================================
 create or replace function fn_sst_rango_clase(p_codigo text)
 returns int
@@ -295,16 +295,16 @@ as $$
   select case p_codigo when 'I' then 1 when 'II' then 2 when 'III' then 3 when 'IV' then 4 when 'V' then 5 end;
 $$;
 
--- Misma regla que lib/sst/grupo.ts (docs/sgsst Â§3): trabajadores =
--- dependientes + sin categorÃ­a + otros del perfil + contratistas (salvo
--- exclusiÃ³n justificada); clase = la MAYOR entre el cÃ³digo de actividad de
--- la clÃ­nica (primer dÃ­gito), la clase de la clÃ­nica y la de los cargos
--- vigentes. Devuelve '60' (clase IV/V o mÃ¡s de 50), '21' (11 a 50), '7'
+-- Misma regla que lib/sst/grupo.ts (docs/sgsst §3): trabajadores =
+-- dependientes + sin categoría + otros del perfil + contratistas (salvo
+-- exclusión justificada); clase = la MAYOR entre el código de actividad de
+-- la clínica (primer dígito), la clase de la clínica y la de los cargos
+-- vigentes. Devuelve '60' (clase IV/V o más de 50), '21' (11 a 50), '7'
 -- (hasta 10) o null si no se puede saber (sin trabajadores, independiente
 -- sin trabajadores, o sin clase de riesgo).
 -- security definer: lee RRHH (empleados, cargos) aunque quien inicia la
--- autoevaluaciÃ³n no tenga permiso de RRHH; solo devuelve un cÃ³digo de grupo.
--- Sin ejecuciÃ³n para usuarios: la llama fn_sst_iniciar_autoevaluacion.
+-- autoevaluación no tenga permiso de RRHH; solo devuelve un código de grupo.
+-- Sin ejecución para usuarios: la llama fn_sst_iniciar_autoevaluacion.
 create or replace function fn_sst_grupo_requerido(p_clinica_id uuid)
 returns text
 language plpgsql
@@ -364,7 +364,7 @@ revoke execute on function fn_sst_grupo_requerido(uuid) from public, anon, authe
 grant execute on function fn_sst_grupo_requerido(uuid) to service_role;
 
 -- ============================================================
--- 4. Foto de cada estÃ¡ndar en la autoevaluaciÃ³n
+-- 4. Foto de cada estándar en la autoevaluación
 -- ============================================================
 alter table sst_autoevaluacion_items
   add column snap_ciclo text,
@@ -375,8 +375,8 @@ alter table sst_autoevaluacion_items
   add column snap_orden int,
   add column snap_verificado boolean;
 
--- Lo ya existente (abiertas y cerradas) toma el catÃ¡logo de hoy: es lo
--- mejor que hay; desde aquÃ­ quedan congeladas.
+-- Lo ya existente (abiertas y cerradas) toma el catálogo de hoy: es lo
+-- mejor que hay; desde aquí quedan congeladas.
 update sst_autoevaluacion_items i
 set snap_ciclo = e.ciclo, snap_componente = e.componente, snap_nombre = e.nombre, snap_descripcion = e.descripcion,
     snap_peso = e.peso, snap_orden = e.orden, snap_verificado = e.verificado
@@ -393,9 +393,9 @@ alter table sst_autoevaluacion_items
   alter column snap_verificado set not null,
   add constraint sst_item_snap_peso_positivo check (snap_peso > 0);
 
--- Ãtems: solo se editan mientras la autoevaluaciÃ³n estÃ¡ abierta, y solo el
--- estado y sus textos. La foto del estÃ¡ndar solo puede cambiar para quedar
--- igual al catÃ¡logo (la refresca el cierre); nadie la inventa.
+-- Ítems: solo se editan mientras la autoevaluación está abierta, y solo el
+-- estado y sus textos. La foto del estándar solo puede cambiar para quedar
+-- igual al catálogo (la refresca el cierre); nadie la inventa.
 create or replace function fn_sst_item_proteger()
 returns trigger
 language plpgsql
@@ -403,10 +403,10 @@ set search_path = public
 as $$
 begin
   if new.autoevaluacion_id <> old.autoevaluacion_id or new.estandar_codigo <> old.estandar_codigo or new.clinica_id <> old.clinica_id then
-    raise exception 'El Ã­tem no cambia de estÃ¡ndar ni de autoevaluaciÃ³n.';
+    raise exception 'El ítem no cambia de estándar ni de autoevaluación.';
   end if;
   if (select estado from sst_autoevaluaciones where id = new.autoevaluacion_id) <> 'abierta' then
-    raise exception 'La autoevaluaciÃ³n estÃ¡ cerrada: no se modifica.';
+    raise exception 'La autoevaluación está cerrada: no se modifica.';
   end if;
   if (new.snap_ciclo, new.snap_componente, new.snap_nombre, new.snap_descripcion, new.snap_peso, new.snap_orden, new.snap_verificado)
      is distinct from
@@ -417,17 +417,17 @@ begin
          and (e.ciclo, e.componente, e.nombre, e.descripcion, e.peso, e.orden, e.verificado)
            = (new.snap_ciclo, new.snap_componente, new.snap_nombre, new.snap_descripcion, new.snap_peso, new.snap_orden, new.snap_verificado)
      ) then
-    raise exception 'La foto del estÃ¡ndar no se edita.';
+    raise exception 'La foto del estándar no se edita.';
   end if;
   return new;
 end;
 $$;
 
--- Al cerrar, la foto se actualiza al catÃ¡logo vigente (por si se corrigiÃ³ un
--- texto mientras estaba abierta) y desde ahÃ­ queda fija.
+-- Al cerrar, la foto se actualiza al catálogo vigente (por si se corrigió un
+-- texto mientras estaba abierta) y desde ahí queda fija.
 -- security definer: quien cierra (APPROVE) puede no tener EDIT sobre los
--- Ã­tems, y el UPDATE de la foto pasarÃ­a por la RLS de sst_items_update. Solo
--- toca autoevaluaciones ABIERTAS de la clÃ­nica del usuario.
+-- ítems, y el UPDATE de la foto pasaría por la RLS de sst_items_update. Solo
+-- toca autoevaluaciones ABIERTAS de la clínica del usuario.
 create or replace function fn_sst_refrescar_foto(p_autoevaluacion_id uuid)
 returns void
 language plpgsql
@@ -457,7 +457,7 @@ revoke execute on function fn_sst_refrescar_foto(uuid) from public, anon;
 grant execute on function fn_sst_refrescar_foto(uuid) to authenticated;
 
 -- Cabecera: el puntaje se calcula con la FOTO (snap_peso), no con el
--- catÃ¡logo vivo.
+-- catálogo vivo.
 create or replace function fn_sst_autoevaluacion_cierre()
 returns trigger
 language plpgsql
@@ -469,10 +469,10 @@ declare
   v_logrado numeric;
 begin
   if old.estado = 'cerrada' then
-    raise exception 'La autoevaluaciÃ³n estÃ¡ cerrada: no se modifica.';
+    raise exception 'La autoevaluación está cerrada: no se modifica.';
   end if;
   if new.clinica_id <> old.clinica_id or new.anio <> old.anio or new.grupo <> old.grupo then
-    raise exception 'El aÃ±o y el grupo de la autoevaluaciÃ³n no cambian.';
+    raise exception 'El año y el grupo de la autoevaluación no cambian.';
   end if;
   if new.estado = 'abierta' then
     new.puntaje := null;
@@ -482,7 +482,7 @@ begin
     return new;
   end if;
   if current_user in ('authenticated', 'anon') and not has_permission('sst', 'APPROVE') then
-    raise exception 'No tienes permiso para cerrar la autoevaluaciÃ³n.';
+    raise exception 'No tienes permiso para cerrar la autoevaluación.';
   end if;
   perform fn_sst_refrescar_foto(new.id);
   select count(*) filter (where i.estado = 'pendiente'),
@@ -492,7 +492,7 @@ begin
   from sst_autoevaluacion_items i
   where i.autoevaluacion_id = new.id;
   if v_pendientes > 0 then
-    raise exception 'Quedan % Ã­tems sin calificar.', v_pendientes;
+    raise exception 'Quedan % ítems sin calificar.', v_pendientes;
   end if;
   new.puntaje := round(v_logrado / v_total * 100, 2);
   new.nivel := case when new.puntaje < 60 then 'critico' when new.puntaje <= 85 then 'moderado' else 'aceptable' end;
@@ -503,9 +503,9 @@ end;
 $$;
 
 -- El grupo lo decide la BD (fn_sst_grupo_requerido): p_grupo se conserva por
--- compatibilidad con el cÃ³digo anterior, y se rechaza si es menor al que
--- corresponde (uno mayor sÃ­ se admite: es mÃ¡s exigente, no menos).
--- security definer: crea la autoevaluaciÃ³n y sus Ã­tems (no hay polÃ­tica de
+-- compatibilidad con el código anterior, y se rechaza si es menor al que
+-- corresponde (uno mayor sí se admite: es más exigente, no menos).
+-- security definer: crea la autoevaluación y sus ítems (no hay política de
 -- insert) y lee RRHH para calcular el grupo.
 create or replace function fn_sst_iniciar_autoevaluacion(p_anio int, p_grupo text)
 returns uuid
@@ -519,23 +519,23 @@ declare
   v_requerido text;
 begin
   if v_clinica is null or not has_permission('sst', 'CREATE') then
-    raise exception 'No tienes permiso para iniciar la autoevaluaciÃ³n.';
+    raise exception 'No tienes permiso para iniciar la autoevaluación.';
   end if;
   if not has_entitlement('sst', 'gestion') then
-    raise exception 'La autoevaluaciÃ³n de estÃ¡ndares estÃ¡ disponible en el plan Pro.';
+    raise exception 'La autoevaluación de estándares está disponible en el plan Pro.';
   end if;
   if p_grupo is null or p_grupo not in ('7', '21', '60') then
-    raise exception 'Grupo de estÃ¡ndares invÃ¡lido.';
+    raise exception 'Grupo de estándares inválido.';
   end if;
   if p_anio is null or p_anio not between 2019 and extract(year from (now() at time zone 'America/Bogota'))::int then
-    raise exception 'AÃ±o invÃ¡lido.';
+    raise exception 'Año inválido.';
   end if;
   v_requerido := fn_sst_grupo_requerido(v_clinica);
   if v_requerido is null then
-    raise exception 'Primero completa el diagnÃ³stico (trabajadores y clase de riesgo): sin eso no se sabe quÃ© grupo de estÃ¡ndares te corresponde.';
+    raise exception 'Primero completa el diagnóstico (trabajadores y clase de riesgo): sin eso no se sabe qué grupo de estándares te corresponde.';
   end if;
   if p_grupo::int < v_requerido::int then
-    raise exception 'Te corresponden % estÃ¡ndares: no puedes iniciar la autoevaluaciÃ³n con el grupo de %.', v_requerido, p_grupo;
+    raise exception 'Te corresponden % estándares: no puedes iniciar la autoevaluación con el grupo de %.', v_requerido, p_grupo;
   end if;
   insert into sst_autoevaluaciones (clinica_id, anio, grupo, created_by)
   values (v_clinica, p_anio, p_grupo, auth.uid())
@@ -549,7 +549,7 @@ begin
   where p_grupo = '60' or (p_grupo = '21' and e.en_21) or (p_grupo = '7' and e.en_7);
   return v_id;
 exception when unique_violation then
-  raise exception 'Ya existe la autoevaluaciÃ³n de %.', p_anio;
+  raise exception 'Ya existe la autoevaluación de %.', p_anio;
 end;
 $$;
 
@@ -559,24 +559,24 @@ revoke execute on function fn_sst_item_proteger() from public, anon, authenticat
 revoke execute on function fn_sst_autoevaluacion_cierre() from public, anon, authenticated;
 
 -- ============================================================
--- 5. Indicadores: ausentismo homogÃ©neo y severidad desde incapacidades
+-- 5. Indicadores: ausentismo homogéneo y severidad desde incapacidades
 -- ============================================================
--- Ausentismo (Res. 0312, Art. 30): dÃ­as de ausencia por incapacidad Ã· dÃ­as
--- de trabajo programados. Antes el numerador sumaba dÃ­as de CALENDARIO y el
--- denominador (trabajadores Ã— dÃ­as hÃ¡biles) dÃ­as hÃ¡biles: podÃ­a pasar de
--- 100 %. Ahora los dos usan DÃAS HÃBILES (lunes a viernes sin festivos): el
--- numerador cuenta, por persona, los dÃ­as hÃ¡biles cubiertos por sus
+-- Ausentismo (Res. 0312, Art. 30): días de ausencia por incapacidad ÷ días
+-- de trabajo programados. Antes el numerador sumaba días de CALENDARIO y el
+-- denominador (trabajadores × días hábiles) días hábiles: podía pasar de
+-- 100 %. Ahora los dos usan DÍAS HÁBILES (lunes a viernes sin festivos): el
+-- numerador cuenta, por persona, los días hábiles cubiertos por sus
 -- incapacidades dentro del mes (una persona con dos incapacidades que se
--- cruzan cuenta el dÃ­a una sola vez) y nunca pasa del denominador.
--- Severidad: dÃ­as de incapacidad por AT de CADA MES. Se prefieren las
+-- cruzan cuenta el día una sola vez) y nunca pasa del denominador.
+-- Severidad: días de incapacidad por AT de CADA MES. Se prefieren las
 -- incapacidades registradas en RRHH (incapacidades_empleado con
--- accidente_trabajo_id) y se reparten por dÃ­as de calendario entre los
+-- accidente_trabajo_id) y se reparten por días de calendario entre los
 -- meses que cubren; solo si el accidente no tiene incapacidades ligadas se
 -- usa accidentes_trabajo.dias_incapacidad (digitado a mano), contado desde
--- la fecha del accidente. Los dÃ­as cargados siguen en el mes del accidente.
+-- la fecha del accidente. Los días cargados siguen en el mes del accidente.
 -- security definer: lee RRHH (incapacidades, empleados) aunque quien ve los
--- indicadores no tenga permiso de RRHH; solo devuelve nÃºmeros agregados y
--- exige sst/VIEW de la clÃ­nica del usuario.
+-- indicadores no tenga permiso de RRHH; solo devuelve números agregados y
+-- exige sst/VIEW de la clínica del usuario.
 create or replace function fn_sst_indicadores(p_anio int)
 returns table (
   mes int,
@@ -605,7 +605,7 @@ begin
     raise exception 'No tienes permiso para ver los indicadores del SG-SST.';
   end if;
   if p_anio is null or p_anio not between 2019 and 2100 then
-    raise exception 'AÃ±o invÃ¡lido.';
+    raise exception 'Año inválido.';
   end if;
   select * into v_perfil from sst_perfil where clinica_id = v_clinica;
   v_pais := fn_hab_pais_clinica(v_clinica);
@@ -670,16 +670,16 @@ end;
 $$;
 
 comment on function fn_sst_indicadores(int) is
-  'SG-SST F7: insumos mensuales de los indicadores del Art. 30 de la Res. 0312 (solo nÃºmeros; ausentismo en dÃ­as hÃ¡biles). Exige sst/VIEW.';
+  'SG-SST F7: insumos mensuales de los indicadores del Art. 30 de la Res. 0312 (solo números; ausentismo en días hábiles). Exige sst/VIEW.';
 
 revoke execute on function fn_sst_indicadores(int) from public, anon;
 grant execute on function fn_sst_indicadores(int) to authenticated;
 
 -- ============================================================
--- 6. Capacitaciones: asistencia atÃ³mica y corregible
+-- 6. Capacitaciones: asistencia atómica y corregible
 -- ============================================================
--- Antes la polÃ­tica de insert decÃ­a "mientras no estÃ© cerrada" pero no lo
--- verificaba, y no habÃ­a forma de quitar a alguien agregado por error.
+-- Antes la política de insert decía "mientras no esté cerrada" pero no lo
+-- verificaba, y no había forma de quitar a alguien agregado por error.
 drop policy "sst_asistentes_insert" on sst_capacitacion_asistentes;
 create policy "sst_asistentes_insert" on sst_capacitacion_asistentes
   for insert to authenticated with check (
@@ -689,7 +689,7 @@ create policy "sst_asistentes_insert" on sst_capacitacion_asistentes
       where c.id = capacitacion_id and c.clinica_id = clinica_actual() and c.estado = 'programada'
     )
   );
--- Quitar a alguien solo mientras la capacitaciÃ³n estÃ¡ programada (una vez
+-- Quitar a alguien solo mientras la capacitación está programada (una vez
 -- realizada, la lista de asistencia es el registro y no cambia).
 create policy "sst_asistentes_delete" on sst_capacitacion_asistentes
   for delete to authenticated using (
@@ -701,10 +701,10 @@ create policy "sst_asistentes_delete" on sst_capacitacion_asistentes
   );
 
 -- La lista de asistentes queda IGUAL a p_asistentes (agrega y quita) y, si
--- p_realizada, la capacitaciÃ³n pasa a "realizada" en la misma transacciÃ³n:
+-- p_realizada, la capacitación pasa a "realizada" en la misma transacción:
 -- si algo falla no queda realizada sin asistencia y se puede reintentar.
 -- security invoker: todo pasa por la RLS del usuario (EDIT + gestion para la
--- capacitaciÃ³n y los borrados, CREATE para los inserts).
+-- capacitación y los borrados, CREATE para los inserts).
 create or replace function fn_sst_guardar_asistencia(p_capacitacion_id uuid, p_asistentes uuid[], p_realizada boolean)
 returns void
 language plpgsql
@@ -719,10 +719,10 @@ begin
   select c.clinica_id, c.estado into v_clinica, v_estado
   from sst_capacitaciones c where c.id = p_capacitacion_id for update;
   if not found then
-    raise exception 'La capacitaciÃ³n no existe o no tienes permiso sobre ella.';
+    raise exception 'La capacitación no existe o no tienes permiso sobre ella.';
   end if;
   if v_estado <> 'programada' then
-    raise exception 'Esta capacitaciÃ³n ya estÃ¡ cerrada: la asistencia no se modifica.';
+    raise exception 'Esta capacitación ya está cerrada: la asistencia no se modifica.';
   end if;
   delete from sst_capacitacion_asistentes a
   where a.capacitacion_id = p_capacitacion_id and a.empleado_id <> all (v_lista);
@@ -739,11 +739,11 @@ revoke execute on function fn_sst_guardar_asistencia(uuid, uuid[], boolean) from
 grant execute on function fn_sst_guardar_asistencia(uuid, uuid[], boolean) to authenticated;
 
 -- ============================================================
--- 7. Storage: subir archivos de gestiÃ³n exige el plan Pro
+-- 7. Storage: subir archivos de gestión exige el plan Pro
 -- ============================================================
--- Lo Ãºnico del bucket que es del plan Gratis es el informe de la
--- investigaciÃ³n de un evento (carpeta 'investigaciones'); el resto de lo que
--- se sube es de gestiÃ³n (mismo criterio de lib/sst/subidas.ts y de
+-- Lo único del bucket que es del plan Gratis es el informe de la
+-- investigación de un evento (carpeta 'investigaciones'); el resto de lo que
+-- se sube es de gestión (mismo criterio de lib/sst/subidas.ts y de
 -- lib/habilitacion/subidas.ts).
 drop policy "sst_storage_insert" on storage.objects;
 create policy "sst_storage_insert" on storage.objects

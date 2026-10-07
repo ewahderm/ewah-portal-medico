@@ -5,19 +5,19 @@
 select t.como('00000000-0000-0000-0000-0000000005a5'); set role authenticated;
 
 -- Capacitación realizada con asistentes.
--- La asistencia solo se agrega mientras está programada (0086): se registra
+-- La asistencia solo se agrega mientras está programada (0087): se registra
 -- y LUEGO se marca realizada.
 insert into sst_capacitaciones (clinica_id, tema, tipo, fecha) values (clinica_actual(), 'Manejo de cortopunzantes', 'capacitacion', current_date - 2)
 returning id as cap \gset
 insert into sst_capacitacion_asistentes (capacitacion_id, clinica_id, empleado_id) values (:'cap', clinica_actual(), :E1), (:'cap', clinica_actual(), :E2);
 update sst_capacitaciones set estado = 'realizada' where id = :'cap';
--- Realizada: ni se agrega ni se quita asistencia (0086).
+-- Realizada: ni se agrega ni se quita asistencia (0087).
 select t.debe_fallar(format($q$insert into sst_capacitacion_asistentes (capacitacion_id, clinica_id, empleado_id) values (%L, clinica_actual(), '00000000-0000-0000-0000-0000000005e3')$q$, :'cap'), 'row-level');
 delete from sst_capacitacion_asistentes where capacitacion_id = :'cap';
 select t.ok(count(*) = 2, 'a una capacitación realizada no se le quita asistencia') from sst_capacitacion_asistentes where capacitacion_id = :'cap';
 select t.debe_fallar(format('select fn_sst_guardar_asistencia(%L, array[%L]::uuid[], false)', :'cap', :E1), 'cerrada');
 
--- Asistencia atómica (0086): agrega, quita y marca realizada en una sola operación.
+-- Asistencia atómica (0087): agrega, quita y marca realizada en una sola operación.
 insert into sst_capacitaciones (clinica_id, tema, tipo, fecha) values (clinica_actual(), 'Bioseguridad (reintento)', 'capacitacion', current_date - 1)
 returning id as cap2 \gset
 select fn_sst_guardar_asistencia(:'cap2', array[:E1, :E2]::uuid[], false);
