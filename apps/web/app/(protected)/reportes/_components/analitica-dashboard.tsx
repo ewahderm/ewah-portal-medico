@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { formatoMoneda } from "@/lib/format";
 import { formatoFecha } from "@/lib/medio-ambiente/fecha-local";
 import { obtenerAnaliticaClinica } from "@/lib/reportes/actions";
+import { exigirExito } from "@/lib/forms/resultado";
 import type { AnaliticaClinica, ValorPorGrupo } from "@/lib/reportes/analitica";
 import { etiquetaMes, formatoEntero } from "@/lib/reportes/formato";
 
@@ -338,7 +339,7 @@ export function AnaliticaDashboard({ fechaInicial, fechaFinal, initialData }: Pr
     setError(null);
     startTransition(async () => {
       try {
-        const resultado = await obtenerAnaliticaClinica(desde, hasta);
+        const resultado = exigirExito(await obtenerAnaliticaClinica(desde, hasta));
         setAnalitica(resultado);
         setFechasAplicadas({ desde, hasta });
       } catch (motivo) {

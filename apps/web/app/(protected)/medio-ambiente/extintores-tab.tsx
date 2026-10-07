@@ -23,6 +23,7 @@ import {
 import { ExtintorDialog } from "./extintor-dialog";
 import type { Opcion } from "@/lib/forms/opciones";
 import { hoy } from "@/lib/format";
+import { exigirExito } from "@/lib/forms/resultado";
 
 const TODOS = "__todos__";
 
@@ -93,7 +94,7 @@ export function ExtintoresTab({
     setErrorToggle(null);
     startToggle(async () => {
       try {
-        await toggleExtintor(id, next);
+        exigirExito(await toggleExtintor(id, next));
         buscar(pagina);
       } catch (e) {
         setErrorToggle(e instanceof Error ? e.message : "No se pudo actualizar.");

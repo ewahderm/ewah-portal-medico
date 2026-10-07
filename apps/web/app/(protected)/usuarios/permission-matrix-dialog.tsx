@@ -20,6 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { exigirExito } from "@/lib/forms/resultado";
 
 type Modulo = { id: string; nombre: string };
 type Permiso = { id: string; codigo: string };
@@ -73,7 +74,7 @@ export function PermissionMatrixDialog({
     const k = key(moduloId, permisoId);
     startTransition(async () => {
       try {
-        await toggleRolPermiso(rolId, moduloId, permisoId, next);
+        exigirExito(await toggleRolPermiso(rolId, moduloId, permisoId, next));
       } catch (e) {
         setChecked((prev) => {
           const copy = new Set(prev);

@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentUsuario, esAdministrador } from "@/lib/auth/session";
 import type { ActionState } from "@/lib/auth/actions";
 import { siteUrl } from "@/lib/site-url";
+import type { ResultadoAccion } from "@/lib/forms/resultado";
 
 /**
  * Guardas compartidas entre las dos formas de dar de alta a alguien
@@ -242,10 +243,10 @@ export async function toggleRolPermiso(
   moduloId: string,
   permisoId: string,
   concedido: boolean,
-) {
+): Promise<ResultadoAccion> {
   const usuario = await getCurrentUsuario();
   if (!usuario || !esAdministrador(usuario)) {
-    throw new Error("Solo un Administrador puede editar permisos.");
+    return { error: "Solo un Administrador puede editar permisos." };
   }
 
   const supabase = await createClient();
@@ -256,7 +257,7 @@ export async function toggleRolPermiso(
     .single();
 
   if (!rol || rol.clinica_id !== usuario.clinica_id) {
-    throw new Error("Rol inválido.");
+    return { error: "Rol inválido." };
   }
 
   if (concedido) {
@@ -266,14 +267,15 @@ export async function toggleRolPermiso(
         { rol_id: rolId, modulo_id: moduloId, permiso_id: permisoId, concedido: true },
         { onConflict: "rol_id,modulo_id,permiso_id" },
       );
-    if (error) throw new Error("No se pudo conceder el permiso.");
+    if (error) return { error: "No se pudo conceder el permiso." };
   } else {
     const { error } = await supabase
       .from("rol_modulo_permiso")
       .delete()
       .match({ rol_id: rolId, modulo_id: moduloId, permiso_id: permisoId });
-    if (error) throw new Error("No se pudo quitar el permiso.");
+    if (error) return { error: "No se pudo quitar el permiso." };
   }
 
   revalidatePath("/usuarios");
+  return {};
 }
