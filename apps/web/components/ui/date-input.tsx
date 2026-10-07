@@ -42,12 +42,18 @@ export function formatDateInput(value: string): string {
   return `${dia}/${mes}/${anio}`
 }
 
-function validarTextoFecha(value: string, min?: string, max?: string) {
+function validarTextoFecha(value: string, min?: string | number, max?: string | number) {
   if (!value) return ""
   const fecha = parseDateInput(value)
   if (!fecha) return "Escribe una fecha válida en formato dd/mm/aaaa."
-  if (min && fecha < min) return `La fecha debe ser igual o posterior a ${formatDateInput(min)}.`
-  if (max && fecha > max) return `La fecha debe ser igual o anterior a ${formatDateInput(max)}.`
+  const fechaMinima = min === undefined ? "" : String(min)
+  const fechaMaxima = max === undefined ? "" : String(max)
+  if (fechaMinima && fecha < fechaMinima) {
+    return `La fecha debe ser igual o posterior a ${formatDateInput(fechaMinima)}.`
+  }
+  if (fechaMaxima && fecha > fechaMaxima) {
+    return `La fecha debe ser igual o anterior a ${formatDateInput(fechaMaxima)}.`
+  }
   return ""
 }
 
