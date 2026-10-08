@@ -1,0 +1,1 @@
+-- Flujo de caja FC5: usa los socios, la tarjeta de Ana y el préstamo de fin2.

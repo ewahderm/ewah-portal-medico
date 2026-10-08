@@ -59,6 +59,7 @@ export function TarifaDialog({
   const router = useRouter();
   const ultima = tarifas[0];
   const [editando, setEditando] = useState<string | null>(null);
+  const [confirmarBorrar, setConfirmarBorrar] = useState<string | null>(null);
   const [form, setForm] = useState<Form>(ultima ? deTarifa(ultima, hoy) : deTarifa(TARIFA_BOLD, hoy));
   const [simulado, setSimulado] = useState<number | null>(100000);
   const [error, setError] = useState<string | null>(null);
@@ -98,6 +99,8 @@ export function TarifaDialog({
   }
 
   async function eliminar(t: Tarifa) {
+    if (confirmarBorrar !== t.id) return setConfirmarBorrar(t.id);
+    setConfirmarBorrar(null);
     const r = await eliminarTarifa(t.id);
     if (r.error) return toast.add({ title: "No se eliminó", description: r.error, type: "error" });
     toast.add({ title: "Tarifa eliminada", type: "success" });
@@ -135,9 +138,15 @@ export function TarifaDialog({
                     >
                       <PencilIcon />
                     </Button>
-                    <Button variant="outline" size="icon-sm" aria-label={`Eliminar la tarifa del ${fechaLegible(t.vigente_desde)}`} onClick={() => eliminar(t)}>
-                      <Trash2Icon />
-                    </Button>
+                    {confirmarBorrar === t.id ? (
+                      <Button variant="destructive" size="sm" onClick={() => eliminar(t)}>
+                        ¿Eliminar?
+                      </Button>
+                    ) : (
+                      <Button variant="outline" size="icon-sm" aria-label={`Eliminar la tarifa del ${fechaLegible(t.vigente_desde)}`} onClick={() => eliminar(t)}>
+                        <Trash2Icon />
+                      </Button>
+                    )}
                   </>
                 ) : null}
               </li>

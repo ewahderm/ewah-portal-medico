@@ -63,6 +63,7 @@ export async function liquidarPasarela(input: {
   cuentaId: string | null;
   fecha: string;
   netoReal: number | null;
+  netoEsperado: number;
   soportePath: string | null;
   soporteNombre: string | null;
 }): Promise<Resultado> {
@@ -87,6 +88,7 @@ export async function liquidarPasarela(input: {
     p_cuenta_banco: input.cuentaId,
     p_fecha: input.fecha,
     p_neto_real: input.netoReal,
+    p_neto_esperado: input.netoEsperado,
     p_soporte_path: soporte?.path ?? null,
     p_soporte_nombre: soporte?.nombre ?? null,
   });

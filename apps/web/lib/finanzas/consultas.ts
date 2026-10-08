@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { MODULO_FINANZAS, type Actividad, type Moneda, type TipoCuenta } from "@/lib/finanzas/constantes";
 import type { IngresoPendiente } from "@/lib/finanzas/tratamientos";
 import type { PendientePasarela, Tarifa } from "@/lib/finanzas/tarifas";
+import type { SaldoSocio } from "@/lib/finanzas/socios";
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 
@@ -317,4 +318,39 @@ export async function getLiquidaciones(supabase: Supabase, limite = 30): Promise
   return ((data ?? []) as Liquidacion[]).map((l) =>
     aNumero(l, ["bruto", "comision", "retefuente", "reteica", "reteiva", "neto_esperado", "neto_real", "diferencia"]),
   );
+}
+
+// ---------- FC5: socios ----------
+
+export async function getSaldosSocios(supabase: Supabase): Promise<Map<string, SaldoSocio>> {
+  const { data, error } = await supabase.rpc("fn_fin_socios_saldos");
+  if (error) console.error("[finanzas] fn_fin_socios_saldos", error);
+  return new Map(
+    ((data ?? []) as SaldoSocio[]).map((s) => [
+      s.socio_id,
+      {
+        socio_id: s.socio_id,
+        deuda_tarjeta: Number(s.deuda_tarjeta),
+        prestado_por_socio: Number(s.prestado_por_socio),
+        prestado_a_socio: Number(s.prestado_a_socio),
+        aportes: Number(s.aportes),
+        le_debemos: Number(s.le_debemos),
+        nos_debe: Number(s.nos_debe),
+      },
+    ]),
+  );
+}
+
+// Historial de un socio: sus movimientos y los de sus tarjetas.
+export async function getMovimientosSocio(supabase: Supabase, socioId: string, tarjetas: string[], limite = 20): Promise<Movimiento[]> {
+  if (!UUID.test(socioId) || tarjetas.some((t) => !UUID.test(t))) return [];
+  const filtros = [`socio_id.eq.${socioId}`, ...tarjetas.flatMap((t) => [`cuenta_id.eq.${t}`, `cuenta_destino_id.eq.${t}`])];
+  const { data } = await supabase
+    .from("fin_movimientos")
+    .select(MOV_SELECT)
+    .or(filtros.join(","))
+    .order("fecha", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(limite);
+  return ((data ?? []) as Movimiento[]).map(numeros);
 }

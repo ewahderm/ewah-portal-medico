@@ -105,6 +105,7 @@ export function BoldCliente({
                       {puedeCrear ? (
                         <Checkbox
                           checked={todos}
+                          indeterminate={!todos && ids.some((id) => elegidos.has(id))}
                           onCheckedChange={(v) => alternar(ids, !!v)}
                           aria-label={`Elegir los cobros que llegan el ${g.fecha ? fechaLegible(g.fecha) : "día sin fecha"}`}
                         />
@@ -230,6 +231,7 @@ function LiquidarDialog({ seleccion, cuentas, hoy, onCerrar }: { seleccion: Pend
       cuentaId,
       fecha,
       netoReal: neto,
+      netoEsperado: total.neto,
       soportePath: soporte?.path ?? null,
       soporteNombre: soporte?.nombre ?? null,
     });

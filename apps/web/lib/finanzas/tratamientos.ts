@@ -8,7 +8,8 @@ export type SituacionIngreso =
   | "medio_sin_cuenta"
   | "fecha_futura"
   | "anulado_con_ingreso"
-  | "corregido_sin_anular";
+  | "corregido_sin_anular"
+  | "anulado_liquidado";
 
 export type IngresoPendiente = {
   tratamiento_id: string;
@@ -48,6 +49,11 @@ export const SITUACIONES: Record<SituacionIngreso, { titulo: string; ayuda: stri
   corregido_sin_anular: {
     titulo: "Corregidos sin anular el original",
     ayuda: "El tratamiento tiene un registro corregido pero no se anuló: los dos cuentan como ingreso. Anula el que sobra en Tratamientos.",
+  },
+  anulado_liquidado: {
+    titulo: "Anulados con el cobro ya abonado",
+    ayuda:
+      "El tratamiento se anuló, pero la pasarela ya abonó ese cobro. Si devolviste la plata al paciente, registra la salida; si fue un error de la liquidación, anúlala en Bold y pon al día.",
   },
   anulado_con_ingreso: {
     titulo: "Anulados con ingreso",
@@ -120,6 +126,7 @@ export function resumirPendientes(pendientes: IngresoPendiente[]): ResumenPendie
       }
       case "sin_valor":
       case "corregido_sin_anular":
+      case "anulado_liquidado":
         r.porRevisar++;
         break;
     }

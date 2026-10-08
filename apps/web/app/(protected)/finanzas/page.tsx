@@ -125,6 +125,7 @@ export default async function FinanzasPage() {
           </Link>
         ) : null}
         {datos.cuentas.some((c) => c.tipo === "tarjeta_socio" && (c.activa || c.saldo !== 0)) ? (
+<Link href="/finanzas/socios" className="block">
           <Cifra
             icono={HandCoinsIcon}
             titulo="Se les debe a los socios"
@@ -132,6 +133,7 @@ export default async function FinanzasPage() {
             detalle="Gastos pagados con sus tarjetas"
             tono={resumen.deudaSocios > 0 ? "alerta" : undefined}
           />
+          </Link>
         ) : null}
       </div>
 

@@ -44,7 +44,9 @@ export default async function BoldPage() {
     );
   }
   return (
+    // La clave reinicia la selección cuando cambian los pendientes.
     <BoldCliente
+      key={pendientes.map((p) => p.movimiento_id).join(",")}
       pendientes={pendientes}
       liquidaciones={liquidaciones}
       cuentas={cuentas.map((c) => ({ id: c.id, nombre: c.nombre, destino: c.activa && c.es_disponible && c.moneda === "COP", pasarela: c.tipo === "pasarela" }))}

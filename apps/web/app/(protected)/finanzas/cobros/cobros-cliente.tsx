@@ -47,6 +47,7 @@ export function CobrosCliente({
       {resumen.porGenerar.cantidad || resumen.anuladosConIngreso ? <PonerAlDia resumen={resumen} puedeCrear={puedeCrear} /> : null}
 
       <Seccion situacion="corregido_sin_anular" filas={de("corregido_sin_anular")} puedeCrear={false} onCobrar={setCobrando} />
+      <Seccion situacion="anulado_liquidado" filas={de("anulado_liquidado")} puedeCrear={false} onCobrar={setCobrando} />
 
       {nada ? (
         <Card>

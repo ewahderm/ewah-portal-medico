@@ -41,11 +41,15 @@ export function MovimientoFila({
   const anulado = m.estado === "anulado";
   const esAnulacion = m.origen === "anulacion";
   const deTratamiento = m.origen === "tratamiento";
-  const anulable = puedeAnular && !anulado && (m.origen === "manual" || deTratamiento);
+  const anulable = puedeAnular && !anulado && ["manual", "tratamiento", "reembolso_socio", "devolucion_socio"].includes(m.origen);
   const codigo = codigoCategoria(m);
+  const ruta = `${nombreCuenta.get(m.cuenta_id) ?? "Cuenta"} → ${nombreCuenta.get(m.cuenta_destino_id ?? "") ?? "Cuenta"}`;
+  // Las transferencias con categoría (reembolso a socio) la muestran primero.
   const titulo =
     m.tipo === "transferencia"
-      ? `${nombreCuenta.get(m.cuenta_id) ?? "Cuenta"} → ${nombreCuenta.get(m.cuenta_destino_id ?? "") ?? "Cuenta"}`
+      ? codigo && nombreCategoria.get(codigo)
+        ? `${nombreCategoria.get(codigo)}: ${ruta}`
+        : ruta
       : (codigo && nombreCategoria.get(codigo)) || "Sin categoría";
   const tercero = m.socio_id ? nombreSocio.get(m.socio_id) : m.proveedor_id ? nombreProveedor?.get(m.proveedor_id) : m.tercero_nombre;
   const Icono = m.tipo === "ingreso" ? ArrowDownLeftIcon : m.tipo === "egreso" ? ArrowUpRightIcon : ArrowLeftRightIcon;
