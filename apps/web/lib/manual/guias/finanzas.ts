@@ -142,6 +142,12 @@ export const FINANZAS_COBROS: Guia = {
           tipo: "nota",
           tono: "info",
           texto:
+            "**Medio de pago ≠ pasarela.** El medio de pago es *cómo paga el paciente* (tarjeta de crédito, tarjeta de débito, link de pago, PSE, efectivo…). La pasarela es *quién procesa ese pago* (Bold, Wompi…). En EWAH cada medio apunta a una sola cuenta: si todo lo cobras con una pasarela, deja los medios con su nombre normal y asígnalos a la cuenta de esa pasarela. Si usas **dos o más pasarelas**, pon la pasarela en el nombre del medio (por ejemplo \"Tarjeta de crédito (Bold)\" y \"Tarjeta de crédito (Wompi)\") para que el personal elija bien al registrar el tratamiento.",
+        },
+        {
+          tipo: "nota",
+          tono: "info",
+          texto:
             "La tarifa es una **estimación**: sirve para calcular cuánto debería llegar y cuándo. Si subes el reporte de la pasarela (más abajo), EWAH usa los valores **reales** de cada pago y deja de depender de la tarifa.",
         },
         { tipo: "imagen", archivo: "finanzas-medios.jpg", alt: "Medios de pago y su cuenta" },
