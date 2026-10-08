@@ -79,6 +79,12 @@ const GRUPOS: Record<ModuloCatalogo, { nombre: string; icono: LucideIcon }> = {
 
 // Orden fijo de los grupos — "general" siempre primero, el resto en el
 // mismo orden en que aparecen en el menú principal de la app.
+const ORDEN_UBICACION = ["paises", "departamentos", "ciudades", "sedes", "consultorios"];
+function posicionUbicacion(tabla: string): number {
+  const i = ORDEN_UBICACION.indexOf(tabla);
+  return i === -1 ? ORDEN_UBICACION.length : i;
+}
+
 const ORDEN_GRUPOS: ModuloCatalogo[] = [
   "general",
   "pacientes",
@@ -439,7 +445,11 @@ export default async function ParametrosPage() {
   // haber algo administrable (Sedes, Consultorios, Tipos de identificación).
   const grupos = ORDEN_GRUPOS.map((modulo) => ({
     modulo,
-    pestañas: todasLasPestañas.filter((p) => p.modulo === modulo),
+    pestañas: todasLasPestañas
+      .filter((p) => p.modulo === modulo)
+      // Ubicación primero (países → departamentos → ciudades → sedes →
+      // consultorios); el resto conserva su orden. sort() es estable.
+      .sort((a, b) => posicionUbicacion(a.tabla) - posicionUbicacion(b.tabla)),
   })).filter((g) => g.pestañas.length > 0 && (g.modulo === "general" || codigosModulosActivos.has(g.modulo)));
 
   return (

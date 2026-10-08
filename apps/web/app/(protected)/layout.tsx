@@ -30,7 +30,6 @@ const NAV_GROUPS: GrupoNavegacion[] = [
     items: [
       { href: "/dashboard", label: "Dashboard" },
       { href: "/reportes", label: "Reportes", modulo: "reportes" },
-      { href: "/manual", label: "Manual" },
     ],
   },
   {
@@ -141,7 +140,9 @@ export default async function ProtectedLayout({
           ],
         }
       : grupo)
-    .concat(esSuperAdmin ? [{ label: "Plataforma", direct: false, items: [{ href: "/plataforma", label: "Plataforma" }] }] : []);
+    .concat(esSuperAdmin ? [{ label: "Plataforma", direct: false, items: [{ href: "/plataforma", label: "Plataforma" }] }] : [])
+    // Siempre al final del menú, a la vista de todos los roles.
+    .concat([{ label: "Documentación", direct: true, items: [{ href: "/manual", label: "Documentación" }] }]);
 
   // Cliente admin a propósito, no el de sesión: clinica_actual() (y por lo
   // tanto la policy de select normal) ahora exige clinicas.activo = true —
