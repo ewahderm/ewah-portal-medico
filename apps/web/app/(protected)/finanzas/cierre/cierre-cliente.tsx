@@ -79,9 +79,9 @@ export function CierreCliente({
                       {p.historial.some((h) => h.accion === "reabrir") ? ` · reabierto ${p.historial.filter((h) => h.accion === "reabrir").length} vez/veces` : ""}
                     </span>
                     {arqueos
-                      .filter((a) => a.periodo_id === p.id && a.diferencia !== 0)
+                      .filter((a) => a.periodo_id === p.id && a.diferencia !== 0 && !a.reemplazado)
                       .map((a) => (
-                        <span key={a.cuenta_id} className={cn("block text-xs", a.diferencia < 0 ? "text-destructive" : "text-emerald-700")}>
+                        <span key={a.id} className={cn("block text-xs", a.diferencia < 0 ? "text-destructive" : "text-emerald-700")}>
                           Arqueo {nombreCuenta[a.cuenta_id]}: {a.diferencia < 0 ? "faltante" : "sobrante"} de{" "}
                           {formatoDinero(Math.abs(a.diferencia), monedaCuenta[a.cuenta_id])}
                           {a.motivo ? ` (${a.motivo})` : ""}

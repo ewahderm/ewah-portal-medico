@@ -40,6 +40,7 @@ await paso("informe del mes por actividades", async () => {
 });
 await paso("rango de meses", async () => {
   await page.fill("#informeDesde", `${anio}-02`);
+  await page.press("#informeDesde", "Enter");
   await page.waitForURL(/desde=\d{4}-02/);
   await page.getByText(/febrero de \d{4} a \w+ de \d{4}/).waitFor();
   await page.getByText("Entradas y salidas por mes").waitFor();

@@ -457,7 +457,7 @@ cuenta contable, no el flujo).
 
 ## 12. Estado de la implementación (Etapa 1 terminada)
 
-Las seis fases están construidas en `staging`. Migraciones **0089 a 0099**:
+Las seis fases están construidas en `staging`. Migraciones **0089 a 0100**:
 
 | Migración | Contenido |
 |---|---|
@@ -466,7 +466,7 @@ Las seis fases están construidas en `staging`. Migraciones **0089 a 0099**:
 | 0093–0094 | FC3: `fin_medios_pago`, ingreso automático desde tratamientos, Cobros (por cobrar / por revisar), puesta al día |
 | 0095, 0097 | FC4: `fin_tarifas_medio_pago`, liquidación de la pasarela (`fin_liquidaciones_pasarela`, `fin_liquidacion_cobros`) |
 | 0096, 0099 | FC5: saldos por socio, reembolso de la tarjeta, préstamos y devoluciones con tope |
-| 0098 | FC6: informe por actividades, cierre mensual con arqueo (`fin_periodos`, `fin_arqueos`), alertas (`fin_alertas_enviadas`) |
+| 0098, 0100 | FC6: informe por actividades, cierre mensual con arqueo (`fin_periodos`, `fin_arqueos`), alertas (`fin_alertas_enviadas`); reabrir rehace el arqueo y un tratamiento de un mes cerrado entra el primer día abierto |
 
 Pantallas: Inicio, Movimientos, Cobros, Bold, Socios, Informe, Cierre y Configuración
 (General, Cuentas, **Medios de pago con tarifa y simulador**, Socios, Categorías).

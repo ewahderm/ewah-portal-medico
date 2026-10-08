@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { DownloadIcon, FileTextIcon } from "lucide-react";
 import { formatoDinero } from "@/lib/finanzas/dinero";
@@ -49,11 +50,11 @@ export function InformeCliente(props: Props) {
         <CardContent className="flex flex-col gap-3 pt-4 sm:flex-row sm:flex-wrap sm:items-end">
           <div className="space-y-1">
             <Label htmlFor="informeDesde">Desde</Label>
-            <Input id="informeDesde" type="month" value={periodo.desde} min={periodo.min} max={periodo.max} onChange={(e) => e.target.value && ir({ desde: e.target.value })} />
+            <CampoMes id="informeDesde" valor={periodo.desde} min={periodo.min} max={periodo.max} onElegir={(v) => ir({ desde: v })} />
           </div>
           <div className="space-y-1">
             <Label htmlFor="informeHasta">Hasta</Label>
-            <Input id="informeHasta" type="month" value={periodo.hasta} min={periodo.min} max={periodo.max} onChange={(e) => e.target.value && ir({ hasta: e.target.value })} />
+            <CampoMes id="informeHasta" valor={periodo.hasta} min={periodo.min} max={periodo.max} onElegir={(v) => ir({ hasta: v })} />
           </div>
           {sedes.length > 1 ? (
             <div className="space-y-1 sm:w-56">
@@ -160,6 +161,28 @@ export function InformeCliente(props: Props) {
         </Card>
       ) : null}
     </div>
+  );
+}
+
+// Mes AAAA-MM: aplica al salir del campo o con Enter (donde no hay selector
+// de mes se escribe a mano y no debe navegar a cada tecla).
+function CampoMes({ id, valor, min, max, onElegir }: { id: string; valor: string; min: string; max: string; onElegir: (v: string) => void }) {
+  const [texto, setTexto] = useState(valor);
+  const aplicar = () => {
+    if (/^\d{4}-(0[1-9]|1[0-2])$/.test(texto) && texto !== valor) onElegir(texto);
+  };
+  return (
+    <Input
+      id={id}
+      type="month"
+      value={texto}
+      min={min}
+      max={max}
+      placeholder="AAAA-MM"
+      onChange={(e) => setTexto(e.target.value)}
+      onBlur={aplicar}
+      onKeyDown={(e) => e.key === "Enter" && aplicar()}
+    />
   );
 }
 

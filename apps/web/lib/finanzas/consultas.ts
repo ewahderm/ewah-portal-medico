@@ -405,14 +405,45 @@ export async function getPeriodos(supabase: Supabase): Promise<Periodo[]> {
   return (data ?? []) as Periodo[];
 }
 
-export type Arqueo = { periodo_id: string; cuenta_id: string; saldo_sistema: number; saldo_contado: number; diferencia: number; motivo: string | null };
+export type Arqueo = {
+  id: string;
+  periodo_id: string;
+  cuenta_id: string;
+  saldo_sistema: number;
+  saldo_contado: number;
+  diferencia: number;
+  motivo: string | null;
+  reemplazado: boolean;
+};
 
 export async function getArqueos(supabase: Supabase): Promise<Arqueo[]> {
-  const { data } = await supabase.from("fin_arqueos").select("periodo_id, cuenta_id, saldo_sistema, saldo_contado, diferencia, motivo").order("created_at");
+  const { data } = await supabase.from("fin_arqueos").select("id, periodo_id, cuenta_id, saldo_sistema, saldo_contado, diferencia, motivo, reemplazado").order("created_at");
   return ((data ?? []) as Arqueo[]).map((a) => ({
     ...a,
     saldo_sistema: Number(a.saldo_sistema),
     saldo_contado: Number(a.saldo_contado),
     diferencia: Number(a.diferencia),
   }));
+}
+
+// Todos los movimientos de un rango (el API devuelve hasta 1.000 por
+// consulta: se piden por páginas). Para exportar.
+export async function getMovimientosRango(supabase: Supabase, desde: string, hasta: string, sedeId: string | null, maximo = 100000): Promise<Movimiento[]> {
+  const todos: Movimiento[] = [];
+  const pagina = 1000;
+  for (let desdeFila = 0; desdeFila < maximo; desdeFila += pagina) {
+    let q = supabase.from("fin_movimientos").select(MOV_SELECT).gte("fecha", desde).lte("fecha", hasta);
+    if (sedeId && UUID.test(sedeId)) q = q.eq("sede_id", sedeId);
+    const { data, error } = await q.order("fecha").order("created_at").order("id").range(desdeFila, desdeFila + pagina - 1);
+    if (error) throw error;
+    todos.push(...((data ?? []) as Movimiento[]).map(numeros));
+    if ((data ?? []).length < pagina) break;
+  }
+  return todos;
+}
+
+export async function getFlujoMeses(supabase: Supabase, desde: string, hasta: string, sedeId: string | null): Promise<{ mes: string; entradas: number; salidas: number }[]> {
+  const { data, error } = await supabase.rpc("fn_fin_flujo_meses", { p_desde: desde, p_hasta: hasta, p_sede: sedeId && UUID.test(sedeId) ? sedeId : null });
+  if (error) console.error("[finanzas] fn_fin_flujo_meses", error);
+  return ((data ?? []) as { mes: string; entradas: number; salidas: number }[]).map((m) => ({ mes: m.mes, entradas: Number(m.entradas), salidas: Number(m.salidas) }));
 }

@@ -20,7 +20,7 @@ type Datos = {
 
 // Las fuentes estándar de PDF solo traen WinAnsi: se quitan caracteres
 // fuera de ese juego (el "−" tipográfico, por ejemplo).
-const texto = (t: string) => t.replace(/[−–]/g, "-").replace(/[^\x20-\x7E\xA0-\xFF]/g, "");
+const texto = (t: string) => t.replace(/[−–]/g, "-").replace(/[^\x20-\x7E\xA0-\xFF\u2018\u2019\u201C\u201D\u2026]/g, "");
 
 export async function descargarInformePdf(d: Datos) {
   const doc = await PDFDocument.create();
@@ -37,7 +37,14 @@ export async function descargarInformePdf(d: Datos) {
   };
   const linea = (izq: string, der: string | null, f: PDFFont = fuente, tam = 10, sangria = 0) => {
     if (y < 60) nuevaPagina();
-    page.drawText(texto(izq), { x: margen + sangria, y, size: tam, font: f, maxWidth: ancho - 140 - sangria });
+    // Una línea por renglón: lo que no cabe se corta con "...".
+    const maxIzq = ancho - 140 - sangria;
+    let t0 = texto(izq);
+    if (der !== null && f.widthOfTextAtSize(t0, tam) > maxIzq) {
+      while (t0.length > 1 && f.widthOfTextAtSize(`${t0}...`, tam) > maxIzq) t0 = t0.slice(0, -1);
+      t0 = `${t0}...`;
+    }
+    page.drawText(t0, { x: margen + sangria, y, size: tam, font: f, maxWidth: der === null ? ancho : undefined });
     if (der !== null) {
       const t = texto(der);
       page.drawText(t, { x: margen + ancho - f.widthOfTextAtSize(t, tam), y, size: tam, font: f });

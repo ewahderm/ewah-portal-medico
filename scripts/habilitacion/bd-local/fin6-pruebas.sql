@@ -49,7 +49,9 @@ insert into tratamientos (clinica_id, paciente_id, tipo_tratamiento_id, profesio
 values (clinica_actual(), '00000000-0000-0000-0000-000000000321', '00000000-0000-0000-0000-000000000301', auth.uid(), '00000000-0000-0000-0000-000000000341',
   '2026-01-25', 45000, (select id from sedes where clinica_id = clinica_actual() order by orden limit 1), '00000000-0000-0000-0000-000000000311', auth.uid())
 returning id as t_cerrado \gset
-select t.ok(situacion = 'por_generar', 'un tratamiento del mes cerrado se guarda y queda pendiente') from fn_fin_ingresos_pendientes() where tratamiento_id = :'t_cerrado';
+select t.ok(fecha = '2026-02-01' and descripcion like '%(tratamiento del 25/01/2026, mes cerrado)',
+  'un tratamiento del mes cerrado genera su ingreso el primer día abierto, con su fecha en la nota')
+  from fin_movimientos where origen = 'tratamiento' and origen_id = :'t_cerrado' and estado <> 'anulado';
 
 -- Febrero, reabrir en orden y volver a registrar.
 select fn_fin_cerrar_mes(2026, 2);
@@ -110,7 +112,7 @@ select t.ok(count(*) filter (where u.email = 'contador@x.co') = 0 and count(*) f
 -- con privilegios del dueño (security definer) y RLS en todas las tablas.
 select t.ok(array_agg(p.proname::text order by p.proname) = array[
     'fn_fin_alertas_pendientes', 'fn_fin_anular_liquidacion', 'fn_fin_anular_movimiento', 'fn_fin_anular_registro',
-    'fn_fin_cerrar_mes', 'fn_fin_clinicas_alertas', 'fn_fin_destinatarios', 'fn_fin_devolucion_prestamo', 'fn_fin_generar_ingresos',
+    'fn_fin_cerrar_mes', 'fn_fin_clinicas_alertas', 'fn_fin_destinatarios', 'fn_fin_devolucion_prestamo', 'fn_fin_fecha_abierta', 'fn_fin_generar_ingresos',
     'fn_fin_ingreso_de_tratamiento', 'fn_fin_ingresos_pendientes', 'fn_fin_liquidacion_cobro_trasladado', 'fn_fin_liquidar_pasarela',
     'fn_fin_mes_abierto', 'fn_fin_reabrir_mes', 'fn_fin_reembolsar_socio', 'fn_fin_registrar_cobro', 'fn_fin_tratamiento_sincronizar',
     'fn_fin_tratamientos_situacion']::text[],
@@ -121,3 +123,37 @@ from pg_class c where c.relnamespace = 'public'::regnamespace and c.relkind = 'r
 select t.ok(not exists (
   select 1 from pg_proc p where p.pronamespace = 'public'::regnamespace and p.proname like 'fn_fin_%' and p.prosecdef
     and has_function_privilege('anon', p.oid, 'execute')), 'ninguna función privilegiada la puede ejecutar anon');
+
+-- ============================================================
+-- Ajustes (0100)
+-- ============================================================
+-- Otra clínica personaliza una categoría: el informe de esta no cambia
+-- aunque se calcule sin RLS (como en la foto del cierre).
+insert into fin_categorias_clinica (clinica_id, categoria_codigo, nombre)
+select id, 'ARRENDAMIENTO', 'Arriendo del local' from clinicas where nombre = 'Clinica B';
+select t.como('00000000-0000-0000-0000-00000000000a');
+create temp table flujo_sin_rls as select * from fn_fin_flujo(:'inicio', :'hoy');
+grant select on flujo_sin_rls to authenticated;
+set role authenticated;
+select t.ok((select count(*) from flujo_sin_rls) = (select count(*) from fn_fin_flujo(:'inicio', :'hoy'))
+  and not exists (select codigo, entradas, salidas from flujo_sin_rls except select codigo, entradas, salidas from fn_fin_flujo(:'inicio', :'hoy')),
+  'el informe sin RLS (foto del cierre) es igual al de la pantalla aunque otra clínica personalice categorías');
+-- Con una sede, el abono de la pasarela se reparte según la sede de sus cobros.
+select id as sede1 from sedes where clinica_id = clinica_actual() order by orden limit 1 \gset
+select t.ok((select entradas - salidas from fn_fin_flujo(:'inicio', :'hoy', :'sede1') where codigo = 'ABONO_PASARELA')
+  = (select entradas - salidas from fn_fin_flujo(:'inicio', :'hoy') where codigo = 'ABONO_PASARELA'),
+  'los cobros de la sede traen su abono de la pasarela');
+select t.ok(count(*) = 0, 'otra sede no recibe abonos ajenos') from fn_fin_flujo(:'inicio', :'hoy', gen_random_uuid()) where codigo = 'ABONO_PASARELA';
+-- Serie mensual en una consulta.
+select t.ok((select entradas - salidas from fn_fin_flujo_meses(:'inicio', :'hoy') where mes = to_char(:'hoy'::date, 'YYYY-MM'))
+  = (select sum(entradas - salidas) from fn_fin_flujo(date_trunc('month', :'hoy'::date)::date, :'hoy')), 'la serie mensual cuadra con el informe del mes');
+-- Reabrir enero anula el ajuste de su arqueo; al cerrar de nuevo se rehace.
+select fn_fin_reabrir_mes(2026, 2, 'Reabrir febrero para llegar a enero');
+select fn_fin_reabrir_mes(2026, 1, 'El conteo del efectivo estaba mal');
+select t.ok(m.estado = 'anulado' and a.reemplazado, 'reabrir anula el ajuste del arqueo y lo marca reemplazado')
+  from fin_arqueos a join fin_movimientos m on m.id = a.movimiento_id join fin_periodos p on p.id = a.periodo_id where p.anio = 2026 and p.mes = 1;
+select t.ok(saldo = :'efectivo_ene'::numeric, 'el efectivo de enero vuelve a lo del sistema') from fn_fin_saldos('2026-01-31') where cuenta_id = :'efectivo';
+select fn_fin_cerrar_mes(2026, 1);
+select fn_fin_cerrar_mes(2026, 2);
+select t.ok(count(*) = 2, 'enero y febrero cerrados de nuevo') from fin_periodos where estado = 'cerrado';
+reset role;
