@@ -9,7 +9,9 @@ export type SituacionIngreso =
   | "fecha_futura"
   | "anulado_con_ingreso"
   | "corregido_sin_anular"
-  | "anulado_liquidado";
+  | "anulado_liquidado"
+  | "en_flujo"
+  | "excluido";
 
 export type IngresoPendiente = {
   tratamiento_id: string;
@@ -23,6 +25,8 @@ export type IngresoPendiente = {
   // null si quien consulta no puede ver pacientes ni tratamientos.
   paciente: string | null;
   sede_id: string;
+  // Solo en la vista de excluidos: por qué se decidió no meterlo.
+  motivo?: string | null;
 };
 
 export const SITUACIONES: Record<SituacionIngreso, { titulo: string; ayuda: string }> = {
@@ -54,6 +58,14 @@ export const SITUACIONES: Record<SituacionIngreso, { titulo: string; ayuda: stri
     titulo: "Anulados con el cobro ya abonado",
     ayuda:
       "El tratamiento se anuló, pero la pasarela ya abonó ese cobro. Si devolviste la plata al paciente, registra la salida; si fue un error de la liquidación, anúlala en Bold y pon al día.",
+  },
+  en_flujo: {
+    titulo: "Ya en el flujo",
+    ayuda: "Tratamientos cuyo ingreso ya está registrado en el flujo de caja (los 200 más recientes).",
+  },
+  excluido: {
+    titulo: "Excluidos del flujo",
+    ayuda: "Tratamientos que decidiste no meter en el flujo de caja. Puedes volver a incluirlos cuando quieras.",
   },
   anulado_con_ingreso: {
     titulo: "Anulados con ingreso",
@@ -142,5 +154,36 @@ export function validarCobro(input: { monto: number | null; fecha: string; cuent
   if (input.fecha < input.fechaInicio) return "La fecha es anterior al inicio del flujo de caja.";
   if (input.monto === null || !Number.isFinite(input.monto) || input.monto <= 0) return "Escribe el valor cobrado.";
   if (input.monto > 9_999_999_999) return "El valor es demasiado grande.";
+  return null;
+}
+
+// Vistas de la pantalla de cobros: lo pendiente (por defecto), lo que ya
+// entró al flujo de caja y lo que la clínica decidió no meter en él.
+export type VistaCobros = "pendientes" | "en_flujo" | "excluidos";
+
+export const VISTAS_COBROS: { valor: VistaCobros; titulo: string }[] = [
+  { valor: "pendientes", titulo: "Pendientes" },
+  { valor: "en_flujo", titulo: "Ya en el flujo" },
+  { valor: "excluidos", titulo: "Excluidos" },
+];
+
+export function vistaDeParametro(v: string | string[] | undefined): VistaCobros {
+  return v === "en_flujo" || v === "excluidos" ? v : "pendientes";
+}
+
+// Situaciones en las que se puede decidir no meter el tratamiento en el
+// flujo (las demás ya tienen un ingreso vivo que primero hay que anular).
+const EXCLUIBLES: SituacionIngreso[] = ["por_generar", "por_cobrar", "sin_valor", "medio_sin_cuenta", "fecha_futura"];
+
+export function sePuedeExcluir(situacion: SituacionIngreso): boolean {
+  return EXCLUIBLES.includes(situacion);
+}
+
+export const MOTIVO_EXCLUSION_MIN = 10;
+
+export function validarMotivoExclusion(motivo: string): string | null {
+  const m = motivo.trim();
+  if (m.length < MOTIVO_EXCLUSION_MIN) return `Explica por qué no entra al flujo de caja (al menos ${MOTIVO_EXCLUSION_MIN} caracteres).`;
+  if (m.length > 500) return "El motivo es demasiado largo (máximo 500 caracteres).";
   return null;
 }

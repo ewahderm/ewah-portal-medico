@@ -447,3 +447,14 @@ export async function getFlujoMeses(supabase: Supabase, desde: string, hasta: st
   if (error) console.error("[finanzas] fn_fin_flujo_meses", error);
   return ((data ?? []) as { mes: string; entradas: number; salidas: number }[]).map((m) => ({ mes: m.mes, entradas: Number(m.entradas), salidas: Number(m.salidas) }));
 }
+
+// Tratamientos que ya entraron al flujo ('en_flujo') o que se excluyeron
+// ('excluidos'). null si no se pudo consultar.
+export async function getTratamientosFlujo(supabase: Supabase, vista: "en_flujo" | "excluidos"): Promise<IngresoPendiente[] | null> {
+  const { data, error } = await supabase.rpc("fn_fin_tratamientos_flujo", { p_vista: vista });
+  if (error) {
+    console.error("[finanzas] fn_fin_tratamientos_flujo", error);
+    return null;
+  }
+  return ((data ?? []) as IngresoPendiente[]).map((p) => ({ ...p, valor: p.valor === null ? null : Number(p.valor) }));
+}

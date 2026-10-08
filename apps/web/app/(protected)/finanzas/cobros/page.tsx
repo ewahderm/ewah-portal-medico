@@ -1,14 +1,17 @@
 import { TriangleAlertIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { requireUsuario } from "@/lib/auth/session";
-import { getAccesoFinanzas, getConfigFinanzas, getCuentas, getIngresosPendientes } from "@/lib/finanzas/consultas";
+import { getAccesoFinanzas, getConfigFinanzas, getCuentas, getIngresosPendientes, getTratamientosFlujo } from "@/lib/finanzas/consultas";
+import { vistaDeParametro } from "@/lib/finanzas/tratamientos";
 import { hoyBogota } from "@/lib/habilitacion/servidor";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CobrosCliente } from "./cobros-cliente";
 
 // FC3: tratamientos por cobrar (crédito) y por revisar, y la puesta al día
-// de los ingresos que el sistema puede registrar solo.
-export default async function CobrosPage() {
+// de los ingresos que el sistema puede registrar solo. ?ver= elige entre
+// los pendientes (por defecto), los que ya entraron al flujo y los
+// excluidos.
+export default async function CobrosPage({ searchParams }: { searchParams: Promise<{ [k: string]: string | string[] | undefined }> }) {
   await requireUsuario();
   const acceso = await getAccesoFinanzas();
   if (!acceso.puedeVer) {
@@ -28,8 +31,13 @@ export default async function CobrosPage() {
       </Alert>
     );
   }
-  const [pendientes, cuentas] = await Promise.all([getIngresosPendientes(supabase), getCuentas(supabase)]);
-  if (!pendientes) {
+  const vista = vistaDeParametro((await searchParams).ver);
+  const [pendientes, cuentas, otraVista] = await Promise.all([
+    getIngresosPendientes(supabase),
+    getCuentas(supabase),
+    vista === "pendientes" ? Promise.resolve([]) : getTratamientosFlujo(supabase, vista),
+  ]);
+  if (!pendientes || !otraVista) {
     return (
       <Alert variant="destructive">
         <TriangleAlertIcon />
@@ -39,7 +47,9 @@ export default async function CobrosPage() {
   }
   return (
     <CobrosCliente
+      vista={vista}
       pendientes={pendientes}
+      otraVista={otraVista}
       cuentas={cuentas.filter((c) => c.activa && c.moneda === "COP" && c.tipo !== "tarjeta_socio").map((c) => ({ id: c.id, nombre: c.nombre }))}
       hoy={hoyBogota()}
       fechaInicio={config.fecha_inicio}

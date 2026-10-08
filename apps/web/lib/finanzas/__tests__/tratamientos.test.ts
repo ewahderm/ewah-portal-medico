@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { configDeDestino, destinoDeConfig, resumirPendientes, validarCobro, type IngresoPendiente } from "../tratamientos";
+import {
+  configDeDestino,
+  destinoDeConfig,
+  resumirPendientes,
+  sePuedeExcluir,
+  validarCobro,
+  validarMotivoExclusion,
+  vistaDeParametro,
+  type IngresoPendiente,
+} from "../tratamientos";
 
 const fila = (p: Partial<IngresoPendiente>): IngresoPendiente => ({
   tratamiento_id: crypto.randomUUID(),
@@ -72,5 +81,31 @@ describe("validarCobro", () => {
     expect(validarCobro({ ...base, monto: null })).toMatch(/valor/);
     expect(validarCobro({ ...base, monto: 0 })).toMatch(/valor/);
     expect(validarCobro({ ...base, monto: Number.NaN })).toMatch(/valor/);
+  });
+});
+
+describe("exclusión del flujo de caja", () => {
+  it("la vista sale del parámetro, con pendientes por defecto", () => {
+    expect(vistaDeParametro(undefined)).toBe("pendientes");
+    expect(vistaDeParametro("en_flujo")).toBe("en_flujo");
+    expect(vistaDeParametro("excluidos")).toBe("excluidos");
+    expect(vistaDeParametro("cualquier-cosa")).toBe("pendientes");
+    expect(vistaDeParametro(["excluidos"])).toBe("pendientes");
+  });
+
+  it("solo se excluye lo que aún no tiene ingreso vivo", () => {
+    for (const s of ["por_generar", "por_cobrar", "sin_valor", "medio_sin_cuenta", "fecha_futura"] as const) {
+      expect(sePuedeExcluir(s)).toBe(true);
+    }
+    for (const s of ["anulado_con_ingreso", "anulado_liquidado", "corregido_sin_anular", "en_flujo", "excluido"] as const) {
+      expect(sePuedeExcluir(s)).toBe(false);
+    }
+  });
+
+  it("el motivo pide al menos 10 caracteres útiles", () => {
+    expect(validarMotivoExclusion("corto")).toMatch(/al menos 10/);
+    expect(validarMotivoExclusion("         x         ")).toMatch(/al menos 10/);
+    expect(validarMotivoExclusion("Cortesía de la gerencia")).toBeNull();
+    expect(validarMotivoExclusion("a".repeat(501))).toMatch(/demasiado largo/);
   });
 });

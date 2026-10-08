@@ -111,6 +111,8 @@ export const FINANZAS_COBROS: Guia = {
           items: [
             "`Poner al día` registra de una vez lo que ya tiene cuenta (por ejemplo, después de asignar un medio de pago).",
             "`Registrar cobro`: cuando el paciente paga un crédito, eliges la cuenta, la fecha y el valor.",
+            "`No meter en el flujo`: si un tratamiento no debe generar ingreso (una cortesía, un registro de prueba, algo cobrado fuera de la clínica), lo excluyes con un motivo. No se borra ni se modifica el tratamiento, y puedes `Volver a incluir` desde la pestaña **Excluidos**.",
+            "Arriba de la lista eliges qué ver: **Pendientes** (marcados como pendientes), **Ya en el flujo** (su ingreso ya está registrado) o **Excluidos**.",
           ],
         },
         { tipo: "imagen", archivo: "finanzas-cobros.jpg", alt: "Cobros por revisar y por cobrar" },

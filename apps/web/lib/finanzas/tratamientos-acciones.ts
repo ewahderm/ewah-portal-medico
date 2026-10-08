@@ -9,7 +9,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requirePermiso } from "@/lib/auth/requirePermiso";
 import { esUuid, hoyBogota, mensajeError } from "@/lib/habilitacion/servidor";
 import { MODULO_FINANZAS } from "@/lib/finanzas/constantes";
-import { configDeDestino, validarCobro, type DestinoMedio } from "@/lib/finanzas/tratamientos";
+import { configDeDestino, validarCobro, validarMotivoExclusion, type DestinoMedio } from "@/lib/finanzas/tratamientos";
 
 type Resultado = { error?: string };
 
@@ -62,6 +62,30 @@ export async function registrarCobro(input: { tratamientoId: string; cuentaId: s
     p_monto: input.monto,
   });
   if (errorBd) return { error: mensajeError("registrarCobro", errorBd, "No se pudo registrar el cobro.") };
+  revalidar();
+  return {};
+}
+
+export async function excluirTratamiento(input: { tratamientoId: string; motivo: string }): Promise<Resultado> {
+  if (!esUuid(input.tratamientoId)) return { error: "Datos inválidos." };
+  const invalido = validarMotivoExclusion(input.motivo);
+  if (invalido) return { error: invalido };
+  const check = await requirePermiso(MODULO_FINANZAS, "CREATE");
+  if (!check.ok) return { error: check.error };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("fn_fin_excluir_tratamiento", { p_tratamiento: input.tratamientoId, p_motivo: input.motivo.trim() });
+  if (error) return { error: mensajeError("excluirTratamiento", error, "No se pudo excluir el tratamiento del flujo de caja.") };
+  revalidar();
+  return {};
+}
+
+export async function reincluirTratamiento(tratamientoId: string): Promise<Resultado> {
+  if (!esUuid(tratamientoId)) return { error: "Datos inválidos." };
+  const check = await requirePermiso(MODULO_FINANZAS, "CREATE");
+  if (!check.ok) return { error: check.error };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("fn_fin_reincluir_tratamiento", { p_tratamiento: tratamientoId });
+  if (error) return { error: mensajeError("reincluirTratamiento", error, "No se pudo volver a incluir el tratamiento.") };
   revalidar();
   return {};
 }
