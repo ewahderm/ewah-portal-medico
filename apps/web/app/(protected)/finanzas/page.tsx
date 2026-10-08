@@ -70,8 +70,11 @@ export default async function FinanzasPage() {
   const mes = resumirPeriodo(delMes.map((m) => ({ tipo: m.tipo, categoria: codigoCategoria(m), valor_cop: m.valor_cop, origen: m.origen })));
   const nombreCategoria = new Map(datos.categorias.map((c) => [c.codigo, c.nombre]));
   const nombreCuenta = new Map(datos.cuentas.map((c) => [c.id, c.nombre]));
+  const monedaCuenta = new Map(datos.cuentas.map((c) => [c.id, c.moneda]));
   const nombreSocio = new Map(datos.socios.map((s) => [s.id, s.nombre]));
   const maxCategoria = Math.max(1, ...mes.porCategoria.map((c) => c.salidas));
+  // Una cuenta inactiva que aún tiene saldo se sigue mostrando (y contando).
+  const visibles = datos.cuentas.filter((c) => c.activa || c.saldo !== 0);
 
   return (
     <div className="space-y-4">
@@ -87,10 +90,10 @@ export default async function FinanzasPage() {
             detalle="Efectivo en dólares y euros"
           />
         ) : null}
-        {datos.cuentas.some((c) => c.tipo === "pasarela") ? (
+        {datos.cuentas.some((c) => c.tipo === "pasarela" && (c.activa || c.saldo !== 0)) ? (
           <Cifra icono={CreditCardIcon} titulo="Por abonar (pasarela)" valor={formatoDinero(resumen.porAbonar)} detalle="Cobros con tarjeta que aún no llegan" />
         ) : null}
-        {datos.cuentas.some((c) => c.tipo === "tarjeta_socio") ? (
+        {datos.cuentas.some((c) => c.tipo === "tarjeta_socio" && (c.activa || c.saldo !== 0)) ? (
           <Cifra
             icono={HandCoinsIcon}
             titulo="Se les debe a los socios"
@@ -109,7 +112,7 @@ export default async function FinanzasPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-3 gap-2 text-sm">
+            <div className="grid grid-cols-1 gap-2 text-sm min-[420px]:grid-cols-3">
               <div className="rounded-lg border p-2">
                 <p className="text-xs text-muted-foreground">Entró</p>
                 <p className="font-semibold tabular-nums text-emerald-700">{formatoDinero(mes.entradas)}</p>
@@ -159,7 +162,7 @@ export default async function FinanzasPage() {
             ) : (
               <ul className="divide-y">
                 {recientes.map((m) => (
-                  <MovimientoFila key={m.id} movimiento={m} nombreCategoria={nombreCategoria} nombreCuenta={nombreCuenta} nombreSocio={nombreSocio} compacta />
+                  <MovimientoFila key={m.id} movimiento={m} nombreCategoria={nombreCategoria} nombreCuenta={nombreCuenta} monedaCuenta={monedaCuenta} nombreSocio={nombreSocio} compacta />
                 ))}
               </ul>
             )}
@@ -178,11 +181,11 @@ export default async function FinanzasPage() {
         </CardHeader>
         <CardContent>
           <p className="mb-2 text-xs text-muted-foreground">Llevas la caja desde el {fechaLegible(config.fecha_inicio)}.</p>
-          {datos.cuentas.length === 0 ? (
+          {visibles.length === 0 ? (
             <p className="text-sm text-muted-foreground">No hay cuentas activas.</p>
           ) : (
             <ul className="divide-y">
-              {datos.cuentas.map((c) => {
+              {visibles.map((c) => {
                 const Icono = ICONOS[c.tipo];
                 const deuda = c.tipo === "tarjeta_socio";
                 return (
@@ -192,7 +195,10 @@ export default async function FinanzasPage() {
                         <Icono className="size-4" />
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-medium">{c.nombre}</span>
+                        <span className="block truncate text-sm font-medium">
+                          {c.nombre}
+                          {!c.activa ? <span className="ml-1 text-xs font-normal text-muted-foreground">(inactiva)</span> : null}
+                        </span>
                         <span className="block text-xs text-muted-foreground">
                           {etiqueta(TIPOS_CUENTA, c.tipo)}
                           {deuda && c.socio_id ? ` · ${nombreSocio.get(c.socio_id) ?? ""}` : ""}

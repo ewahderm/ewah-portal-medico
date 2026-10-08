@@ -30,17 +30,18 @@ export function validarMovimiento(m: MovimientoEntrada, contexto: { hoy: string;
   if (m.fecha < contexto.fechaInicio) return "La fecha es anterior al inicio del flujo de caja.";
   if (m.monto === null || !(m.monto > 0)) return "Escribe cuánto fue.";
   if (m.monto > 1e12) return "El monto es demasiado grande.";
+  // Mismo orden que la pantalla: ¿cuánto? → ¿en qué? → ¿con qué cuenta?
+  if (m.tipo !== "transferencia" && !m.categoria) return m.tipo === "ingreso" ? "Elige de qué es la entrada." : "Elige en qué se gastó.";
   if (!m.cuentaId) return m.tipo === "ingreso" ? "Elige a dónde llegó la plata." : "Elige de dónde salió la plata.";
   if (m.moneda !== "COP" && (m.tasa === null || !(m.tasa > 0) || m.tasa > TASA_MAXIMA)) return `Escribe a cuánto estaba el ${m.moneda} en pesos.`;
   if (m.tipo === "transferencia") {
     if (!m.cuentaDestinoId) return "Elige a qué cuenta pasa la plata.";
     if (m.cuentaDestinoId === m.cuentaId) return "La cuenta de origen y la de destino deben ser distintas.";
     if (m.monedaDestino && m.monedaDestino !== m.moneda) {
-      if (m.montoDestino === null || !(m.montoDestino > 0)) return `Escribe cuántos ${m.monedaDestino} llegaron.`;
+      if (m.montoDestino === null || !(m.montoDestino > 0) || m.montoDestino > 1e12) return `Escribe cuántos ${m.monedaDestino} llegaron.`;
     }
     return null;
   }
-  if (!m.categoria) return m.tipo === "ingreso" ? "Elige de qué es la entrada." : "Elige en qué se gastó.";
   if (m.requiereSocio && !m.socioId) return "Elige el socio.";
   return null;
 }

@@ -53,14 +53,18 @@ export default async function MovimientosPage({ searchParams }: { searchParams: 
   const cuenta = typeof q.cuenta === "string" ? q.cuenta : "";
   const categoria = typeof q.categoria === "string" ? q.categoria : "";
 
-  const [datos, movimientos, proveedores] = await Promise.all([
+  // Sin el filtro de tipo en la consulta: una anulación tiene el tipo
+  // invertido y los totales deben restarla aunque se filtre por tipo.
+  const [datos, delMes, proveedores] = await Promise.all([
     getDatosRegistro(supabase, acceso, config, hoy),
-    getMovimientos(supabase, { desde: `${mes}-01`, hasta: ultimoDia(mes), tipo, cuentaId: cuenta, categoria }, 1000),
+    getMovimientos(supabase, { desde: `${mes}-01`, hasta: ultimoDia(mes), cuentaId: cuenta, categoria }, 2000),
     getProveedores(supabase),
   ]);
-  const resumen = resumirPeriodo(movimientos.map((m) => ({ tipo: m.tipo, categoria: codigoCategoria(m), valor_cop: m.valor_cop, origen: m.origen })));
+  const movimientos = tipo ? delMes.filter((m) => m.tipo === tipo || (m.origen === "anulacion" && delMes.some((o) => o.id === m.anula_a && o.tipo === tipo))) : delMes;
+  const resumen = resumirPeriodo(delMes.map((m) => ({ tipo: m.tipo, categoria: codigoCategoria(m), valor_cop: m.valor_cop, origen: m.origen })));
   const nombreCategoria = new Map(datos.categorias.map((c) => [c.codigo, c.nombre]));
   const nombreCuenta = new Map(datos.cuentas.map((c) => [c.id, c.nombre]));
+  const monedaCuenta = new Map(datos.cuentas.map((c) => [c.id, c.moneda]));
   const nombreSocio = new Map(datos.socios.map((s) => [s.id, s.nombre]));
   const nombreProveedor = new Map(proveedores.map((p) => [p.id, p.nombre]));
   const [anio, numMes] = mes.split("-").map(Number);
@@ -104,7 +108,7 @@ export default async function MovimientosPage({ searchParams }: { searchParams: 
             cuentas={datos.cuentas.map((c) => ({ value: c.id, label: c.nombre }))}
             categorias={datos.categorias.map((c) => ({ value: c.codigo, label: c.nombre }))}
           />
-          <div className="grid grid-cols-3 gap-2 text-sm">
+          <div className="grid grid-cols-1 gap-2 text-sm min-[420px]:grid-cols-3">
             <div className="rounded-lg border p-2">
               <p className="text-xs text-muted-foreground">Entró</p>
               <p className="font-semibold tabular-nums text-emerald-700">{formatoDinero(resumen.entradas)}</p>
@@ -132,6 +136,7 @@ export default async function MovimientosPage({ searchParams }: { searchParams: 
                   movimiento={m}
                   nombreCategoria={nombreCategoria}
                   nombreCuenta={nombreCuenta}
+                  monedaCuenta={monedaCuenta}
                   nombreSocio={nombreSocio}
                   nombreProveedor={nombreProveedor}
                   puedeAnular={acceso.puedeAnular}

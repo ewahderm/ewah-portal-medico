@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowDownLeftIcon, ArrowLeftRightIcon, ArrowUpRightIcon, PaperclipIcon } from "lucide-react";
 import { anularMovimiento, urlSoporteMovimiento } from "@/lib/finanzas/movimientos-acciones";
 import type { Movimiento } from "@/lib/finanzas/consultas";
+import type { Moneda } from "@/lib/finanzas/constantes";
 import { codigoCategoria } from "@/lib/finanzas/movimientos";
 import { formatoDinero } from "@/lib/finanzas/dinero";
 import { fechaLegible } from "@/lib/habilitacion/ruta";
@@ -21,6 +22,7 @@ export function MovimientoFila({
   movimiento: m,
   nombreCategoria,
   nombreCuenta,
+  monedaCuenta,
   nombreSocio,
   compacta = false,
   puedeAnular = false,
@@ -29,6 +31,7 @@ export function MovimientoFila({
   movimiento: Movimiento;
   nombreCategoria: Map<string, string>;
   nombreCuenta: Map<string, string>;
+  monedaCuenta?: Map<string, Moneda>;
   nombreSocio: Map<string, string>;
   nombreProveedor?: Map<string, string>;
   compacta?: boolean;
@@ -91,7 +94,9 @@ export function MovimientoFila({
         </span>
         {m.moneda !== "COP" ? <span className="block text-xs text-muted-foreground">{formatoDinero(m.valor_cop)}</span> : null}
         {m.tipo === "transferencia" && m.monto_destino !== null && m.monto_destino !== m.monto_original ? (
-          <span className="block text-xs text-muted-foreground">llegaron {m.monto_destino.toLocaleString("es-CO")}</span>
+          <span className="block text-xs text-muted-foreground">
+            llegaron {formatoDinero(m.monto_destino, monedaCuenta?.get(m.cuenta_destino_id ?? "") ?? m.moneda)}
+          </span>
         ) : null}
       </span>
       {anulando ? <AnularDialog movimiento={m} titulo={titulo} onCerrar={() => setAnulando(false)} /> : null}

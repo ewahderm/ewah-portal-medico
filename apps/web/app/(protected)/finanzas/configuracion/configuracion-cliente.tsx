@@ -348,6 +348,7 @@ function CuentaDialog({
                   id="sedeCuenta"
                   items={[{ value: "", label: "General (todas)" }, ...sedes.map((s) => ({ value: s.id, label: s.nombre }))]}
                   value={sedeId ?? ""}
+                  placeholder="General (todas)"
                   onValueChange={(v) => setSedeId(v ? String(v) : null)}
                 />
               </div>

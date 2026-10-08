@@ -74,6 +74,24 @@ reset role;
 select t.debe_fallar(format('update fin_movimientos set descripcion = ''x'' where id = %L', :'prestamo'), 'no se modifica');
 select t.debe_fallar(format('delete from fin_movimientos where id = %L', :'prestamo'), 'no se borra');
 
+-- Ajustes (0092): campos del sistema saneados, soporte en su carpeta y
+-- fecha de inicio frente a los movimientos.
+select t.como('00000000-0000-0000-0000-00000000000a'); set role authenticated;
+insert into fin_movimientos (clinica_id, fecha, tipo, categoria_codigo, cuenta_id, moneda, monto_original,
+  anulado_motivo, anulado_en, fecha_esperada, origen_id, tercero_tipo, tercero_nombre)
+values (clinica_actual(), :'hoy', 'egreso', 'GASOLINA', :'banco', 'COP', 50000,
+  'falso', now() - interval '1 year', '2030-01-01', gen_random_uuid(), 'paciente', 'Estación El Cruce')
+returning id as gasolina \gset
+select t.ok(anulado_motivo is null and anulado_en is null and fecha_esperada is null and origen_id is null and tercero_tipo = 'otro',
+  'un movimiento manual no trae del cliente los campos del sistema') from fin_movimientos where id = :'gasolina';
+select t.debe_fallar(format($q$insert into fin_movimientos (clinica_id, fecha, tipo, categoria_codigo, cuenta_id, moneda, monto_original, soporte_storage_path) values (clinica_actual(), %L, 'egreso', 'GASOLINA', %L, 'COP', 1, clinica_actual() || '/movimientos/otro/x.pdf')$q$, :'hoy', :'banco'), 'no corresponde');
+insert into fin_movimientos (clinica_id, fecha, tipo, categoria_codigo, cuenta_id, moneda, monto_original)
+values (clinica_actual(), '2026-03-02', 'egreso', 'CAMARA_COMERCIO', :'banco', 'COP', 640000);
+select t.debe_fallar($q$update fin_config set fecha_inicio = '2026-04-01', motivo_cambio = 'Mover el inicio después de los movimientos'$q$, '02/03/2026');
+update fin_config set fecha_inicio = '2026-01-15', motivo_cambio = 'Adelantamos el inicio a mediados de enero';
+select t.ok(fecha_inicio = '2026-01-15', 'mover el inicio antes de los movimientos sí se puede') from fin_config;
+reset role;
+
 -- Sin permiso de anular (VOID): rol con solo VIEW/CREATE.
 select t.como('00000000-0000-0000-0000-0000000000a2'); set role authenticated;
 select t.debe_fallar(format($q$select fn_fin_anular_movimiento(%L, 'Intento sin permiso de anular')$q$, :'prestamo'), 'permiso');

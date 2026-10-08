@@ -23,15 +23,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { CampoDinero } from "./campo-dinero";
 import { IconoCategoria } from "./icono-categoria";
 
-export type CuentaOpcion = { id: string; nombre: string; tipo: TipoCuenta; moneda: Moneda; saldo: number; socio_id: string | null };
+export type CuentaOpcion = { id: string; nombre: string; tipo: TipoCuenta; moneda: Moneda; saldo: number; socio_id: string | null; activa: boolean };
 type Opcion = { id: string; nombre: string };
+type SocioOpcion = Opcion & { activo: boolean };
 
 export type DatosRegistro = {
   hoy: string;
   fechaInicio: string;
   cuentas: CuentaOpcion[];
   categorias: Categoria[];
-  socios: Opcion[];
+  socios: SocioOpcion[];
   proveedores: Opcion[];
   sedes: Opcion[];
   gestion: boolean;
@@ -101,20 +102,34 @@ function RegistrarMovimientoDialog({ tipoInicial, datos, onCerrar }: { tipoInici
   const cat = datos.categorias.find((c) => c.codigo === categoria) ?? null;
   const entreMonedas = tipo === "transferencia" && destino && destino.moneda !== moneda;
 
+  const sociosActivos = datos.socios.filter((s) => s.activo);
+  const cuentasActivas = datos.cuentas.filter((c) => c.activa);
   const categorias = useMemo(
     () => datos.categorias.filter((c) => c.activa && !c.automatica && (c.tipo === tipo || c.tipo === "ambos") && (datos.gestion || !["prestamo_socio", "aporte_socio"].includes(c.comportamiento))),
     [datos.categorias, datos.gestion, tipo],
   );
   // Egreso: cuentas disponibles y tarjetas de socio; ingreso y transferencia: solo disponibles.
-  const cuentasOrigen = datos.cuentas.filter((c) => (c.tipo === "tarjeta_socio" ? tipo === "egreso" && datos.gestion : c.tipo !== "pasarela"));
-  const cuentasDestino = datos.cuentas.filter((c) => c.tipo !== "pasarela" && c.tipo !== "tarjeta_socio" && c.id !== cuentaId);
+  const cuentasOrigen = cuentasActivas.filter((c) => (c.tipo === "tarjeta_socio" ? tipo === "egreso" && datos.gestion : c.tipo !== "pasarela"));
+  const cuentasDestino = cuentasActivas.filter((c) => c.tipo !== "pasarela" && c.tipo !== "tarjeta_socio" && c.id !== cuentaId);
+  // HU-4: aviso (sin bloquear) si una caja o billetera quedaría en negativo.
+  const quedaNegativa =
+    tipo !== "ingreso" && cuenta && ["efectivo", "nequi", "daviplata"].includes(cuenta.tipo) && monto !== null && monto > cuenta.saldo;
   const socioTarjeta = cuenta?.tipo === "tarjeta_socio" ? datos.socios.find((s) => s.id === cuenta.socio_id) : null;
 
   function cambiarTipo(t: TipoMovimiento) {
     setTipo(t);
     setCategoria(null);
+    setSocioId(null);
+    setProveedorId(null);
     setError(null);
     if (t !== "egreso" && cuenta?.tipo === "tarjeta_socio") setCuentaId(null);
+  }
+
+  function elegirCategoria(codigo: string) {
+    setCategoria(codigo);
+    const nueva = datos.categorias.find((c) => c.codigo === codigo);
+    // El socio solo viaja con préstamos y aportes.
+    if (!nueva || !["prestamo_socio", "aporte_socio"].includes(nueva.comportamiento)) setSocioId(null);
   }
 
   async function guardar() {
@@ -204,7 +219,7 @@ function RegistrarMovimientoDialog({ tipoInicial, datos, onCerrar }: { tipoInici
               1. ¿Cuánto? {moneda !== "COP" ? `(en ${moneda})` : ""}
             </Label>
             <div className="max-w-xs">
-              <CampoDinero key={moneda} id={`monto-${id}`} moneda={moneda} onValor={setMonto} required />
+              <CampoDinero id={`monto-${id}`} moneda={moneda} onValor={setMonto} required />
             </div>
           </section>
 
@@ -220,7 +235,7 @@ function RegistrarMovimientoDialog({ tipoInicial, datos, onCerrar }: { tipoInici
                     role="radio"
                     aria-checked={categoria === c.codigo}
                     title={c.ayuda}
-                    onClick={() => setCategoria(c.codigo)}
+                    onClick={() => elegirCategoria(c.codigo)}
                     className={cn(
                       "flex min-h-14 items-center gap-2 rounded-lg border p-2 text-left text-sm transition-colors",
                       categoria === c.codigo ? "border-primary bg-accent font-medium" : "hover:bg-muted",
@@ -245,6 +260,11 @@ function RegistrarMovimientoDialog({ tipoInicial, datos, onCerrar }: { tipoInici
                 setTasaTexto("");
                 if (v === cuentaDestinoId) setCuentaDestinoId(null);
               }} etiqueta="Cuenta" />
+            {quedaNegativa ? (
+              <p className="text-xs text-amber-700">
+                {cuenta?.nombre} tiene {formatoDinero(cuenta?.saldo ?? 0, cuenta?.moneda)}: quedará en negativo. Revisa si la plata salió de otra cuenta.
+              </p>
+            ) : null}
             {socioTarjeta ? (
               <p className="text-xs text-amber-700">La clínica le quedará debiendo este gasto a {socioTarjeta.nombre} hasta que se le reembolse.</p>
             ) : null}
@@ -257,7 +277,7 @@ function RegistrarMovimientoDialog({ tipoInicial, datos, onCerrar }: { tipoInici
               {entreMonedas ? (
                 <div className="max-w-xs space-y-1">
                   <Label htmlFor={`montoDestino-${id}`}>¿Cuántos {destino?.moneda} llegaron?</Label>
-                  <CampoDinero key={destino?.moneda} id={`montoDestino-${id}`} moneda={destino!.moneda} onValor={setMontoDestino} />
+                  <CampoDinero id={`montoDestino-${id}`} moneda={destino!.moneda} onValor={setMontoDestino} />
                 </div>
               ) : null}
             </section>
@@ -276,7 +296,7 @@ function RegistrarMovimientoDialog({ tipoInicial, datos, onCerrar }: { tipoInici
           {cat?.comportamiento === "prestamo_socio" || cat?.comportamiento === "aporte_socio" ? (
             <section className="max-w-sm space-y-1">
               <Label htmlFor={`socio-${id}`}>Socio{cat.comportamiento === "aporte_socio" ? " (opcional)" : ""}</Label>
-              <Combobox id={`socio-${id}`} items={datos.socios.map((s) => ({ value: s.id, label: s.nombre }))} value={socioId} onValueChange={(v) => setSocioId(v ? String(v) : null)} />
+              <Combobox id={`socio-${id}`} items={sociosActivos.map((s) => ({ value: s.id, label: s.nombre }))} value={socioId} onValueChange={(v) => setSocioId(v ? String(v) : null)} />
               {cat.comportamiento === "prestamo_socio" ? <p className="text-xs text-muted-foreground">Sin intereses. No es gasto ni ingreso: queda como deuda.</p> : null}
             </section>
           ) : null}
@@ -333,6 +353,7 @@ function RegistrarMovimientoDialog({ tipoInicial, datos, onCerrar }: { tipoInici
                     id={`sede-${id}`}
                     items={[{ value: "", label: "General" }, ...datos.sedes.map((s) => ({ value: s.id, label: s.nombre }))]}
                     value={sedeId ?? ""}
+                    placeholder="General"
                     onValueChange={(v) => setSedeId(v ? String(v) : null)}
                   />
                 </div>

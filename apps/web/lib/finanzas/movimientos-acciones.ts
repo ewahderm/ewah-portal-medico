@@ -85,6 +85,8 @@ export async function registrarMovimiento(input: {
   const propia = input.categoria?.startsWith("PROPIA_") ? input.categoria.slice(7) : null;
   if (propia && !esUuid(propia)) return { error: "Categoría inválida." };
   const montoDestino = input.tipo === "transferencia" ? (monedaDestino && monedaDestino !== moneda ? input.montoDestino : input.monto) : null;
+  const CLASES = ["equipo_biomedico", "muebles_enseres", "equipo_computo", "infraestructura"];
+  if (input.datosActivo && !CLASES.includes(input.datosActivo.clase)) return { error: "Tipo de activo inválido." };
   const activo = input.datosActivo?.nombre?.trim()
     ? { nombre: input.datosActivo.nombre.trim().slice(0, 200), clase: input.datosActivo.clase }
     : null;

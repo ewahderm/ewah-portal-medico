@@ -28,6 +28,8 @@ describe("validarMovimiento", () => {
   it("monto, cuenta y categoría", () => {
     expect(validarMovimiento({ ...base, monto: 0 }, ctx)).toMatch(/cuánto/);
     expect(validarMovimiento({ ...base, cuentaId: null }, ctx)).toMatch(/de dónde salió/);
+    // Primero la categoría (paso 2) y luego la cuenta (paso 3).
+    expect(validarMovimiento({ ...base, categoria: null, cuentaId: null }, ctx)).toMatch(/en qué se gastó/);
     expect(validarMovimiento({ ...base, tipo: "ingreso", cuentaId: null }, ctx)).toMatch(/a dónde llegó/);
     expect(validarMovimiento({ ...base, categoria: null }, ctx)).toMatch(/en qué se gastó/);
   });

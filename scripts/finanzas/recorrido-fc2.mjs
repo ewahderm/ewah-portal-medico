@@ -16,9 +16,13 @@ const paso = async (n, f) => { const t = Date.now(); await f(); console.log(`OK 
 await page.goto(`${B}/login`); await page.fill('input[name="email"]', "admin@ewah.local"); await page.fill('input[name="password"]', "Prueba-local-123!");
 await page.click('button[type="submit"]'); await page.waitForURL((u) => !u.pathname.startsWith("/login"));
 
-const dialogo = () => page.getByRole("dialog");
+const dialogo = () => page.locator("[data-slot=dialog-content]");
 const disponible = async () => (await page.getByText("Disponible en pesos").locator("..").innerText()).match(/\$\s?([\d.]+)/)?.[1];
-const radio = (grupo, nombre) => dialogo().getByRole("radiogroup", { name: grupo }).getByRole("radio", { name: nombre });
+async function esperarDisponible(valor) {
+  for (let i = 0; i < 40; i++) { if ((await disponible()) === valor) return; await page.waitForTimeout(250); }
+  throw new Error(`disponible: ${await disponible()} (esperado ${valor})`);
+}
+const radio = (grupo, nombre) => dialogo().getByRole("radiogroup", { name: grupo, exact: true }).getByRole("radio", { name: nombre });
 async function registrar({ boton, monto, categoria, cuenta, tercero, archivo, extra }) {
   await page.getByRole("button", { name: boton }).first().click();
   await dialogo().waitFor();
@@ -35,9 +39,12 @@ await paso("salió plata: arriendo con factura", async () => {
   await page.goto(`${B}/finanzas`);
   const antes = await disponible();
   await registrar({ boton: "Salió plata", monto: "2.500.000", categoria: /Arrendamiento/, cuenta: /Bancolombia/, tercero: "Inmobiliaria Los Andes", archivo: `${S}/factura.pdf` });
-  await page.getByText("Salida registrada").waitFor({ timeout: 20000 });
-  await page.waitForFunction((a) => !document.body.innerText.includes(`Disponible en pesos\n$ ${a}`), antes);
-  console.log(`   disponible ${antes} → ${await disponible()}`);
+  await page.getByText("Salida registrada").last().waitFor({ timeout: 20000 });
+  let despues = antes;
+  for (let i = 0; i < 40 && despues === antes; i++) { await page.waitForTimeout(250); despues = await disponible(); }
+  console.log(`   disponible ${antes} → ${despues}`);
+  // 12.580.000 incluye los $80.000 de la Nequi inactiva (una cuenta inactiva con saldo sigue contando).
+  if (despues !== "10.080.000") throw new Error(`disponible tras el arriendo: ${despues}`);
   await page.getByText("Arrendamiento").first().waitFor();
 });
 await paso("validaciones del formulario", async () => {
@@ -47,17 +54,19 @@ await paso("validaciones del formulario", async () => {
   await dialogo().locator("input[id^=monto-]").fill("1.000");
   await dialogo().getByRole("button", { name: "Registrar" }).click();
   await dialogo().getByText(/en qué se gastó/).waitFor();
-  await page.keyboard.press("Escape");
+  await dialogo().getByRole("button", { name: "Cancelar" }).click();
+  await dialogo().waitFor({ state: "detached" });
 });
 await paso("gasto con la tarjeta del socio aumenta su deuda", async () => {
   await registrar({ boton: "Salió plata", monto: "480.000", categoria: /Prepagada/, cuenta: /Tarjeta de Ana/,
     extra: async () => dialogo().getByText(/quedará debiendo este gasto a Ana/).waitFor() });
-  await page.getByText("Salida registrada").waitFor();
+  await page.getByText("Salida registrada").last().waitFor();
   await page.getByText(/Se le debe \$\s?830\.000/).waitFor();
 });
 await paso("entró plata en efectivo", async () => {
   await registrar({ boton: "Entró plata", monto: "150.000", categoria: /Otros ingresos/, cuenta: /^Efectivo/ });
-  await page.getByText("Entrada registrada").waitFor();
+  await page.getByText("Entrada registrada").last().waitFor();
+  await esperarDisponible("10.230.000");
 });
 await paso("consignar efectivo en el banco (no cambia lo disponible)", async () => {
   const antes = await disponible();
@@ -66,7 +75,7 @@ await paso("consignar efectivo en el banco (no cambia lo disponible)", async () 
   await radio("Cuenta", /^Efectivo/).click();
   await radio("Cuenta destino", /Bancolombia/).click();
   await dialogo().getByRole("button", { name: "Registrar" }).click();
-  await page.getByText("Transferencia registrada").waitFor();
+  await page.getByText("Transferencia registrada").last().waitFor();
   await page.waitForTimeout(500);
   if ((await disponible()) !== antes) throw new Error(`una transferencia cambió lo disponible: ${antes} → ${await disponible()}`);
 });
@@ -75,7 +84,7 @@ await paso("gasto en dólares con tasa digitada", async () => {
     await dialogo().locator("input[id^=tasa-]").fill("4.123,45");
     await dialogo().getByText(/Equivale a \$\s?82\.469/).waitFor();
   } });
-  await page.getByText("Salida registrada").waitFor();
+  await page.getByText("Salida registrada").last().waitFor();
 });
 await paso("préstamo a socio exige el socio", async () => {
   await page.getByRole("button", { name: "Salió plata" }).first().click();
@@ -87,7 +96,7 @@ await paso("préstamo a socio exige el socio", async () => {
   await dialogo().locator("input[id^=socio-]").click();
   await page.getByRole("option", { name: /Ana María Socia/ }).click();
   await dialogo().getByRole("button", { name: "Registrar" }).click();
-  await page.getByText("Salida registrada").waitFor();
+  await page.getByText("Salida registrada").last().waitFor();
 });
 await page.screenshot({ path: `${S}/fc2-tablero.png`, fullPage: true });
 await paso("lista del mes, filtro y soporte firmado", async () => {
@@ -128,7 +137,7 @@ await paso("móvil 390 px (tablero, lista y formulario)", async () => {
     if (ancho > 390) throw new Error(`scroll horizontal ${ancho} en ${ruta}`);
   }
   await m.getByRole("button", { name: "Salió plata" }).first().click();
-  await m.getByRole("dialog").waitFor();
+  await m.locator("[data-slot=dialog-content]").waitFor();
   await m.screenshot({ path: `${S}/fc2-movil-form.png`, fullPage: true });
   const ancho = await m.evaluate(() => document.documentElement.scrollWidth);
   if (ancho > 390) throw new Error(`scroll horizontal ${ancho} en el formulario`);

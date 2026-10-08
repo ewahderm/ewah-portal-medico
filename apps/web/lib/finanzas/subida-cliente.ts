@@ -11,7 +11,7 @@ export async function subirArchivoFinanzas(archivo: File, area: AreaFinanzas, en
   if (archivo.size === 0) return { error: "El archivo está vacío." };
   if (archivo.size > MAX_ARCHIVO_BYTES) return { error: "El archivo no puede pesar más de 10 MB." };
   const tipo = detectarTipoArchivo(new Uint8Array(await archivo.arrayBuffer()));
-  if (!tipo) return { error: "Formato no soportado. Sube un PDF o una foto (JPG, PNG, WEBP)." };
+  if (!tipo) return { error: "Formato no soportado. Sube un PDF, una foto (JPG, PNG, WEBP) o un Word/Excel." };
   const destino = await prepararSubidaFinanzas(area, entidadId, tipo.extension);
   if (destino.error || !destino.path || !destino.token) return { error: destino.error ?? "No se pudo preparar la subida." };
   const { error } = await createClient().storage.from("finanzas").uploadToSignedUrl(destino.path, destino.token, archivo, { contentType: tipo.mime });

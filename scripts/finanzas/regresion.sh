@@ -15,7 +15,10 @@ detener() { for p in $(ps -eo pid,args | awk '/next dev|next-server/ && !/awk/ {
 limpiar() { detener; rm -f "$R/apps/web/.env.local" "$R"/apps/web/recorrido-*.mjs; }
 trap limpiar EXIT
 
-if [ "${SIN_LEVANTAR:-}" != "1" ]; then echo "== BD limpia"; "$L/levantar.sh" > "$OUT/levantar.log" 2>&1; fi
+# SIN_LEVANTAR=1 reutiliza el Supabase local ya arriba y solo reinicia el
+# flujo de caja (reiniciar-local.sql).
+if [ "${SIN_LEVANTAR:-}" != "1" ]; then echo "== BD limpia"; "$L/levantar.sh" > "$OUT/levantar.log" 2>&1
+else psql -q -v ON_ERROR_STOP=1 postgresql://postgres:postgres@127.0.0.1:54322/postgres -f "$D/reiniciar-local.sql" > /dev/null; fi
 detener; sleep 1
 cp "$L/env.local" "$R/apps/web/.env.local"
 (cd "$R/apps/web" && npx next dev -p 3000 > "$OUT/dev.log" 2>&1 &)

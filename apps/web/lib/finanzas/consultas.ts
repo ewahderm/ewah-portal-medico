@@ -206,18 +206,26 @@ export async function getDatosRegistro(supabase: Supabase, acceso: AccesoFinanza
     getCuentas(supabase),
     getSaldos(supabase),
     getCategorias(supabase),
-    acceso.gestion ? getSocios(supabase) : Promise.resolve([] as Socio[]),
+    getSocios(supabase),
     getProveedores(supabase),
     getSedesFinanzas(supabase),
   ]);
   return {
     hoy,
     fechaInicio: config.fecha_inicio,
-    cuentas: cuentas
-      .filter((c) => c.activa)
-      .map((c) => ({ id: c.id, nombre: c.nombre, tipo: c.tipo, moneda: c.moneda, saldo: saldos.get(c.id) ?? c.saldo_inicial, socio_id: c.socio_id })),
+    // Todas (las inactivas siguen nombrando su historia y contando su
+    // saldo); los selectores muestran solo las activas.
+    cuentas: cuentas.map((c) => ({
+      id: c.id,
+      nombre: c.nombre,
+      tipo: c.tipo,
+      moneda: c.moneda,
+      saldo: saldos.get(c.id) ?? c.saldo_inicial,
+      socio_id: c.socio_id,
+      activa: c.activa,
+    })),
     categorias,
-    socios: socios.filter((s) => s.activo).map((s) => ({ id: s.id, nombre: s.nombre })),
+    socios: socios.map((s) => ({ id: s.id, nombre: s.nombre, activo: s.activo })),
     proveedores,
     sedes,
     gestion: acceso.gestion,
