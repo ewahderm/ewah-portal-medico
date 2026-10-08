@@ -67,13 +67,17 @@ Fuera de la Etapa 1 (siguientes etapas, ver §11):
 
 ### HU-0 · Fecha de inicio (configurable en la aplicación)
 Como administrador quiero elegir desde qué fecha la clínica lleva su flujo de caja en EWAH.
-- Se define en `/finanzas/configuracion` (permiso EDIT), con un asistente de arranque:
-  fecha de inicio → cuentas y su saldo a esa fecha → socios → medios de pago.
+- La primera vez, un asistente de arranque en `/finanzas` (permiso EDIT): fecha de inicio →
+  socios (Pro) → cuentas y su saldo a esa fecha → confirmar. Después se cambia en
+  `/finanzas/configuracion`. La cuenta destino de cada medio de pago se configura en FC3,
+  cuando los tratamientos empiecen a generar ingresos.
 - Puede ser hoy o una fecha pasada (por ejemplo, el 1 de enero para cargar el año). No futura.
 - Desde esa fecha nacen los ingresos automáticos de los tratamientos (HU-6): al fijarla en el
   pasado, el sistema genera de una vez los ingresos de los tratamientos ya registrados
   desde entonces y muestra cuántos y por cuánto antes de confirmar.
-- Los saldos iniciales de las cuentas quedan como movimientos de apertura en esa fecha.
+- Los saldos iniciales se guardan en cada cuenta (`fin_cuentas.saldo_inicial`), a la fecha de
+  inicio. El saldo de una cuenta = saldo inicial + movimientos (FC2). La contabilidad los
+  convertirá en el asiento de apertura.
 - **Cambiar la fecha** solo mientras no haya un mes cerrado: se anulan y regeneran las
   aperturas y los ingresos automáticos (con confirmación y auditoría). Con meses cerrados,
   la fecha queda fija.
