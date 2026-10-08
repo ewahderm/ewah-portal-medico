@@ -15,7 +15,7 @@ export const TIPOS_CUENTA = [
   { value: "nequi", label: "Nequi", ayuda: "Billetera digital.", pro: false },
   { value: "daviplata", label: "Daviplata", ayuda: "Billetera digital.", pro: false },
   { value: "efectivo", label: "Efectivo", ayuda: "Caja en pesos, dólares o euros.", pro: false },
-  { value: "pasarela", label: "Pasarela (Bold)", ayuda: "Cobros con tarjeta que llegan al banco días después.", pro: true },
+  { value: "pasarela", label: "Pasarela de pago", ayuda: "Bold, Wompi, PayU, ePayco…: cobros con tarjeta o link que llegan al banco días después.", pro: true },
   { value: "tarjeta_socio", label: "Tarjeta de crédito de socio", ayuda: "Gastos que paga un socio con su tarjeta: la clínica se los debe.", pro: true },
 ] as const;
 export type TipoCuenta = (typeof TIPOS_CUENTA)[number]["value"];
@@ -32,7 +32,7 @@ export const SECCIONES_FINANZAS = [
   { href: "/finanzas", label: "Inicio", disponible: true },
   { href: "/finanzas/movimientos", label: "Movimientos", disponible: true },
   { href: "/finanzas/cobros", label: "Cobros", disponible: true },
-  { href: "/finanzas/bold", label: "Bold", disponible: true },
+  { href: "/finanzas/bold", label: "Pasarelas", disponible: true },
   { href: "/finanzas/socios", label: "Socios", disponible: true },
   { href: "/finanzas/informe", label: "Informe", disponible: true },
   { href: "/finanzas/cierre", label: "Cierre", disponible: true },

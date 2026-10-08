@@ -30,7 +30,7 @@ export default async function BoldPage() {
   if (!acceso.gestion) {
     return (
       <Alert>
-        <AlertDescription>La liquidación de Bold y las tarifas por medio de pago están disponibles en el plan Pro.</AlertDescription>
+        <AlertDescription>La liquidación de las pasarelas de pago y las tarifas por medio de pago están disponibles en el plan Pro.</AlertDescription>
       </Alert>
     );
   }

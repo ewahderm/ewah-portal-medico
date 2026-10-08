@@ -256,18 +256,18 @@ export async function getDatosRegistro(supabase: Supabase, acceso: AccesoFinanza
 
 // ---------- FC3: ingresos desde tratamientos ----------
 
-export type MedioPagoFinanzas = { id: string; nombre: string; activo: boolean; cuenta_id: string | null; es_credito: boolean };
+export type MedioPagoFinanzas = { id: string; nombre: string; activo: boolean; cuenta_id: string | null; es_credito: boolean; requiere_confirmacion: boolean };
 
 // Medios de pago de la clínica (catálogo de Parámetros) con su destino en
 // el flujo de caja. Los inactivos solo si ya tenían destino.
 export async function getMediosPagoFinanzas(supabase: Supabase): Promise<MedioPagoFinanzas[]> {
   const [{ data: medios }, { data: config }] = await Promise.all([
     supabase.from("medios_pago").select("id, nombre, activo").order("orden").order("nombre"),
-    supabase.from("fin_medios_pago").select("medio_pago_id, cuenta_id, es_credito"),
+    supabase.from("fin_medios_pago").select("medio_pago_id, cuenta_id, es_credito, requiere_confirmacion"),
   ]);
-  const porMedio = new Map(((config ?? []) as { medio_pago_id: string; cuenta_id: string | null; es_credito: boolean }[]).map((c) => [c.medio_pago_id, c]));
+  const porMedio = new Map(((config ?? []) as { medio_pago_id: string; cuenta_id: string | null; es_credito: boolean; requiere_confirmacion: boolean }[]).map((c) => [c.medio_pago_id, c]));
   return ((medios ?? []) as { id: string; nombre: string; activo: boolean }[])
-    .map((m) => ({ ...m, cuenta_id: porMedio.get(m.id)?.cuenta_id ?? null, es_credito: porMedio.get(m.id)?.es_credito ?? false }))
+    .map((m) => ({ ...m, cuenta_id: porMedio.get(m.id)?.cuenta_id ?? null, es_credito: porMedio.get(m.id)?.es_credito ?? false, requiere_confirmacion: porMedio.get(m.id)?.requiere_confirmacion ?? false }))
     .filter((m) => m.activo || m.cuenta_id || m.es_credito);
 }
 

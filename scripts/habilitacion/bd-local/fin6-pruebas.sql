@@ -112,7 +112,7 @@ select t.ok(count(*) filter (where u.email = 'contador@x.co') = 0 and count(*) f
 -- con privilegios del dueño (security definer) y RLS en todas las tablas.
 select t.ok(array_agg(p.proname::text order by p.proname) = array[
     'fn_fin_alertas_pendientes', 'fn_fin_anular_liquidacion', 'fn_fin_anular_movimiento', 'fn_fin_anular_registro',
-    'fn_fin_cerrar_mes', 'fn_fin_clinicas_alertas', 'fn_fin_destinatarios', 'fn_fin_devolucion_prestamo', 'fn_fin_excluir_tratamiento', 'fn_fin_fecha_abierta', 'fn_fin_generar_ingresos',
+    'fn_fin_cerrar_mes', 'fn_fin_clinicas_alertas', 'fn_fin_confirmar_pago', 'fn_fin_destinatarios', 'fn_fin_devolucion_prestamo', 'fn_fin_excluir_tratamiento', 'fn_fin_fecha_abierta', 'fn_fin_generar_ingresos',
     'fn_fin_ingreso_de_tratamiento', 'fn_fin_ingresos_pendientes', 'fn_fin_liquidacion_cobro_trasladado', 'fn_fin_liquidar_pasarela',
     'fn_fin_mes_abierto', 'fn_fin_reabrir_mes', 'fn_fin_reembolsar_socio', 'fn_fin_registrar_cobro', 'fn_fin_reincluir_tratamiento',
     'fn_fin_tratamiento_sincronizar', 'fn_fin_tratamientos_flujo', 'fn_fin_tratamientos_situacion']::text[],

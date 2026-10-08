@@ -15,7 +15,7 @@ import { ACTIVIDADES, MONEDAS, TIPOS_CUENTA, etiqueta, type Moneda } from "@/lib
 import { saldoParaMostrar } from "@/lib/finanzas/cuentas";
 import { formatoDinero, leerPorcentaje } from "@/lib/finanzas/dinero";
 import type { CambioFechaInicio, Categoria, Cuenta, MedioPagoFinanzas, Socio } from "@/lib/finanzas/consultas";
-import { guardarDestinoMedio } from "@/lib/finanzas/tratamientos-acciones";
+import { guardarConfirmacionMedio, guardarDestinoMedio } from "@/lib/finanzas/tratamientos-acciones";
 import { destinoDeConfig } from "@/lib/finanzas/tratamientos";
 import { resumenTarifa, type Tarifa } from "@/lib/finanzas/tarifas";
 import { TarifaDialog } from "../_components/tarifa-dialog";
@@ -233,15 +233,32 @@ function DestinoMedioFila({
       .map((c) => ({ value: c.id, label: `${c.nombre}${c.activa ? "" : " (inactiva)"}` })),
   ];
   const sinAsignar = destino === "sin";
+  const esPasarela = cuentas.find((c) => c.id === destino)?.tipo === "pasarela";
+  const [confirmacion, setConfirmacion] = useState(medio.requiere_confirmacion);
+
+  async function cambiarConfirmacion(valor: boolean) {
+    setConfirmacion(valor);
+    setPendiente(true);
+    const r = await guardarConfirmacionMedio(medio.id, valor);
+    setPendiente(false);
+    if (r.error) {
+      setConfirmacion(!valor);
+      return toast.add({ title: "No se guardó", description: r.error, type: "error" });
+    }
+    toast.add({ title: `${medio.nombre}: guardado`, type: "success" });
+    router.refresh();
+  }
 
   async function cambiar(nuevo: string) {
     const anterior = destino;
     setDestino(nuevo);
+    setConfirmacion(false);
     setPendiente(true);
     const r = await guardarDestinoMedio(medio.id, nuevo);
     setPendiente(false);
     if (r.error) {
       setDestino(anterior);
+      setConfirmacion(medio.requiere_confirmacion);
       return toast.add({ title: "No se guardó", description: r.error, type: "error" });
     }
     toast.add({ title: `${medio.nombre}: guardado`, type: "success" });
@@ -254,6 +271,12 @@ function DestinoMedioFila({
         {medio.nombre} {!medio.activo ? <Badge variant="outline">Inactivo</Badge> : null}
         {sinAsignar ? <span className="block text-xs font-normal text-amber-700">Sus tratamientos quedan por revisar</span> : null}
         {vigente ? <span className="block text-xs font-normal text-muted-foreground">Tarifa: {resumenTarifa(vigente)}</span> : null}
+        {esPasarela ? (
+          <label className="mt-1 flex items-start gap-2 text-xs font-normal text-muted-foreground">
+            <Checkbox checked={confirmacion} disabled={!puedeEditar || pendiente} onCheckedChange={(v) => cambiarConfirmacion(!!v)} />
+            <span>Esperar la confirmación de la pasarela antes de registrar el ingreso (útil para links de pago).</span>
+          </label>
+        ) : null}
       </span>
       {gestion && destino !== "sin" && destino !== "credito" ? (
         <Button size="sm" variant="outline" onClick={() => setVerTarifa(true)}>

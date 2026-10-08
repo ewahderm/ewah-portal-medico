@@ -18,7 +18,7 @@ export const FINANZAS_INICIO: Guia = {
             "Entra a **Operación → Flujo de caja**. La primera vez aparece el asistente.",
             "Elige la **fecha de inicio**: desde cuándo llevas la caja en EWAH (hoy o una fecha pasada, por ejemplo el 1 de enero).",
             "Si tu plan es Pro, registra a los **socios** (para sus tarjetas y préstamos).",
-            "Crea tus **cuentas** con el saldo que tenían en la fecha de inicio: efectivo, bancos, Nequi, Daviplata, la pasarela (Bold) y la tarjeta de crédito de cada socio.",
+            "Crea tus **cuentas** con el saldo que tenían en la fecha de inicio: efectivo, bancos, Nequi, Daviplata, la pasarela de pago (Bold, Wompi…) y la tarjeta de crédito de cada socio.",
             "Confirma. Desde ese día los tratamientos entran solos al flujo de caja.",
           ],
         },
@@ -76,8 +76,8 @@ export const FINANZAS_INICIO: Guia = {
 
 export const FINANZAS_COBROS: Guia = {
   slug: "cobros-y-bold",
-  titulo: "Cobros de tratamientos y Bold",
-  resumen: "A qué cuenta llega cada medio de pago, cobros por revisar y por cobrar, tarifas de la pasarela y liquidación de Bold.",
+  titulo: "Cobros de tratamientos y pasarelas de pago",
+  resumen: "A qué cuenta llega cada medio de pago, cobros por revisar y por cobrar, tarifas de la pasarela y su liquidación (Bold, Wompi, PayU…).",
   grupo: "Flujo de caja",
   icono: "credit-card",
   ruta: "/finanzas/cobros",
@@ -90,8 +90,9 @@ export const FINANZAS_COBROS: Guia = {
           tipo: "pasos",
           pasos: [
             "En **Flujo de caja → Configuración → Medios de pago**, elige para cada medio la cuenta a la que llega la plata, **A crédito** (queda por cobrar) o **Sin asignar**.",
-            "Para la pasarela (por ejemplo Bold), pulsa `Tarifa`: comisión %, valor fijo, si incluye IVA, ReteRenta, ReteICA, ReteIVA y días hábiles de abono. `Usar la tarifa estándar de Bold` la llena por ti.",
+            "Para una pasarela de pago (Bold, Wompi, PayU…; puedes tener varias, cada una con su cuenta), pulsa `Tarifa`: comisión %, valor fijo, si incluye IVA, ReteRenta, ReteICA, ReteIVA y días hábiles de abono. `Usar la tarifa estándar de Bold` la llena por ti.",
             "El simulador muestra cuánto te llega: de un cobro de $100.000 con la tarifa de Bold llegan $93.996.",
+            "Si el medio es un **link de pago**, marca **Esperar la confirmación de la pasarela**: el tratamiento no entra al flujo hasta que confirmes que se pagó.",
           ],
         },
         { tipo: "imagen", archivo: "finanzas-medios.jpg", alt: "Medios de pago y su cuenta" },
@@ -120,23 +121,23 @@ export const FINANZAS_COBROS: Guia = {
     },
     {
       id: "bold",
-      titulo: "Liquida Bold",
+      titulo: "Liquida la pasarela",
       bloques: [
         {
           tipo: "texto",
           texto:
-            "Los cobros con la pasarela quedan **pendientes de abono** hasta que la plata llega al banco. La pantalla **Bold** los agrupa por día esperado con el neto que debería llegar.",
+            "Los cobros con la pasarela quedan **pendientes de abono** hasta que la plata llega al banco. La pantalla **Pasarelas** los agrupa por día esperado con el neto que debería llegar.",
         },
         {
           tipo: "pasos",
           pasos: [
             "Marca los cobros que llegaron y pulsa `Liquidar`.",
-            "Elige la cuenta a la que llegó, la fecha y escribe **cuánto llegó**. Adjunta el reporte de Bold si quieres.",
+            "Elige la cuenta a la que llegó, la fecha y escribe **cuánto llegó**. Adjunta el reporte de la pasarela si quieres.",
             "Al confirmar se registran el abono al banco, la comisión, las retenciones (no son gasto: se descuentan en la declaración) y la diferencia si llegó otro valor.",
           ],
         },
         { tipo: "imagen", archivo: "finanzas-bold.jpg", alt: "Pendientes de Bold y liquidaciones" },
-        { tipo: "nota", tono: "pro", texto: "Las tarifas y la liquidación de Bold son del plan Pro." },
+        { tipo: "nota", tono: "pro", texto: "Las tarifas y la liquidación de las pasarelas son del plan Pro." },
       ],
     },
   ],

@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRightIcon, CheckCircle2Icon, RefreshCwIcon } from "lucide-react";
-import { excluirTratamiento, ponerAlDiaIngresos, registrarCobro, reincluirTratamiento } from "@/lib/finanzas/tratamientos-acciones";
+import { confirmarPago, excluirTratamiento, ponerAlDiaIngresos, registrarCobro, reincluirTratamiento } from "@/lib/finanzas/tratamientos-acciones";
 import {
   SITUACIONES,
   VISTAS_COBROS,
@@ -151,11 +151,16 @@ export function CobrosCliente({
         </Card>
       ) : null}
 
+      <Seccion situacion="por_confirmar" filas={de("por_confirmar")} total={resumen.porConfirmar.valor} puedeCrear={puedeCrear} onCobrar={setCobrando} onExcluir={setExcluyendo} puedeExcluir={puedeCrear} />
       <Seccion situacion="por_generar" filas={de("por_generar")} total={resumen.porGenerar.valor} puedeCrear={puedeCrear} onCobrar={setCobrando} onExcluir={setExcluyendo} puedeExcluir={puedeCrear} />
       <Seccion situacion="sin_valor" filas={de("sin_valor")} puedeCrear={puedeCrear} onCobrar={setCobrando} onExcluir={setExcluyendo} puedeExcluir={puedeCrear} />
       <Seccion situacion="fecha_futura" filas={de("fecha_futura")} puedeCrear={false} onCobrar={setCobrando} onExcluir={setExcluyendo} puedeExcluir={puedeCrear} />
 
-      {cobrando ? <CobroDialog pendiente={cobrando} cuentas={cuentas} hoy={hoy} fechaInicio={fechaInicio} onCerrar={() => setCobrando(null)} /> : null}
+      {cobrando && cobrando.situacion === "por_confirmar" ? (
+        <ConfirmarPagoDialog pendiente={cobrando} hoy={hoy} fechaInicio={fechaInicio} onCerrar={() => setCobrando(null)} />
+      ) : cobrando ? (
+        <CobroDialog pendiente={cobrando} cuentas={cuentas} hoy={hoy} fechaInicio={fechaInicio} onCerrar={() => setCobrando(null)} />
+      ) : null}
       {dialogoExcluir}
     </div>
   );
@@ -185,9 +190,68 @@ function FiltroVista({ vista, pendientes }: { vista: VistaCobros; pendientes: nu
   );
 }
 
+function ConfirmarPagoDialog({ pendiente: p, hoy, fechaInicio, onCerrar }: { pendiente: IngresoPendiente; hoy: string; fechaInicio: string; onCerrar: () => void }) {
+  const router = useRouter();
+  const minimo = p.fecha > fechaInicio ? p.fecha : fechaInicio;
+  const [fecha, setFecha] = useState(hoy < minimo ? minimo : hoy);
+  const [error, setError] = useState<string | null>(null);
+  const [enviando, setEnviando] = useState(false);
+
+  async function guardar(ev: React.FormEvent) {
+    ev.preventDefault();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return setError("Elige la fecha del pago.");
+    if (fecha > hoy) return setError("La fecha del pago no puede ser futura.");
+    if (fecha < minimo) return setError("El pago no puede ser anterior al tratamiento ni al inicio del flujo de caja.");
+    setEnviando(true);
+    setError(null);
+    const r = await confirmarPago({ tratamientoId: p.tratamiento_id, fecha });
+    setEnviando(false);
+    if (r.error) return setError(r.error);
+    toast.add({ title: "Pago confirmado", description: "Entra a la pasarela, pendiente de abono.", type: "success" });
+    router.refresh();
+    onCerrar();
+  }
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onCerrar()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Confirmar pago</DialogTitle>
+          <DialogDescription>
+            {p.paciente ?? "Paciente"} · {p.tratamiento ?? "Tratamiento"} del {fechaLegible(p.fecha)} · {p.valor === null ? "Sin valor" : formatoDinero(p.valor)}. La pasarela
+            ya lo cobró: entra como ingreso pendiente de abono hasta que llegue al banco.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={guardar} className="space-y-3">
+          {error ? (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          ) : null}
+          <div className="space-y-1">
+            <Label htmlFor="fechaPago">Fecha en que la pasarela cobró</Label>
+            <Input id="fechaPago" type="date" value={fecha} min={minimo} max={hoy} onChange={(e) => setFecha(e.target.value)} />
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={onCerrar} disabled={enviando}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={enviando}>
+              {enviando ? "Guardando…" : "Confirmar pago"}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function ExcluirDialog({ pendiente: p, onCerrar }: { pendiente: IngresoPendiente; onCerrar: () => void }) {
   const router = useRouter();
-  const [motivo, setMotivo] = useState("");
+  // Un cobro que esperaba la confirmación de la pasarela y no se pagó sale
+  // del flujo con el mismo mecanismo (reversible).
+  const noPagado = p.situacion === "por_confirmar";
+  const [motivo, setMotivo] = useState(noPagado ? "La pasarela no confirmó el pago" : "");
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
 
@@ -209,10 +273,10 @@ function ExcluirDialog({ pendiente: p, onCerrar }: { pendiente: IngresoPendiente
     <Dialog open onOpenChange={(o) => !o && onCerrar()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>No meter en el flujo de caja</DialogTitle>
+          <DialogTitle>{noPagado ? "No se pagó" : "No meter en el flujo de caja"}</DialogTitle>
           <DialogDescription>
             {p.paciente ?? "Paciente"} · {p.tratamiento ?? "Tratamiento"} del {fechaLegible(p.fecha)}
-            {p.valor === null ? "" : ` · ${formatoDinero(p.valor)}`}. No generará ingreso ni pedirá revisión. El tratamiento no se modifica.
+            {p.valor === null ? "" : ` · ${formatoDinero(p.valor)}`}. {noPagado ? "No entrará al flujo de caja; si el paciente paga después, lo vuelves a incluir desde Excluidos." : "No generará ingreso ni pedirá revisión."} El tratamiento no se modifica.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={guardar} className="space-y-3">
@@ -222,7 +286,7 @@ function ExcluirDialog({ pendiente: p, onCerrar }: { pendiente: IngresoPendiente
             </Alert>
           ) : null}
           <div className="space-y-1">
-            <Label htmlFor="motivoExclusion">¿Por qué no entra al flujo?</Label>
+            <Label htmlFor="motivoExclusion">{noPagado ? "Motivo" : "¿Por qué no entra al flujo?"}</Label>
             <Textarea
               id="motivoExclusion"
               rows={3}
@@ -237,7 +301,7 @@ function ExcluirDialog({ pendiente: p, onCerrar }: { pendiente: IngresoPendiente
               Cancelar
             </Button>
             <Button type="submit" disabled={enviando}>
-              {enviando ? "Guardando…" : "No meter en el flujo"}
+              {enviando ? "Guardando…" : noPagado ? "Marcar como no pagado" : "No meter en el flujo"}
             </Button>
           </div>
         </form>
@@ -372,12 +436,12 @@ function Lista({
             <span className="text-sm font-semibold tabular-nums">{p.valor === null ? "Sin valor" : formatoDinero(p.valor)}</span>
             {puedeCrear ? (
               <Button size="sm" variant="outline" onClick={() => onCobrar(p)}>
-                Registrar cobro
+                {p.situacion === "por_confirmar" ? "Confirmar pago" : "Registrar cobro"}
               </Button>
             ) : null}
             {puedeExcluir && sePuedeExcluir(p.situacion) ? (
               <Button size="sm" variant="ghost" onClick={() => onExcluir(p)}>
-                No meter en el flujo
+                {p.situacion === "por_confirmar" ? "No se pagó" : "No meter en el flujo"}
               </Button>
             ) : null}
             {onReincluir && p.situacion === "excluido" ? (

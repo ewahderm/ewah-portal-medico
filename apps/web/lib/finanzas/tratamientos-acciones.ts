@@ -35,6 +35,32 @@ export async function guardarDestinoMedio(medioPagoId: string, destino: DestinoM
   return {};
 }
 
+// Marca que el medio de pago espera la confirmación de su pasarela (ej. link de pago).
+export async function guardarConfirmacionMedio(medioPagoId: string, requiere: boolean): Promise<Resultado> {
+  if (!esUuid(medioPagoId)) return { error: "Medio de pago inválido." };
+  const check = await requirePermiso(MODULO_FINANZAS, "EDIT");
+  if (!check.ok) return { error: check.error };
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("fin_medios_pago").update({ requiere_confirmacion: requiere }).eq("medio_pago_id", medioPagoId).select("id");
+  if (error) return { error: mensajeError("guardarConfirmacionMedio", error, "No se pudo guardar el medio de pago.") };
+  if (!data?.length) return { error: "Primero asigna una cuenta de pasarela a este medio de pago." };
+  revalidar();
+  return {};
+}
+
+export async function confirmarPago(input: { tratamientoId: string; fecha: string }): Promise<Resultado> {
+  if (!esUuid(input.tratamientoId)) return { error: "Datos inválidos." };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.fecha)) return { error: "Elige la fecha del pago." };
+  if (input.fecha > hoyBogota()) return { error: "La fecha del pago no puede ser futura." };
+  const check = await requirePermiso(MODULO_FINANZAS, "CREATE");
+  if (!check.ok) return { error: check.error };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("fn_fin_confirmar_pago", { p_tratamiento: input.tratamientoId, p_fecha: input.fecha });
+  if (error) return { error: mensajeError("confirmarPago", error, "No se pudo confirmar el pago.") };
+  revalidar();
+  return {};
+}
+
 export async function ponerAlDiaIngresos(): Promise<Resultado & { generados?: number; valor?: number; anulados?: number; fallidos?: number }> {
   const check = await requirePermiso(MODULO_FINANZAS, "CREATE");
   if (!check.ok) return { error: check.error };

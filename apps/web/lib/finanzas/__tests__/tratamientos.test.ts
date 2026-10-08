@@ -30,9 +30,9 @@ describe("destino de un medio de pago", () => {
     expect(destinoDeConfig({ cuenta_id: null, es_credito: false })).toBe("sin");
     expect(destinoDeConfig({ cuenta_id: null, es_credito: true })).toBe("credito");
     expect(destinoDeConfig({ cuenta_id: "c1", es_credito: false })).toBe("c1");
-    expect(configDeDestino("sin")).toEqual({ cuenta_id: null, es_credito: false });
-    expect(configDeDestino("credito")).toEqual({ cuenta_id: null, es_credito: true });
-    expect(configDeDestino("c1")).toEqual({ cuenta_id: "c1", es_credito: false });
+    expect(configDeDestino("sin")).toEqual({ cuenta_id: null, es_credito: false, requiere_confirmacion: false });
+    expect(configDeDestino("credito")).toEqual({ cuenta_id: null, es_credito: true, requiere_confirmacion: false });
+    expect(configDeDestino("c1")).toEqual({ cuenta_id: "c1", es_credito: false, requiere_confirmacion: false });
   });
 });
 
@@ -94,7 +94,7 @@ describe("exclusión del flujo de caja", () => {
   });
 
   it("solo se excluye lo que aún no tiene ingreso vivo", () => {
-    for (const s of ["por_generar", "por_cobrar", "sin_valor", "medio_sin_cuenta", "fecha_futura"] as const) {
+    for (const s of ["por_generar", "por_confirmar", "por_cobrar", "sin_valor", "medio_sin_cuenta", "fecha_futura"] as const) {
       expect(sePuedeExcluir(s)).toBe(true);
     }
     for (const s of ["anulado_con_ingreso", "anulado_liquidado", "corregido_sin_anular", "en_flujo", "excluido"] as const) {
