@@ -15,7 +15,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Combobox } from "@/components/ui/combobox";
-import { toItems, type Opcion } from "@/lib/forms/opciones";
+import type { Opcion } from "@/lib/forms/opciones";
 import { hoy } from "@/lib/format";
 import { AtencionDetalleDialog } from "./atencion-detalle-dialog";
 import { PacienteRapidoDialog } from "../pacientes/paciente-rapido-dialog";
@@ -129,10 +129,13 @@ export function AtencionSinCitaDialog({
                   />
                 )}
               </div>
+              {/* Un campo deshabilitado no se envía con el formulario: si el
+                  paciente viene fijo (desde su ficha) va en un input oculto. */}
+              {pacienteFijo ? <input type="hidden" name="pacienteId" value={pacienteId} /> : null}
               <Combobox
                 id="pacienteId"
-                name="pacienteId"
-                required
+                name={pacienteFijo ? undefined : "pacienteId"}
+                required={!pacienteFijo}
                 disabled={Boolean(pacienteFijo)}
                 items={itemsPaciente}
                 value={pacienteId}
@@ -152,13 +155,12 @@ export function AtencionSinCitaDialog({
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="profesionalId">Profesional</Label>
-                <Combobox
+                {/* Quien atiende es siempre quien está logueado (el servidor
+                    lo fuerza igual): evita registrar atenciones a nombre de otro. */}
+                <Input
                   id="profesionalId"
-                  name="profesionalId"
-                  required
-                  items={toItems(profesionales)}
-                  defaultValue={usuarioActualId}
-                  placeholder="Selecciona"
+                  readOnly
+                  value={profesionales.find((p) => p.id === usuarioActualId)?.nombre ?? "Tú (usuario actual)"}
                 />
               </div>
               <div className="space-y-2">

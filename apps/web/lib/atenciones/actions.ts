@@ -66,16 +66,17 @@ export async function crearAtencionSinCita(
   formData: FormData,
 ): Promise<CrearAtencionResultado> {
   const pacienteId = String(formData.get("pacienteId") ?? "");
-  const profesionalId = String(formData.get("profesionalId") ?? "");
   const fecha = String(formData.get("fecha") ?? "").trim();
   const motivo = campoOpcional(formData, "motivo");
 
-  if (!pacienteId || !profesionalId || !fecha) {
-    return { error: "Paciente, profesional y fecha son obligatorios." };
+  if (!pacienteId || !fecha) {
+    return { error: "Paciente y fecha son obligatorios." };
   }
 
   const check = await requirePermiso();
   if (!check.ok) return { error: check.error };
+  // Quien atiende es quien registra: no se acepta otro profesional.
+  const profesionalId = check.usuario.id;
 
   const supabase = await createClient();
   const { data: atencion, error } = await supabase
