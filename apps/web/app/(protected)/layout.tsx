@@ -30,6 +30,7 @@ const NAV_GROUPS: GrupoNavegacion[] = [
     items: [
       { href: "/dashboard", label: "Dashboard" },
       { href: "/reportes", label: "Reportes", modulo: "reportes" },
+      { href: "/manual", label: "Manual" },
     ],
   },
   {
