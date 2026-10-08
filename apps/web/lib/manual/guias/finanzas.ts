@@ -77,82 +77,238 @@ export const FINANZAS_INICIO: Guia = {
 export const FINANZAS_COBROS: Guia = {
   slug: "cobros-y-bold",
   titulo: "Cobros de tratamientos y pasarelas de pago",
-  resumen: "A qué cuenta llega cada medio de pago, cobros por revisar y por cobrar, tarifas de la pasarela y su liquidación (Bold, Wompi, PayU…).",
+  resumen:
+    "Qué pasa con cada cobro desde que registras el tratamiento hasta que la plata llega al banco: medios de pago, cobros pendientes, link de pago, reporte de la pasarela (Bold, Wompi, PayU…) y liquidación.",
   grupo: "Flujo de caja",
   icono: "credit-card",
   ruta: "/finanzas/cobros",
   secciones: [
     {
-      id: "medios",
-      titulo: "Medios de pago y tarifas",
+      id: "recorrido",
+      titulo: "El recorrido de un cobro con pasarela",
       bloques: [
+        {
+          tipo: "texto",
+          texto:
+            "Una **pasarela de pago** (Bold, Wompi, PayU…) es la empresa que procesa los pagos con tarjeta, datáfono o link de pago. La pasarela **no te consigna al instante ni pago por pago**: unos días después te hace **un solo abono al banco con varios pagos juntos**, ya descontada su comisión y las retenciones. Por eso EWAH sigue el cobro en cuatro momentos.",
+        },
         {
           tipo: "pasos",
           pasos: [
-            "En **Flujo de caja → Configuración → Medios de pago**, elige para cada medio la cuenta a la que llega la plata, **A crédito** (queda por cobrar) o **Sin asignar**.",
-            "Para una pasarela de pago (Bold, Wompi, PayU…; puedes tener varias, cada una con su cuenta), pulsa `Tarifa`: comisión %, valor fijo, si incluye IVA, ReteRenta, ReteICA, ReteIVA y días hábiles de abono. `Usar la tarifa estándar de Bold` la llena por ti.",
-            "El simulador muestra cuánto te llega: de un cobro de $100.000 con la tarifa de Bold llegan $93.996.",
-            "Si el medio es un **link de pago**, marca **Esperar la confirmación de la pasarela**: el tratamiento no entra al flujo hasta que confirmes que se pagó.",
+            "**Registras el tratamiento** con un medio de pago que va a la pasarela (por ejemplo Datáfono o Link de pago). Ejemplo: una consulta de $2.840.000 pagada con tarjeta Visa.",
+            "**El cobro queda pendiente de abono.** El ingreso se anota en la cuenta de la pasarela por el valor completo. Es plata tuya, pero todavía no está en tu banco.",
+            "**La pasarela te abona** al banco un total que junta varios pagos y ya trae descontadas la comisión y las retenciones. Del ejemplo, llegan $2.686.226,40 y quedan $153.773,60 de deducciones.",
+            "**Tú liquidas.** Marcas los cobros que incluía ese abono y confirmas cuánto llegó. EWAH pasa la plata de la pasarela al banco y registra aparte la comisión y las retenciones.",
           ],
+        },
+        {
+          tipo: "lista",
+          items: [
+            "**Cobrado (bruto):** el valor completo que pagó el paciente.",
+            "**Comisión:** lo que cobra la pasarela por procesar el pago (un porcentaje más un valor fijo, con IVA incluido). Cambia según el tipo de tarjeta y la franquicia.",
+            "**Retenciones:** impuestos que la pasarela te descuenta y entrega a la DIAN y al municipio (retención en la fuente, ReteICA, ReteIVA). **No son un gasto**: son un anticipo que descuentas en tu declaración.",
+            "**Neto:** lo que realmente te llega al banco = cobrado − comisión − retenciones.",
+            "**Abono:** la transferencia que la pasarela hace a tu banco.",
+            "**Liquidar:** confirmarle a EWAH que un abono llegó, para que cierre esos cobros pendientes.",
+          ],
+        },
+        {
+          tipo: "nota",
+          tono: "info",
+          texto:
+            "Mientras un cobro está **pendiente de abono**, la plata cuenta como \"en camino\" y no como dinero disponible en el banco. Se vuelve disponible cuando liquidas.",
+        },
+      ],
+    },
+    {
+      id: "medios",
+      titulo: "Primero: a dónde va cada medio de pago",
+      bloques: [
+        {
+          tipo: "texto",
+          texto:
+            "Para que EWAH sepa qué hacer con un cobro, cada medio de pago de tu clínica necesita un destino. Se configura una sola vez.",
+        },
+        {
+          tipo: "pasos",
+          pasos: [
+            "Primero crea la **cuenta de la pasarela** en **Flujo de caja → Configuración → Cuentas** con el tipo **Pasarela de pago**. Si usas más de una pasarela, crea una cuenta por cada una.",
+            "Ve a **Configuración → Medios de pago**. Para cada medio (efectivo, datáfono, link de pago, transferencia…) elige la cuenta a la que llega la plata, **A crédito** (queda por cobrar) o **Sin asignar**.",
+            "Los medios que pasan por una pasarela se asignan a **la cuenta de esa pasarela**. Cada pasarela tiene sus propios medios y sus propias tarifas.",
+            "En esos medios pulsa `Tarifa` y escribe lo que te cobra la pasarela: comisión %, valor fijo, si incluye IVA, retenciones y días hábiles de abono. `Usar la tarifa estándar de Bold` la llena por ti. El simulador te muestra cuánto llega de un cobro de ejemplo.",
+          ],
+        },
+        {
+          tipo: "nota",
+          tono: "info",
+          texto:
+            "La tarifa es una **estimación**: sirve para calcular cuánto debería llegar y cuándo. Si subes el reporte de la pasarela (más abajo), EWAH usa los valores **reales** de cada pago y deja de depender de la tarifa.",
         },
         { tipo: "imagen", archivo: "finanzas-medios.jpg", alt: "Medios de pago y su cuenta" },
       ],
     },
     {
       id: "cobros",
-      titulo: "Cobros: por revisar y por cobrar",
+      titulo: "La pantalla Cobros: qué significa cada cosa",
       bloques: [
         {
           tipo: "texto",
           texto:
-            "Cada tratamiento con valor entra solo como ingreso de **Servicios de salud**. Lo que no pudo entrar aparece en **Cobros**: tratamientos sin valor, medios de pago sin cuenta, fechas futuras o correcciones a medias. Los tratamientos a crédito quedan **por cobrar**.",
+            "Cada tratamiento con valor entra **solo** al flujo de caja como ingreso de **Servicios de salud**, sin que hagas nada, siempre que su medio de pago tenga cuenta. Lo que no pudo entrar aparece en **Cobros**. Arriba eliges qué ver:",
         },
         {
           tipo: "lista",
           items: [
-            "`Poner al día` registra de una vez lo que ya tiene cuenta (por ejemplo, después de asignar un medio de pago).",
-            "`Registrar cobro`: cuando el paciente paga un crédito, eliges la cuenta, la fecha y el valor.",
-            "`No meter en el flujo`: si un tratamiento no debe generar ingreso (una cortesía, un registro de prueba, algo cobrado fuera de la clínica), lo excluyes con un motivo. No se borra ni se modifica el tratamiento, y puedes `Volver a incluir` desde la pestaña **Excluidos**.",
-            "Arriba de la lista eliges qué ver: **Pendientes** (marcados como pendientes), **Ya en el flujo** (su ingreso ya está registrado) o **Excluidos**.",
+            "**Pendientes** (la vista por defecto): tratamientos que aún no entraron. Cada fila lleva la marca *Pendiente*.",
+            "**Ya en el flujo:** tratamientos cuyo ingreso ya está registrado (marca *Ya en el flujo*; se muestran los 200 más recientes).",
+            "**Excluidos:** tratamientos que decidiste no meter en el flujo (marca *Excluido*), con su motivo.",
           ],
         },
-        { tipo: "imagen", archivo: "finanzas-cobros.jpg", alt: "Cobros por revisar y por cobrar" },
+        {
+          tipo: "texto",
+          texto: "Dentro de **Pendientes**, cada sección te dice por qué el tratamiento no ha entrado y qué hacer:",
+        },
+        {
+          tipo: "lista",
+          items: [
+            "**Listos para registrar:** su medio ya tiene cuenta. Pulsa `Poner al día` y entran todos de una vez.",
+            "**Medio de pago sin cuenta:** el medio de pago no tiene destino. Asígnalo en Configuración y pulsa `Poner al día`, o registra el cobro de cada uno a mano.",
+            "**Por cobrar:** tratamientos a crédito. Cuando el paciente pague, pulsa `Registrar cobro` y elige la cuenta, la fecha y el valor.",
+            "**Esperando confirmación de la pasarela:** medios (como el link de pago) que esperan que confirmes que se pagó. Ver la siguiente sección.",
+            "**Sin valor:** el tratamiento no tiene valor. Corrígelo en Tratamientos o registra aquí lo que se cobró.",
+            "**Con fecha futura:** entrarán cuando llegue su fecha, al poner al día.",
+            "**Corregidos sin anular / Anulados:** casos de tratamientos corregidos o anulados que piden que revises cuál de los registros sobra.",
+          ],
+        },
+        {
+          tipo: "pasos",
+          pasos: [
+            "Si un tratamiento **no debe generar ingreso** (una cortesía, un registro de prueba, algo que se cobró fuera de la clínica), pulsa `No meter en el flujo` y escribe el motivo.",
+            "El tratamiento **no se borra ni se modifica**: solo sale de los pendientes y aparece en **Excluidos**. Desde allí puedes `Volver a incluir` cuando quieras.",
+          ],
+        },
+        {
+          tipo: "nota",
+          tono: "aviso",
+          texto:
+            "Un tratamiento que **ya entró** al flujo no se puede excluir. Si entró por error, primero se anula su ingreso en **Movimientos** (con permiso para anular) y después vuelve a Pendientes.",
+        },
+        { tipo: "imagen", archivo: "finanzas-cobros.jpg", alt: "Cobros pendientes, ya en el flujo y excluidos" },
       ],
     },
     {
-      id: "bold",
-      titulo: "Liquida la pasarela",
+      id: "confirmacion",
+      titulo: "Link de pago: esperar la confirmación",
       bloques: [
         {
           tipo: "texto",
           texto:
-            "Los cobros con la pasarela quedan **pendientes de abono** hasta que la plata llega al banco. La pantalla **Pasarelas** los agrupa por día esperado con el neto que debería llegar.",
+            "Con un **datáfono**, cuando registras el tratamiento el paciente ya pagó. Con un **link de pago** no: el link se envía, el paciente puede pagar horas después o no pagar. Para no anotar como ingreso un pago que no ocurrió, activa la confirmación en ese medio.",
         },
         {
           tipo: "pasos",
           pasos: [
-            "Marca los cobros que llegaron y pulsa `Liquidar`.",
-            "Elige la cuenta a la que llegó, la fecha y escribe **cuánto llegó**. Adjunta el reporte de la pasarela si quieres.",
-            "Al confirmar se registran el abono al banco, la comisión, las retenciones (no son gasto: se descuentan en la declaración) y la diferencia si llegó otro valor.",
+            "En **Configuración → Medios de pago**, en el medio \"Link de pago\" (que debe ir a la cuenta de la pasarela) marca **Esperar la confirmación de la pasarela**.",
+            "Desde ese momento, los tratamientos con ese medio **no entran solos**: quedan en **Cobros → Esperando confirmación de la pasarela**.",
+            "Cuando la pasarela te avise que el pago se hizo, pulsa `Confirmar pago` y escribe la fecha en que la pasarela cobró. El ingreso entra a la pasarela como **pendiente de abono**.",
+            "Si el paciente no pagó, pulsa `No se pagó` y deja el motivo. El tratamiento sale del flujo y queda en **Excluidos**. Si el paciente paga después, lo vuelves a incluir desde allí.",
           ],
         },
+        {
+          tipo: "nota",
+          tono: "info",
+          texto:
+            "Si subes el reporte de la pasarela, **no necesitas confirmar uno por uno**: el reporte confirma automáticamente los tratamientos cuyo pago aparece como exitoso (ver la siguiente sección).",
+        },
+      ],
+    },
+    {
+      id: "reporte",
+      titulo: "Subir el reporte de la pasarela (recomendado)",
+      bloques: [
         {
           tipo: "texto",
           texto:
-            "**Reporte de la pasarela.** En la pantalla **Pasarelas** puedes subir el reporte de transacciones que descargas de Bold (Excel o texto). Confirma que cada cobro se realizó y trae la comisión y las retenciones **reales** de cada pago, así que el neto esperado de la liquidación es exacto en vez de una estimación.",
+            "Cada pasarela te deja descargar un **reporte de transacciones** con todos los pagos: su estado, la comisión y las retenciones exactas de cada uno, y lo que se deposita. Subirlo a EWAH hace tres cosas: **confirma que el cobro se realizó**, **empareja cada pago con su cobro** y hace que al liquidar el neto esperado sea **exacto** (no una estimación).",
         },
         {
           tipo: "pasos",
           pasos: [
-            "Elige la pasarela (si tienes varias) y el archivo, y revisa el resumen: pagos leídos, comisión, retenciones y lo que se deposita.",
-            "Pulsa `Importar y emparejar`. El sistema liga cada pago con su cobro por valor y fecha, y confirma los tratamientos que esperaban la confirmación.",
-            "Si hay varios cobros del mismo valor, el pago queda en **Pagos sin su cobro** y eliges tú cuál es. Un cobro emparejado muestra *valores reales*.",
-            "Al liquidar, el neto esperado es la suma de lo que la pasarela depositó. Si el abono de tu banco coincide, no queda diferencia.",
+            "Descarga el reporte de transacciones desde el panel de tu pasarela, **sin editarlo ni quitar columnas**.",
+            "Entra a **Flujo de caja → Pasarelas**, a la tarjeta **Reporte de la pasarela**. Si tienes varias pasarelas, elige de cuál es el reporte.",
+            "Elige el archivo (Excel o texto). Antes de importar ves un resumen: cuántos pagos leyó, cuánto cobró, cuánta comisión y retenciones, y cuánto se deposita. Si alguna fila no cuadra, te la señala y no la importa.",
+            "Pulsa `Importar y emparejar`. EWAH liga cada pago exitoso con su cobro.",
           ],
         },
-        { tipo: "nota", tono: "info", texto: "El archivo se lee en tu navegador. No se guardan el número de la tarjeta ni el nombre o correo del pagador. Volver a subir el mismo reporte no duplica pagos." },
-        { tipo: "imagen", archivo: "finanzas-bold.jpg", alt: "Pendientes de Bold y liquidaciones" },
-        { tipo: "nota", tono: "pro", texto: "Las tarifas y la liquidación de las pasarelas son del plan Pro." },
+        {
+          tipo: "lista",
+          items: [
+            "**Cómo empareja:** busca el cobro pendiente de abono de esa pasarela con **el mismo valor** y una **fecha cercana** (de unos días antes a un par de días después del pago). Si hay un único candidato, los une solo. También confirma el tratamiento que esperaba la confirmación.",
+            "**Varios cobros iguales:** si hay dos cobros del mismo valor, EWAH **no adivina**. El pago queda en **Pagos sin su cobro** y eliges tú el cobro correcto en la lista y pulsas `Emparejar`.",
+            "**Sin cobro:** si un pago de la pasarela no tiene ningún cobro posible, aparece con el aviso *Sin cobro del mismo valor y fecha cercana*. Suele significar que falta registrar ese tratamiento (o que su valor o fecha son muy distintos).",
+            "**Pagos no exitosos:** se guardan pero no se emparejan ni generan ingreso.",
+            "**Un cobro emparejado** muestra la marca *valores reales* en la lista de pendientes de abono.",
+          ],
+        },
+        {
+          tipo: "nota",
+          tono: "info",
+          texto:
+            "Puedes subir el mismo reporte varias veces sin duplicar nada: los pagos ya importados se reconocen por su número de transacción. El archivo se lee en tu navegador y **no se guardan** el número de la tarjeta ni el nombre o correo del pagador.",
+        },
+        {
+          tipo: "nota",
+          tono: "pro",
+          texto: "Importar el reporte, las tarifas y la liquidación de las pasarelas son del plan Pro.",
+        },
+      ],
+    },
+    {
+      id: "bold",
+      titulo: "Liquidar el abono que llegó al banco",
+      bloques: [
+        {
+          tipo: "texto",
+          texto:
+            "Cuando la pasarela te hace un abono, entra a **Flujo de caja → Pasarelas**. Los cobros pendientes de abono aparecen agrupados por el día en que se espera la plata, cada uno con el **neto** que debería llegar.",
+        },
+        {
+          tipo: "pasos",
+          pasos: [
+            "Mira tu extracto del banco y **marca los cobros que incluye ese abono**. Abajo ves cuántos marcaste, el cobrado y el **neto esperado**. Debe parecerse a lo que te llegó.",
+            "Pulsa `Liquidar`. Elige la cuenta del banco a la que llegó, la **fecha del abono** y escribe **cuánto llegó** realmente.",
+            "Adjunta el reporte o el comprobante de la pasarela si quieres dejarlo como soporte.",
+            "Al confirmar, EWAH registra: el **abono** de la pasarela al banco, la **comisión**, las **retenciones** (como anticipo de impuestos, no gasto) y, si hay, la **diferencia**. Los cobros dejan de estar pendientes.",
+          ],
+        },
+        {
+          tipo: "lista",
+          items: [
+            "**Con el reporte subido:** el neto esperado es la suma exacta de lo que la pasarela depositó por esos pagos. Si lo que llegó al banco es igual, **no queda diferencia**.",
+            "**Sin el reporte:** el neto esperado se calcula con tu tarifa, que es una estimación. Si llega un valor distinto (porque cambió la franquicia o la comisión), la diferencia se registra como un **ajuste de caja** para que el banco cuadre.",
+            "**Solo una pasarela a la vez:** no mezcles en una misma liquidación cobros de pasarelas distintas.",
+            "**Si te equivocaste:** puedes `Anular` la liquidación (con motivo). Los cobros vuelven a estar pendientes y la liquidación queda en el historial.",
+          ],
+        },
+        { tipo: "imagen", archivo: "finanzas-bold.jpg", alt: "Pasarelas: pendientes de abono y liquidaciones" },
+      ],
+    },
+    {
+      id: "preguntas",
+      titulo: "¿Qué hago si…?",
+      bloques: [
+        {
+          tipo: "lista",
+          items: [
+            "**Registré un tratamiento y no aparece en Ingresos.** Revisa **Cobros → Pendientes**: allí dice por qué (medio sin cuenta, a crédito, esperando confirmación, sin valor o fecha futura). Lo más común es un medio de pago sin cuenta asignada.",
+            "**La pasarela me cobró pero no encuentro el tratamiento.** Sube el reporte: el pago aparece en *Pagos sin su cobro* con aviso de que no tiene cobro. Registra el tratamiento que falta y vuelve a subir el mismo reporte: no duplica nada y empareja el pago con el cobro nuevo.",
+            "**Llegó menos plata de la esperada.** Si no subiste el reporte, puede ser otra franquicia o tarjeta con comisión distinta: sube el reporte para ver el valor real. Si aun así no cuadra, revisa que marcaste exactamente los cobros del abono.",
+            "**El paciente no pagó el link.** Usa `No se pagó` en *Esperando confirmación de la pasarela* (si el medio tiene la confirmación activa) o `No meter en el flujo`.",
+            "**Tengo dos pasarelas.** Crea una cuenta de tipo *Pasarela de pago* por cada una, asigna a cada medio de pago su cuenta y sube cada reporte eligiendo su pasarela. Liquida cada una por separado.",
+            "**Anulé un tratamiento cuyo cobro ya se liquidó.** Aparece en *Anulados con el cobro ya abonado*: la pasarela ya pagó esa plata. Si le devolviste el dinero al paciente, registra la salida; si fue un error de la liquidación, anúlala en Pasarelas y pon al día.",
+            "**El mes ya está cerrado.** Un ingreso nuevo de un mes cerrado entra en el primer día abierto y lo indica en su descripción.",
+          ],
+        },
       ],
     },
   ],
