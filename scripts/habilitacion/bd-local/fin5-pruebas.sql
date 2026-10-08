@@ -52,6 +52,22 @@ select fn_fin_anular_movimiento(:'dev_luis', 'La devolución no se hizo todavía
 select t.ok(prestado_por_socio = 2000000, 'anular la devolución la deshace') from fn_fin_socios_saldos() where socio_id = :'luis';
 reset role;
 
+-- Ajustes (0099): anular sin dejar saldos imposibles, fechas atrás y cuentas.
+select t.como('00000000-0000-0000-0000-00000000000a'); set role authenticated;
+select t.debe_fallar($q$select fn_fin_anular_movimiento(id, 'El préstamo fue por otro valor') from fin_movimientos
+  where categoria_codigo = 'PRESTAMO_A_SOCIO' and tipo = 'egreso' and origen = 'manual' and estado <> 'anulado' limit 1$q$, 'devoluciones');
+select t.debe_fallar($q$select fn_fin_anular_movimiento(id, 'La prepagada no era de la clínica') from fin_movimientos
+  where categoria_codigo = 'PREPAGADA' and estado <> 'anulado' limit 1$q$, 'ya se le reembolsó');
+select t.debe_fallar(format($q$select fn_fin_devolucion_prestamo(%L, 'clinica_devuelve', %L, '2026-03-01', 1000)$q$, :'luis', :'banco'), 'a esa fecha');
+select t.ok(prestado_por_socio = 0, 'a una fecha anterior al préstamo no se le debía nada') from fn_fin_socios_saldos('2026-03-01') where socio_id = :'luis';
+select t.debe_fallar(format($q$insert into fin_movimientos (clinica_id, fecha, tipo, categoria_codigo, cuenta_id, socio_id, moneda, monto_original) values (clinica_actual(), %L, 'egreso', 'PRESTAMO_A_SOCIO', %L, %L, 'COP', 1000)$q$, :'hoy', :'tarjeta', :'ana'), 'plata disponible');
+-- Un préstamo sin devoluciones sí se anula.
+insert into fin_movimientos (clinica_id, fecha, tipo, categoria_codigo, cuenta_id, socio_id, moneda, monto_original)
+values (clinica_actual(), :'hoy', 'egreso', 'PRESTAMO_A_SOCIO', :'banco', :'luis', 'COP', 70000) returning id as p_luis \gset
+select fn_fin_anular_movimiento(:'p_luis', 'Préstamo registrado por error');
+select t.ok(prestado_a_socio = 0, 'un préstamo sin devoluciones se anula') from fn_fin_socios_saldos() where socio_id = :'luis';
+reset role;
+
 -- Sin permisos y otra clínica.
 select t.como('00000000-0000-0000-0000-0000000000a2'); set role authenticated;
 select t.ok(count(*) = 0, 'sin finanzas no ve saldos de socios') from fn_fin_socios_saldos();

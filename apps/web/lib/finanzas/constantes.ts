@@ -34,8 +34,8 @@ export const SECCIONES_FINANZAS = [
   { href: "/finanzas/cobros", label: "Cobros", disponible: true },
   { href: "/finanzas/bold", label: "Bold", disponible: true },
   { href: "/finanzas/socios", label: "Socios", disponible: true },
-  { href: "/finanzas/informe", label: "Informe", disponible: false },
-  { href: "/finanzas/cierre", label: "Cierre", disponible: false },
+  { href: "/finanzas/informe", label: "Informe", disponible: true },
+  { href: "/finanzas/cierre", label: "Cierre", disponible: true },
   { href: "/finanzas/configuracion", label: "Configuración", disponible: true },
 ] as const;
 

@@ -34,7 +34,7 @@ type SocioVista = {
 };
 type CuentaOpcion = { id: string; nombre: string; moneda: Moneda; disponible: boolean };
 
-const SIN_SALDO: SaldoSocio = { socio_id: "", deuda_tarjeta: 0, prestado_por_socio: 0, prestado_a_socio: 0, aportes: 0, le_debemos: 0, nos_debe: 0 };
+const SIN_SALDO: SaldoSocio = { socio_id: "", deuda_tarjeta: 0, tarjeta_a_favor: 0, prestado_por_socio: 0, prestado_a_socio: 0, aportes: 0, le_debemos: 0, nos_debe: 0 };
 
 export function SociosCliente({
   socios,
@@ -119,6 +119,12 @@ export function SociosCliente({
                 <Dato titulo="Préstamos que nos hizo" valor={saldo.prestado_por_socio} alerta />
                 <Dato titulo="Préstamos que le hicimos" valor={saldo.prestado_a_socio} />
               </dl>
+              {saldo.tarjeta_a_favor > 0 ? (
+                <p className="text-sm text-amber-700">
+                  A su tarjeta se le reembolsaron {formatoDinero(saldo.tarjeta_a_favor)} de más: el socio los debe devolver (anula el reembolso
+                  sobrante o regístralo de nuevo por el valor correcto).
+                </p>
+              ) : null}
               {s.tarjetas.length > 1 ? (
                 <ul className="text-xs text-muted-foreground">
                   {s.tarjetas.map((t) => (
@@ -259,7 +265,11 @@ function OperacionDialog({
                 id="tarjetaSocio"
                 items={conDeuda.map((t) => ({ value: t.id, label: `${t.nombre} (${formatoDinero(t.deuda)})` }))}
                 value={tarjetaId}
-                onValueChange={(v) => setTarjetaId(v ? String(v) : null)}
+                onValueChange={(v) => {
+                  const id = v ? String(v) : null;
+                  setTarjetaId(id);
+                  setMonto(socio.tarjetas.find((t) => t.id === id)?.deuda ?? null);
+                }}
               />
             </div>
           ) : null}
@@ -274,7 +284,7 @@ function OperacionDialog({
             </div>
             <div className="space-y-1">
               <Label htmlFor="montoSocio">Valor</Label>
-              <CampoDinero id="montoSocio" valorInicial={monto} onValor={setMonto} required />
+              <CampoDinero key={tarjetaId ?? "sin"} id="montoSocio" valorInicial={monto} onValor={setMonto} required />
               {tope !== null ? <p className="text-xs text-muted-foreground">Pendiente: {formatoDinero(tope)}</p> : null}
             </div>
           </div>

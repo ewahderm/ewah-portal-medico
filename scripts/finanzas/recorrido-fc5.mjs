@@ -35,7 +35,7 @@ await page.click('button[type="submit"]'); await page.waitForURL((u) => !u.pathn
 let deuda0;
 await paso("la ficha de Ana muestra lo que se le debe", async () => {
   await page.goto(`${B}/finanzas`);
-  await page.getByText("Se les debe a los socios").click();
+  await page.getByText("Tarjetas de socios por reembolsar").click();
   await page.waitForURL(/\/finanzas\/socios/);
   deuda0 = await dato("Gastos con su tarjeta por reembolsar");
   console.log(`   deuda de la tarjeta: ${deuda0}`);

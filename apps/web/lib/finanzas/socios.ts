@@ -3,6 +3,8 @@
 export type SaldoSocio = {
   socio_id: string;
   deuda_tarjeta: number;
+  // Se le reembolsó de más: lo debe devolver (cuenta en nos_debe).
+  tarjeta_a_favor: number;
   prestado_por_socio: number;
   prestado_a_socio: number;
   aportes: number;

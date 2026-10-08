@@ -2,6 +2,10 @@
 -- enlazada) para repetir los recorridos sin volver a levantar todo. Los
 -- triggers de inmutabilidad se saltan solo en esta sesión.
 set session_replication_role = replica;
+delete from fin_arqueos;
+delete from fin_periodos;
+delete from fin_alertas_enviadas;
+delete from fin_liquidacion_cobros;
 delete from fin_movimientos;
 delete from fin_medios_pago;
 delete from fin_liquidaciones_pasarela;

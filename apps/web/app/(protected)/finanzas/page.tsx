@@ -128,7 +128,7 @@ export default async function FinanzasPage() {
 <Link href="/finanzas/socios" className="block">
           <Cifra
             icono={HandCoinsIcon}
-            titulo="Se les debe a los socios"
+            titulo="Tarjetas de socios por reembolsar"
             valor={formatoDinero(resumen.deudaSocios)}
             detalle="Gastos pagados con sus tarjetas"
             tono={resumen.deudaSocios > 0 ? "alerta" : undefined}

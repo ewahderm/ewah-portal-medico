@@ -7,24 +7,43 @@ import { MODULO_FINANZAS, type Actividad, type Moneda, type TipoCuenta } from "@
 import type { IngresoPendiente } from "@/lib/finanzas/tratamientos";
 import type { PendientePasarela, Tarifa } from "@/lib/finanzas/tarifas";
 import type { SaldoSocio } from "@/lib/finanzas/socios";
+import type { FilaFlujo } from "@/lib/finanzas/informe";
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export type AccesoFinanzas = { puedeVer: boolean; puedeEditar: boolean; puedeCrear: boolean; puedeAnular: boolean; gestion: boolean };
+export type AccesoFinanzas = {
+  puedeVer: boolean;
+  puedeEditar: boolean;
+  puedeCrear: boolean;
+  puedeAnular: boolean;
+  puedeAprobar: boolean;
+  puedeExportar: boolean;
+  gestion: boolean;
+};
 
 export const getAccesoFinanzas = cache(async (): Promise<AccesoFinanzas> => {
   const supabase = await createClient();
   const permiso = (permiso_code: string) => supabase.rpc("has_permission", { modulo_code: MODULO_FINANZAS, permiso_code });
-  const [{ data: puedeVer }, { data: puedeEditar }, { data: puedeCrear }, { data: puedeAnular }, { data: gestion }] = await Promise.all([
+  const [{ data: puedeVer }, { data: puedeEditar }, { data: puedeCrear }, { data: puedeAnular }, { data: puedeAprobar }, { data: puedeExportar }, { data: gestion }] = await Promise.all([
     permiso("VIEW"),
     permiso("EDIT"),
     permiso("CREATE"),
     permiso("VOID"),
+    permiso("APPROVE"),
+    permiso("EXPORT"),
     supabase.rpc("has_entitlement", { modulo_code: MODULO_FINANZAS, feature_code: "gestion" }),
   ]);
-  return { puedeVer: !!puedeVer, puedeEditar: !!puedeEditar, puedeCrear: !!puedeCrear, puedeAnular: !!puedeAnular, gestion: !!gestion };
+  return {
+    puedeVer: !!puedeVer,
+    puedeEditar: !!puedeEditar,
+    puedeCrear: !!puedeCrear,
+    puedeAnular: !!puedeAnular,
+    puedeAprobar: !!puedeAprobar,
+    puedeExportar: !!puedeExportar,
+    gestion: !!gestion,
+  };
 });
 
 export type CambioFechaInicio = { anterior: string; nueva: string; motivo: string; en: string };
@@ -331,6 +350,7 @@ export async function getSaldosSocios(supabase: Supabase): Promise<Map<string, S
       {
         socio_id: s.socio_id,
         deuda_tarjeta: Number(s.deuda_tarjeta),
+        tarjeta_a_favor: Number(s.tarjeta_a_favor ?? 0),
         prestado_por_socio: Number(s.prestado_por_socio),
         prestado_a_socio: Number(s.prestado_a_socio),
         aportes: Number(s.aportes),
@@ -353,4 +373,46 @@ export async function getMovimientosSocio(supabase: Supabase, socioId: string, t
     .order("created_at", { ascending: false })
     .limit(limite);
   return ((data ?? []) as Movimiento[]).map(numeros);
+}
+
+// ---------- FC6: informe y cierre ----------
+
+export async function getFlujo(supabase: Supabase, desde: string, hasta: string, sedeId?: string | null): Promise<FilaFlujo[] | null> {
+  const { data, error } = await supabase.rpc("fn_fin_flujo", { p_desde: desde, p_hasta: hasta, p_sede: sedeId && UUID.test(sedeId) ? sedeId : null });
+  if (error) {
+    console.error("[finanzas] fn_fin_flujo", error);
+    return null;
+  }
+  return ((data ?? []) as FilaFlujo[]).map((f) => ({ ...f, entradas: Number(f.entradas), salidas: Number(f.salidas) }));
+}
+
+export async function getTasas(supabase: Supabase, fecha?: string): Promise<Map<string, number>> {
+  const { data } = await supabase.rpc("fn_fin_tasas", fecha ? { p_fecha: fecha } : {});
+  return new Map(((data ?? []) as { moneda: string; tasa: number }[]).map((t) => [t.moneda, Number(t.tasa)]));
+}
+
+export type Periodo = {
+  id: string;
+  anio: number;
+  mes: number;
+  estado: "cerrado" | "abierto";
+  cerrado_en: string | null;
+  historial: { accion: "cerrar" | "reabrir"; en: string; motivo?: string }[];
+};
+
+export async function getPeriodos(supabase: Supabase): Promise<Periodo[]> {
+  const { data } = await supabase.from("fin_periodos").select("id, anio, mes, estado, cerrado_en, historial").order("anio").order("mes");
+  return (data ?? []) as Periodo[];
+}
+
+export type Arqueo = { periodo_id: string; cuenta_id: string; saldo_sistema: number; saldo_contado: number; diferencia: number; motivo: string | null };
+
+export async function getArqueos(supabase: Supabase): Promise<Arqueo[]> {
+  const { data } = await supabase.from("fin_arqueos").select("periodo_id, cuenta_id, saldo_sistema, saldo_contado, diferencia, motivo").order("created_at");
+  return ((data ?? []) as Arqueo[]).map((a) => ({
+    ...a,
+    saldo_sistema: Number(a.saldo_sistema),
+    saldo_contado: Number(a.saldo_contado),
+    diferencia: Number(a.diferencia),
+  }));
 }

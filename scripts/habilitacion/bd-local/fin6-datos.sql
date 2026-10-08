@@ -1,0 +1,1 @@
+-- Flujo de caja FC6: usa lo que dejan fin1–fin5 en la clínica A.
