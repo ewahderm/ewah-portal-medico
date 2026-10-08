@@ -30,7 +30,7 @@ export type Actividad = (typeof ACTIVIDADES)[number]["value"];
 // Subnavegación. `disponible: false` se ve sin enlace hasta su fase.
 export const SECCIONES_FINANZAS = [
   { href: "/finanzas", label: "Inicio", disponible: true },
-  { href: "/finanzas/movimientos", label: "Movimientos", disponible: false },
+  { href: "/finanzas/movimientos", label: "Movimientos", disponible: true },
   { href: "/finanzas/bold", label: "Bold", disponible: false },
   { href: "/finanzas/socios", label: "Socios", disponible: false },
   { href: "/finanzas/informe", label: "Informe", disponible: false },

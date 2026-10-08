@@ -115,7 +115,7 @@ export function validarAsistente(
   );
 }
 
-export type CuentaConSaldo = { id: string; nombre: string; tipo: TipoCuenta; moneda: Moneda; saldo: number; activa: boolean; socio_id: string | null };
+export type CuentaConSaldo = { id: string; nombre: string; tipo: TipoCuenta; moneda: Moneda; saldo: number; socio_id: string | null };
 
 export type ResumenCuentas = {
   disponible: Record<Moneda, number>;

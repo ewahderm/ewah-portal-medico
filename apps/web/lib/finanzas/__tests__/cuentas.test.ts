@@ -56,7 +56,7 @@ describe("cuentas", () => {
     expect(saldoParaGuardar("banco", -5)).toBe(-5);
   });
   it("resumen: disponible por moneda, por abonar y deuda por socio", () => {
-    const c = (p: Partial<CuentaConSaldo>): CuentaConSaldo => ({ id: "x", nombre: "x", tipo: "efectivo", moneda: "COP", saldo: 0, activa: true, socio_id: null, ...p });
+    const c = (p: Partial<CuentaConSaldo>): CuentaConSaldo => ({ id: "x", nombre: "x", tipo: "efectivo", moneda: "COP", saldo: 0, socio_id: null, ...p });
     const r = resumirCuentas([
       c({ saldo: 500000 }),
       c({ tipo: "banco", saldo: 12000000 }),

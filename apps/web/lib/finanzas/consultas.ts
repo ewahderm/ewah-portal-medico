@@ -7,16 +7,21 @@ import { MODULO_FINANZAS, type Actividad, type Moneda, type TipoCuenta } from "@
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 
-export type AccesoFinanzas = { puedeVer: boolean; puedeEditar: boolean; gestion: boolean };
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export type AccesoFinanzas = { puedeVer: boolean; puedeEditar: boolean; puedeCrear: boolean; puedeAnular: boolean; gestion: boolean };
 
 export const getAccesoFinanzas = cache(async (): Promise<AccesoFinanzas> => {
   const supabase = await createClient();
-  const [{ data: puedeVer }, { data: puedeEditar }, { data: gestion }] = await Promise.all([
-    supabase.rpc("has_permission", { modulo_code: MODULO_FINANZAS, permiso_code: "VIEW" }),
-    supabase.rpc("has_permission", { modulo_code: MODULO_FINANZAS, permiso_code: "EDIT" }),
+  const permiso = (permiso_code: string) => supabase.rpc("has_permission", { modulo_code: MODULO_FINANZAS, permiso_code });
+  const [{ data: puedeVer }, { data: puedeEditar }, { data: puedeCrear }, { data: puedeAnular }, { data: gestion }] = await Promise.all([
+    permiso("VIEW"),
+    permiso("EDIT"),
+    permiso("CREATE"),
+    permiso("VOID"),
     supabase.rpc("has_entitlement", { modulo_code: MODULO_FINANZAS, feature_code: "gestion" }),
   ]);
-  return { puedeVer: !!puedeVer, puedeEditar: !!puedeEditar, gestion: !!gestion };
+  return { puedeVer: !!puedeVer, puedeEditar: !!puedeEditar, puedeCrear: !!puedeCrear, puedeAnular: !!puedeAnular, gestion: !!gestion };
 });
 
 export type CambioFechaInicio = { anterior: string; nueva: string; motivo: string; en: string };
@@ -127,4 +132,94 @@ export async function getBancos(supabase: Supabase): Promise<{ id: string; nombr
   if (!clinica?.pais_operacion_id) return [];
   const { data } = await supabase.from("bancos").select("id, nombre").eq("pais_id", clinica.pais_operacion_id).eq("activo", true).order("orden").order("nombre");
   return (data ?? []) as { id: string; nombre: string }[];
+}
+
+// ---------- FC2: movimientos y saldos ----------
+
+export async function getSaldos(supabase: Supabase, fecha?: string): Promise<Map<string, number>> {
+  const { data, error } = await supabase.rpc("fn_fin_saldos", fecha ? { p_fecha: fecha } : {});
+  if (error) console.error("[finanzas] fn_fin_saldos", error);
+  return new Map(((data ?? []) as { cuenta_id: string; saldo: number }[]).map((s) => [s.cuenta_id, Number(s.saldo)]));
+}
+
+export type Movimiento = {
+  id: string;
+  fecha: string;
+  tipo: "ingreso" | "egreso" | "transferencia";
+  categoria_codigo: string | null;
+  categoria_propia_id: string | null;
+  cuenta_id: string;
+  cuenta_destino_id: string | null;
+  sede_id: string | null;
+  tercero_tipo: string | null;
+  proveedor_id: string | null;
+  socio_id: string | null;
+  tercero_nombre: string | null;
+  moneda: Moneda;
+  monto_original: number;
+  tasa_cop: number;
+  valor_cop: number;
+  monto_destino: number | null;
+  descripcion: string | null;
+  estado: "registrado" | "pendiente_abono" | "por_cobrar" | "anulado";
+  origen: string;
+  anula_a: string | null;
+  anulado_motivo: string | null;
+  soporte_nombre_archivo: string | null;
+  created_at: string;
+};
+
+const MOV_SELECT =
+  "id, fecha, tipo, categoria_codigo, categoria_propia_id, cuenta_id, cuenta_destino_id, sede_id, tercero_tipo, proveedor_id, socio_id, tercero_nombre, moneda, monto_original, tasa_cop, valor_cop, monto_destino, descripcion, estado, origen, anula_a, anulado_motivo, soporte_nombre_archivo, created_at";
+
+const numeros = (m: Movimiento): Movimiento => ({
+  ...m,
+  monto_original: Number(m.monto_original),
+  tasa_cop: Number(m.tasa_cop),
+  valor_cop: Number(m.valor_cop),
+  monto_destino: m.monto_destino === null ? null : Number(m.monto_destino),
+});
+
+export type FiltrosMovimientos = { desde: string; hasta: string; tipo?: string; cuentaId?: string; categoria?: string };
+
+export async function getMovimientos(supabase: Supabase, f: FiltrosMovimientos, limite = 500): Promise<Movimiento[]> {
+  let q = supabase.from("fin_movimientos").select(MOV_SELECT).gte("fecha", f.desde).lte("fecha", f.hasta);
+  if (f.tipo === "ingreso" || f.tipo === "egreso" || f.tipo === "transferencia") q = q.eq("tipo", f.tipo);
+  // Los filtros vienen de la URL: solo uuids y códigos válidos llegan al
+  // filtro `or` de PostgREST (que se arma como texto).
+  if (f.cuentaId && UUID.test(f.cuentaId)) q = q.or(`cuenta_id.eq.${f.cuentaId},cuenta_destino_id.eq.${f.cuentaId}`);
+  if (f.categoria?.startsWith("PROPIA_") && UUID.test(f.categoria.slice(7))) q = q.eq("categoria_propia_id", f.categoria.slice(7));
+  else if (f.categoria && /^[A-Z][A-Z0-9_]{2,40}$/.test(f.categoria)) q = q.eq("categoria_codigo", f.categoria);
+  const { data } = await q.order("fecha", { ascending: false }).order("created_at", { ascending: false }).limit(limite);
+  return ((data ?? []) as Movimiento[]).map(numeros);
+}
+
+
+export async function getProveedores(supabase: Supabase): Promise<{ id: string; nombre: string }[]> {
+  const { data } = await supabase.from("proveedores").select("id, nombre").eq("activo", true).order("nombre");
+  return (data ?? []) as { id: string; nombre: string }[];
+}
+
+// Todo lo que necesita el formulario de registrar un movimiento.
+export async function getDatosRegistro(supabase: Supabase, acceso: AccesoFinanzas, config: ConfigFinanzas, hoy: string) {
+  const [cuentas, saldos, categorias, socios, proveedores, sedes] = await Promise.all([
+    getCuentas(supabase),
+    getSaldos(supabase),
+    getCategorias(supabase),
+    acceso.gestion ? getSocios(supabase) : Promise.resolve([] as Socio[]),
+    getProveedores(supabase),
+    getSedesFinanzas(supabase),
+  ]);
+  return {
+    hoy,
+    fechaInicio: config.fecha_inicio,
+    cuentas: cuentas
+      .filter((c) => c.activa)
+      .map((c) => ({ id: c.id, nombre: c.nombre, tipo: c.tipo, moneda: c.moneda, saldo: saldos.get(c.id) ?? c.saldo_inicial, socio_id: c.socio_id })),
+    categorias,
+    socios: socios.filter((s) => s.activo).map((s) => ({ id: s.id, nombre: s.nombre })),
+    proveedores,
+    sedes,
+    gestion: acceso.gestion,
+  };
 }

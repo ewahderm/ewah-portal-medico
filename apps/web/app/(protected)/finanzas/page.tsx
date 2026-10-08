@@ -2,8 +2,9 @@ import Link from "next/link";
 import { ArrowRightIcon, BanknoteIcon, CreditCardIcon, HandCoinsIcon, LandmarkIcon, SmartphoneIcon, TriangleAlertIcon, WalletIcon, type LucideIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { requireUsuario } from "@/lib/auth/session";
-import { getAccesoFinanzas, getConfigFinanzas, getCuentas, getSocios } from "@/lib/finanzas/consultas";
+import { getAccesoFinanzas, getConfigFinanzas, getDatosRegistro, getMovimientos } from "@/lib/finanzas/consultas";
 import { resumirCuentas } from "@/lib/finanzas/cuentas";
+import { codigoCategoria, resumirPeriodo } from "@/lib/finanzas/movimientos";
 import { formatoDinero } from "@/lib/finanzas/dinero";
 import { TIPOS_CUENTA, etiqueta, type TipoCuenta } from "@/lib/finanzas/constantes";
 import { hoyBogota } from "@/lib/habilitacion/servidor";
@@ -12,6 +13,8 @@ import { cn } from "cn";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AsistenteArranque } from "./asistente-arranque";
+import { RegistrarMovimientoBotones } from "./_components/registrar-movimiento";
+import { MovimientoFila } from "./_components/movimiento-fila";
 
 const ICONOS: Record<TipoCuenta, LucideIcon> = {
   banco: LandmarkIcon,
@@ -22,8 +25,10 @@ const ICONOS: Record<TipoCuenta, LucideIcon> = {
   tarjeta_socio: HandCoinsIcon,
 };
 
-// FC1: asistente de arranque (sin configuración) o tablero de saldos. Los
-// movimientos llegan en FC2; mientras tanto el saldo es el inicial.
+const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+
+// Asistente de arranque (sin configuración) o tablero: saldos por cuenta,
+// botones para registrar, entradas y salidas del mes y últimos movimientos.
 export default async function FinanzasPage() {
   await requireUsuario();
   const acceso = await getAccesoFinanzas();
@@ -44,9 +49,10 @@ export default async function FinanzasPage() {
       </Alert>
     );
   }
+  const hoy = hoyBogota();
   if (config === null) {
     return acceso.puedeEditar ? (
-      <AsistenteArranque hoy={hoyBogota()} gestion={acceso.gestion} />
+      <AsistenteArranque hoy={hoy} gestion={acceso.gestion} />
     ) : (
       <Alert>
         <AlertDescription>El flujo de caja aún no está activado. Pide a un administrador que lo configure.</AlertDescription>
@@ -54,19 +60,22 @@ export default async function FinanzasPage() {
     );
   }
 
-  const [cuentas, socios] = await Promise.all([getCuentas(supabase), getSocios(supabase)]);
-  const activas = cuentas.filter((c) => c.activa);
-  const resumen = resumirCuentas(activas.map((c) => ({ ...c, saldo: c.saldo_inicial })));
-  const nombreSocio = new Map(socios.map((s) => [s.id, s.nombre]));
+  const inicioMes = `${hoy.slice(0, 8)}01`;
+  const [datos, delMes, recientes] = await Promise.all([
+    getDatosRegistro(supabase, acceso, config, hoy),
+    getMovimientos(supabase, { desde: inicioMes > config.fecha_inicio ? inicioMes : config.fecha_inicio, hasta: hoy }, 5000),
+    getMovimientos(supabase, { desde: config.fecha_inicio, hasta: hoy }, 6),
+  ]);
+  const resumen = resumirCuentas(datos.cuentas);
+  const mes = resumirPeriodo(delMes.map((m) => ({ tipo: m.tipo, categoria: codigoCategoria(m), valor_cop: m.valor_cop, origen: m.origen })));
+  const nombreCategoria = new Map(datos.categorias.map((c) => [c.codigo, c.nombre]));
+  const nombreCuenta = new Map(datos.cuentas.map((c) => [c.id, c.nombre]));
+  const nombreSocio = new Map(datos.socios.map((s) => [s.id, s.nombre]));
+  const maxCategoria = Math.max(1, ...mes.porCategoria.map((c) => c.salidas));
 
   return (
     <div className="space-y-4">
-      <Alert>
-        <AlertDescription>
-          Llevas la caja desde el <strong>{fechaLegible(config.fecha_inicio)}</strong>. Por ahora ves los saldos iniciales; muy pronto
-          podrás registrar lo que entra y lo que sale.
-        </AlertDescription>
-      </Alert>
+      <RegistrarMovimientoBotones {...datos} puedeCrear={acceso.puedeCrear} />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Cifra icono={WalletIcon} titulo="Disponible en pesos" valor={formatoDinero(resumen.disponible.COP)} detalle="Bancos, billeteras y efectivo" />
@@ -78,10 +87,10 @@ export default async function FinanzasPage() {
             detalle="Efectivo en dólares y euros"
           />
         ) : null}
-        {activas.some((c) => c.tipo === "pasarela") ? (
+        {datos.cuentas.some((c) => c.tipo === "pasarela") ? (
           <Cifra icono={CreditCardIcon} titulo="Por abonar (pasarela)" valor={formatoDinero(resumen.porAbonar)} detalle="Cobros con tarjeta que aún no llegan" />
         ) : null}
-        {activas.some((c) => c.tipo === "tarjeta_socio") ? (
+        {datos.cuentas.some((c) => c.tipo === "tarjeta_socio") ? (
           <Cifra
             icono={HandCoinsIcon}
             titulo="Se les debe a los socios"
@@ -90,6 +99,72 @@ export default async function FinanzasPage() {
             tono={resumen.deudaSocios > 0 ? "alerta" : undefined}
           />
         ) : null}
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base font-semibold">
+              {MESES[Number(hoy.slice(5, 7)) - 1][0].toUpperCase() + MESES[Number(hoy.slice(5, 7)) - 1].slice(1)} hasta hoy
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-3 gap-2 text-sm">
+              <div className="rounded-lg border p-2">
+                <p className="text-xs text-muted-foreground">Entró</p>
+                <p className="font-semibold tabular-nums text-emerald-700">{formatoDinero(mes.entradas)}</p>
+              </div>
+              <div className="rounded-lg border p-2">
+                <p className="text-xs text-muted-foreground">Salió</p>
+                <p className="font-semibold tabular-nums text-destructive">{formatoDinero(mes.salidas)}</p>
+              </div>
+              <div className="rounded-lg border p-2">
+                <p className="text-xs text-muted-foreground">Diferencia</p>
+                <p className={cn("font-semibold tabular-nums", mes.entradas - mes.salidas < 0 && "text-destructive")}>{formatoDinero(mes.entradas - mes.salidas)}</p>
+              </div>
+            </div>
+            {mes.porCategoria.length ? (
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground">En qué se fue la plata</p>
+                <ul className="space-y-1.5">
+                  {mes.porCategoria.slice(0, 8).map((c) => (
+                    <li key={c.categoria} className="space-y-0.5 text-sm">
+                      <div className="flex justify-between gap-2">
+                        <span className="truncate">{nombreCategoria.get(c.categoria) ?? c.categoria}</span>
+                        <span className="shrink-0 tabular-nums">{formatoDinero(c.salidas)}</span>
+                      </div>
+                      <div className="h-1.5 rounded-full bg-muted" aria-hidden>
+                        <div className="h-1.5 rounded-full bg-primary" style={{ width: `${Math.max(2, (c.salidas / maxCategoria) * 100)}%` }} />
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">Todavía no hay salidas este mes.</p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between gap-3">
+            <CardTitle className="text-base font-semibold">Últimos movimientos</CardTitle>
+            <Link href="/finanzas/movimientos" className="inline-flex items-center gap-1 text-sm text-primary underline-offset-4 hover:underline">
+              Ver todos <ArrowRightIcon className="size-4" />
+            </Link>
+          </CardHeader>
+          <CardContent>
+            {recientes.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Aún no hay movimientos. Empieza con los botones de arriba.</p>
+            ) : (
+              <ul className="divide-y">
+                {recientes.map((m) => (
+                  <MovimientoFila key={m.id} movimiento={m} nombreCategoria={nombreCategoria} nombreCuenta={nombreCuenta} nombreSocio={nombreSocio} compacta />
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       <Card>
@@ -102,29 +177,31 @@ export default async function FinanzasPage() {
           ) : null}
         </CardHeader>
         <CardContent>
-          {activas.length === 0 ? (
+          <p className="mb-2 text-xs text-muted-foreground">Llevas la caja desde el {fechaLegible(config.fecha_inicio)}.</p>
+          {datos.cuentas.length === 0 ? (
             <p className="text-sm text-muted-foreground">No hay cuentas activas.</p>
           ) : (
             <ul className="divide-y">
-              {activas.map((c) => {
+              {datos.cuentas.map((c) => {
                 const Icono = ICONOS[c.tipo];
                 const deuda = c.tipo === "tarjeta_socio";
                 return (
-                  <li key={c.id} className="flex items-center gap-3 py-3">
-                    <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-accent-foreground">
-                      <Icono className="size-4" />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-medium">{c.nombre}</span>
-                      <span className="block text-xs text-muted-foreground">
-                        {etiqueta(TIPOS_CUENTA, c.tipo)}
-                        {deuda && c.socio_id ? ` · ${nombreSocio.get(c.socio_id) ?? ""}` : ""}
-                        {c.ultimos_digitos ? ` · ****${c.ultimos_digitos}` : ""}
+                  <li key={c.id}>
+                    <Link href={`/finanzas/movimientos?cuenta=${c.id}`} className="flex items-center gap-3 py-3 hover:bg-muted/50">
+                      <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-accent-foreground">
+                        <Icono className="size-4" />
                       </span>
-                    </span>
-                    <span className={cn("text-right text-sm font-semibold tabular-nums", deuda && c.saldo_inicial < 0 && "text-destructive")}>
-                      {deuda ? (c.saldo_inicial < 0 ? `Se le debe ${formatoDinero(-c.saldo_inicial)}` : "Al día") : formatoDinero(c.saldo_inicial, c.moneda)}
-                    </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium">{c.nombre}</span>
+                        <span className="block text-xs text-muted-foreground">
+                          {etiqueta(TIPOS_CUENTA, c.tipo)}
+                          {deuda && c.socio_id ? ` · ${nombreSocio.get(c.socio_id) ?? ""}` : ""}
+                        </span>
+                      </span>
+                      <span className={cn("text-right text-sm font-semibold tabular-nums", (deuda ? c.saldo < 0 : c.saldo < 0) && "text-destructive")}>
+                        {deuda ? (c.saldo < 0 ? `Se le debe ${formatoDinero(-c.saldo)}` : "Al día") : formatoDinero(c.saldo, c.moneda)}
+                      </span>
+                    </Link>
                   </li>
                 );
               })}
