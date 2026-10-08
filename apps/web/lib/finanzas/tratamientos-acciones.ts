@@ -35,15 +35,15 @@ export async function guardarDestinoMedio(medioPagoId: string, destino: DestinoM
   return {};
 }
 
-export async function ponerAlDiaIngresos(): Promise<Resultado & { generados?: number; valor?: number; anulados?: number }> {
+export async function ponerAlDiaIngresos(): Promise<Resultado & { generados?: number; valor?: number; anulados?: number; fallidos?: number }> {
   const check = await requirePermiso(MODULO_FINANZAS, "CREATE");
   if (!check.ok) return { error: check.error };
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("fn_fin_generar_ingresos");
   if (error) return { error: mensajeError("ponerAlDiaIngresos", error, "No se pudieron poner al día los ingresos.") };
-  const r = (data ?? {}) as { generados?: number; valor?: number; anulados?: number };
+  const r = (data ?? {}) as { generados?: number; valor?: number; anulados?: number; fallidos?: number };
   revalidar();
-  return { generados: Number(r.generados ?? 0), valor: Number(r.valor ?? 0), anulados: Number(r.anulados ?? 0) };
+  return { generados: Number(r.generados ?? 0), valor: Number(r.valor ?? 0), anulados: Number(r.anulados ?? 0), fallidos: Number(r.fallidos ?? 0) };
 }
 
 export async function registrarCobro(input: { tratamientoId: string; cuentaId: string | null; fecha: string; monto: number | null }): Promise<Resultado> {

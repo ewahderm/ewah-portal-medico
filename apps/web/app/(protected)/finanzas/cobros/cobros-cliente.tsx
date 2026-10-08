@@ -46,6 +46,8 @@ export function CobrosCliente({
     <div className="space-y-4">
       {resumen.porGenerar.cantidad || resumen.anuladosConIngreso ? <PonerAlDia resumen={resumen} puedeCrear={puedeCrear} /> : null}
 
+      <Seccion situacion="corregido_sin_anular" filas={de("corregido_sin_anular")} puedeCrear={false} onCobrar={setCobrando} />
+
       {nada ? (
         <Card>
           <CardContent className="flex items-center gap-3 py-6 text-sm text-muted-foreground">
@@ -92,6 +94,7 @@ export function CobrosCliente({
         </Card>
       ) : null}
 
+      <Seccion situacion="por_generar" filas={de("por_generar")} total={resumen.porGenerar.valor} puedeCrear={puedeCrear} onCobrar={setCobrando} />
       <Seccion situacion="sin_valor" filas={de("sin_valor")} puedeCrear={puedeCrear} onCobrar={setCobrando} />
       <Seccion situacion="fecha_futura" filas={de("fecha_futura")} puedeCrear={false} onCobrar={setCobrando} />
 
@@ -121,7 +124,15 @@ function PonerAlDia({ resumen, puedeCrear }: { resumen: ReturnType<typeof resumi
       r.generados ? `${r.generados} ${r.generados === 1 ? "ingreso registrado" : "ingresos registrados"} por ${formatoDinero(r.valor ?? 0)}` : null,
       r.anulados ? `${r.anulados} ${r.anulados === 1 ? "ingreso anulado" : "ingresos anulados"}` : null,
     ].filter(Boolean);
-    toast.add({ title: "Flujo de caja al día", description: hechos.join(" · ") || "No había nada pendiente.", type: "success" });
+    if (r.fallidos) {
+      toast.add({
+        title: "Quedaron pendientes",
+        description: `${hechos.join(" · ")}${hechos.length ? ". " : ""}${r.fallidos} no se pudieron registrar; siguen en la lista.`,
+        type: "error",
+      });
+    } else {
+      toast.add({ title: "Flujo de caja al día", description: hechos.join(" · ") || "No había nada pendiente.", type: "success" });
+    }
     router.refresh();
   }
 
@@ -130,7 +141,8 @@ function PonerAlDia({ resumen, puedeCrear }: { resumen: ReturnType<typeof resumi
       <RefreshCwIcon />
       <AlertDescription className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <span>
-          Listos para poner al día: {partes.join(" y ")}. {SITUACIONES.por_generar.ayuda}
+          Listos para poner al día: {partes.join(" y ")}. Entran con la fecha de cada tratamiento. Si alguno llegó a otra cuenta,
+          registra su cobro en la lista de abajo antes de poner al día.
         </span>
         {puedeCrear ? (
           <Button size="sm" onClick={aplicar} disabled={pendiente} className="shrink-0">
@@ -230,7 +242,7 @@ function CobroDialog({
     const r = await registrarCobro({ tratamientoId: p.tratamiento_id, cuentaId, fecha, monto });
     setEnviando(false);
     if (r.error) return setError(r.error);
-    toast.add({ title: "Cobro registrado", description: `${formatoDinero(monto ?? 0)} de ${p.paciente}`, type: "success" });
+    toast.add({ title: "Cobro registrado", description: `${formatoDinero(monto ?? 0)}${p.paciente ? ` de ${p.paciente}` : ""}`, type: "success" });
     router.refresh();
     onCerrar();
   }
@@ -241,7 +253,7 @@ function CobroDialog({
         <DialogHeader>
           <DialogTitle>Registrar cobro</DialogTitle>
           <DialogDescription>
-            {p.paciente} · {p.tratamiento ?? "Tratamiento"} del {fechaLegible(p.fecha)}. Entra como ingreso de servicios de salud.
+            {p.paciente ?? "Paciente"} · {p.tratamiento ?? "Tratamiento"} del {fechaLegible(p.fecha)}. Entra como ingreso de servicios de salud.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={guardar} className="space-y-3">

@@ -1,7 +1,14 @@
 // Ingresos desde tratamientos (FC3): lógica pura que comparten la pantalla
 // de cobros, el tablero y la configuración de medios de pago.
 
-export type SituacionIngreso = "por_generar" | "por_cobrar" | "sin_valor" | "medio_sin_cuenta" | "fecha_futura" | "anulado_con_ingreso";
+export type SituacionIngreso =
+  | "por_generar"
+  | "por_cobrar"
+  | "sin_valor"
+  | "medio_sin_cuenta"
+  | "fecha_futura"
+  | "anulado_con_ingreso"
+  | "corregido_sin_anular";
 
 export type IngresoPendiente = {
   tratamiento_id: string;
@@ -12,7 +19,8 @@ export type IngresoPendiente = {
   medio_pago_id: string;
   medio_pago: string | null;
   tratamiento: string | null;
-  paciente: string;
+  // null si quien consulta no puede ver pacientes ni tratamientos.
+  paciente: string | null;
   sede_id: string;
 };
 
@@ -36,6 +44,10 @@ export const SITUACIONES: Record<SituacionIngreso, { titulo: string; ayuda: stri
   fecha_futura: {
     titulo: "Con fecha futura",
     ayuda: "Entrarán cuando llegue su fecha, al poner al día.",
+  },
+  corregido_sin_anular: {
+    titulo: "Corregidos sin anular el original",
+    ayuda: "El tratamiento tiene un registro corregido pero no se anuló: los dos cuentan como ingreso. Anula el que sobra en Tratamientos.",
   },
   anulado_con_ingreso: {
     titulo: "Anulados con ingreso",
@@ -107,6 +119,7 @@ export function resumirPendientes(pendientes: IngresoPendiente[]): ResumenPendie
         break;
       }
       case "sin_valor":
+      case "corregido_sin_anular":
         r.porRevisar++;
         break;
     }

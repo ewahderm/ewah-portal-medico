@@ -250,11 +250,12 @@ export async function getMediosPagoFinanzas(supabase: Supabase): Promise<MedioPa
     .filter((m) => m.activo || m.cuenta_id || m.es_credito);
 }
 
-export async function getIngresosPendientes(supabase: Supabase): Promise<IngresoPendiente[]> {
+// null si no se pudo consultar (no es lo mismo que "nada pendiente").
+export async function getIngresosPendientes(supabase: Supabase): Promise<IngresoPendiente[] | null> {
   const { data, error } = await supabase.rpc("fn_fin_ingresos_pendientes");
   if (error) {
     console.error("[finanzas] fn_fin_ingresos_pendientes", error);
-    return [];
+    return null;
   }
   return ((data ?? []) as IngresoPendiente[]).map((p) => ({ ...p, valor: p.valor === null ? null : Number(p.valor) }));
 }

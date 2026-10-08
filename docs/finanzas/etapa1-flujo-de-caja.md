@@ -81,6 +81,12 @@ Como administrador quiero elegir desde qué fecha la clínica lleva su flujo de 
 - **Cambiar la fecha** solo mientras no haya un mes cerrado: se anulan y regeneran las
   aperturas y los ingresos automáticos (con confirmación y auditoría). Con meses cerrados,
   la fecha queda fija.
+  - *Implementado en FC2/FC3:* la fecha se puede mover hacia atrás (con motivo e
+    historial); los tratamientos del nuevo rango quedan "listos para poner al día" en
+    Cobros, donde se ven cuántos y por cuánto antes de confirmar, y la pantalla avisa que
+    hay que ajustar los saldos iniciales. Hacia adelante solo si no hay movimientos
+    antes de la nueva fecha (la anulación y regeneración automática queda para FC6, con
+    el cierre de mes).
 - Nada con fecha anterior al inicio se puede registrar.
 
 ### HU-1 · Configurar cuentas de dinero
@@ -157,6 +163,23 @@ Como administrador quiero decir a qué cuenta llega cada medio de pago y cuánto
 - Medio "Crédito / cuotas": en la Etapa 1 se registra como **pendiente de cobro** (sin plan
   de cuotas). Se marca como recibido cuando el paciente paga. Las cuotas formales son de la
   etapa siguiente.
+- *Implementado en FC3 (0093–0094):*
+  - Configuración → Medios de pago: cada medio va a una cuenta en pesos, "a crédito" o
+    "sin asignar" (tabla `fin_medios_pago`; el catálogo sigue en Parámetros).
+  - El ingreso nace con la fecha del tratamiento, en Servicios de salud, sin el nombre del
+    paciente. A una pasarela entra pendiente de abono (1 día hábil hasta FC4).
+  - Finanzas nunca bloquea el registro clínico: si el ingreso falla, el tratamiento se
+    guarda y queda por revisar.
+  - Pantalla **Cobros**: por cobrar (crédito), listos para registrar, sin valor, medio sin
+    cuenta, fecha futura y correcciones sin anular. "Poner al día" registra lo listo y
+    anula ingresos de tratamientos anulados, fila por fila. "Registrar cobro" deja elegir
+    cuenta, fecha y valor.
+  - Al editar un tratamiento (la app crea el corregido y anula el original), un cobro
+    registrado a mano pasa al corregido; un ingreso automático se anula y el corregido
+    genera el suyo.
+  - El ingreso de un tratamiento también se puede anular a mano (vuelve a Cobros).
+  - Los nombres de pacientes en Cobros solo los ve quien tiene acceso a pacientes o
+    tratamientos.
 
 ### HU-7 · Bold: cobro pendiente y liquidación
 - El cobro con Bold entra a la cuenta "Bold por abonar" por el **bruto**, con fecha esperada

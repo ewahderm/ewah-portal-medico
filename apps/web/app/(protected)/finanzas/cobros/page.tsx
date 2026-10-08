@@ -29,6 +29,14 @@ export default async function CobrosPage() {
     );
   }
   const [pendientes, cuentas] = await Promise.all([getIngresosPendientes(supabase), getCuentas(supabase)]);
+  if (!pendientes) {
+    return (
+      <Alert variant="destructive">
+        <TriangleAlertIcon />
+        <AlertDescription>No se pudieron consultar los cobros pendientes. Vuelve a intentarlo en unos minutos.</AlertDescription>
+      </Alert>
+    );
+  }
   return (
     <CobrosCliente
       pendientes={pendientes}

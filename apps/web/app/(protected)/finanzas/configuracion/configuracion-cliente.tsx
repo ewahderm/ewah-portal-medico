@@ -137,6 +137,9 @@ function General({ hoy, fechaInicio, historialFecha, puedeEditar }: Props) {
             <Textarea id="motivoFecha" rows={2} maxLength={500} value={motivo} onChange={(e) => setMotivo(e.target.value)} placeholder="Al menos 10 caracteres" />
             <p className="text-xs text-muted-foreground">
               Los saldos iniciales de las cuentas pasarán a ser al {fechaLegible(fecha)}: revísalos en la pestaña Cuentas.
+              {fecha < fechaInicio
+                ? " Los tratamientos desde esa fecha quedarán listos para poner al día en Cobros: ajusta los saldos iniciales para no contar dos veces esa plata."
+                : ""}
             </p>
             <Button onClick={guardar} disabled={pendiente || motivo.trim().length < 10}>
               {pendiente ? "Guardando…" : "Cambiar fecha"}
@@ -182,7 +185,7 @@ function MediosPago({ medios, cuentas, puedeEditar }: Props) {
           </ul>
         )}
         <p className="mt-3 text-xs text-muted-foreground">
-          Cambiar la cuenta aplica a los tratamientos nuevos y a los que estén pendientes; lo ya registrado no se mueve.
+          Cambiar la cuenta aplica a los tratamientos nuevos; los pendientes entran al poner al día en Cobros. Lo ya registrado no se mueve.
         </p>
       </CardContent>
     </Card>

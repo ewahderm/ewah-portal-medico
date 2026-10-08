@@ -36,6 +36,7 @@ describe("resumirPendientes", () => {
       fila({ situacion: "por_cobrar", valor: 300000 }),
       fila({ situacion: "sin_valor", valor: null }),
       fila({ situacion: "fecha_futura" }),
+      fila({ situacion: "corregido_sin_anular", movimiento_id: "y" }),
       fila({ situacion: "medio_sin_cuenta", medio_pago_id: "m2", medio_pago: "Nequi", valor: 50000 }),
       fila({ situacion: "medio_sin_cuenta", medio_pago_id: "m2", medio_pago: "Nequi", valor: 70000 }),
       fila({ situacion: "medio_sin_cuenta", medio_pago_id: "m3", medio_pago: "PSE", valor: 10000 }),
@@ -43,7 +44,7 @@ describe("resumirPendientes", () => {
     expect(r.porGenerar).toEqual({ cantidad: 2, valor: 100000 });
     expect(r.anuladosConIngreso).toBe(1);
     expect(r.porCobrar).toEqual({ cantidad: 1, valor: 300000 });
-    expect(r.porRevisar).toBe(4);
+    expect(r.porRevisar).toBe(5);
     expect(r.fechaFutura).toBe(1);
     expect(r.mediosSinCuenta).toEqual([
       { medioPagoId: "m2", nombre: "Nequi", cantidad: 2, valor: 120000 },

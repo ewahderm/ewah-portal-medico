@@ -68,7 +68,7 @@ export default async function FinanzasPage() {
     getMovimientos(supabase, { desde: config.fecha_inicio, hasta: hoy }, 6),
     getIngresosPendientes(supabase),
   ]);
-  const cobros = resumirPendientes(pendientes);
+  const cobros = resumirPendientes(pendientes ?? []);
   const atender = cobros.porGenerar.cantidad + cobros.anuladosConIngreso + cobros.porRevisar;
   const resumen = resumirCuentas(datos.cuentas);
   const mes = resumirPeriodo(delMes.map((m) => ({ tipo: m.tipo, categoria: codigoCategoria(m), valor_cop: m.valor_cop, origen: m.origen })));
