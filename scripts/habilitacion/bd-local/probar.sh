@@ -15,7 +15,11 @@ set -euo pipefail
 cd "$(dirname "$0")"
 RAIZ="$(cd ../../.. && pwd)"
 DB=hab_prueba
-PSQL() { su postgres -c "psql -X -q -d $DB -v ON_ERROR_STOP=1" ; }
+# Sesión en hora de Colombia: current_date de las pruebas debe ser el mismo
+# día que usa la BD ("now() at time zone 'America/Bogota'"); en UTC, entre
+# las 7 p. m. y la medianoche de Colombia, las pruebas de "fecha no futura"
+# fallaban sin que hubiera un error real.
+PSQL() { su postgres -c "PGTZ=America/Bogota psql -X -q -d $DB -v ON_ERROR_STOP=1" ; }
 
 pg_ctlcluster 16 main start 2>/dev/null || true
 su postgres -c "dropdb --if-exists $DB" && su postgres -c "createdb $DB"
@@ -54,7 +58,7 @@ SQL
   aplicar "$f"
 done
 
-for datos in $(ls f*-datos.sql | sort -V) $(ls sst*-datos.sql 2>/dev/null | sort -V) $(ls ma*-datos.sql 2>/dev/null | sort -V) $(ls rp*-datos.sql 2>/dev/null | sort -V); do
+for datos in $(ls f[0-9]*-datos.sql | sort -V) $(ls sst*-datos.sql 2>/dev/null | sort -V) $(ls ma*-datos.sql 2>/dev/null | sort -V) $(ls rp*-datos.sql 2>/dev/null | sort -V) $(ls fin*-datos.sql 2>/dev/null | sort -V); do
   fase=${datos%-datos.sql}
   echo "Pruebas $fase:"
   PSQL < "$datos" > /dev/null

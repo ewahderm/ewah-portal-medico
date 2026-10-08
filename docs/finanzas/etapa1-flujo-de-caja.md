@@ -67,16 +67,26 @@ Fuera de la Etapa 1 (siguientes etapas, ver §11):
 
 ### HU-0 · Fecha de inicio (configurable en la aplicación)
 Como administrador quiero elegir desde qué fecha la clínica lleva su flujo de caja en EWAH.
-- Se define en `/finanzas/configuracion` (permiso EDIT), con un asistente de arranque:
-  fecha de inicio → cuentas y su saldo a esa fecha → socios → medios de pago.
+- La primera vez, un asistente de arranque en `/finanzas` (permiso EDIT): fecha de inicio →
+  socios (Pro) → cuentas y su saldo a esa fecha → confirmar. Después se cambia en
+  `/finanzas/configuracion`. La cuenta destino de cada medio de pago se configura en FC3,
+  cuando los tratamientos empiecen a generar ingresos.
 - Puede ser hoy o una fecha pasada (por ejemplo, el 1 de enero para cargar el año). No futura.
 - Desde esa fecha nacen los ingresos automáticos de los tratamientos (HU-6): al fijarla en el
   pasado, el sistema genera de una vez los ingresos de los tratamientos ya registrados
   desde entonces y muestra cuántos y por cuánto antes de confirmar.
-- Los saldos iniciales de las cuentas quedan como movimientos de apertura en esa fecha.
+- Los saldos iniciales se guardan en cada cuenta (`fin_cuentas.saldo_inicial`), a la fecha de
+  inicio. El saldo de una cuenta = saldo inicial + movimientos (FC2). La contabilidad los
+  convertirá en el asiento de apertura.
 - **Cambiar la fecha** solo mientras no haya un mes cerrado: se anulan y regeneran las
   aperturas y los ingresos automáticos (con confirmación y auditoría). Con meses cerrados,
   la fecha queda fija.
+  - *Implementado en FC2/FC3:* la fecha se puede mover hacia atrás (con motivo e
+    historial); los tratamientos del nuevo rango quedan "listos para poner al día" en
+    Cobros, donde se ven cuántos y por cuánto antes de confirmar, y la pantalla avisa que
+    hay que ajustar los saldos iniciales. Hacia adelante solo si no hay movimientos
+    antes de la nueva fecha (la anulación y regeneración automática queda para FC6, con
+    el cierre de mes).
 - Nada con fecha anterior al inicio se puede registrar.
 
 ### HU-1 · Configurar cuentas de dinero
@@ -153,6 +163,23 @@ Como administrador quiero decir a qué cuenta llega cada medio de pago y cuánto
 - Medio "Crédito / cuotas": en la Etapa 1 se registra como **pendiente de cobro** (sin plan
   de cuotas). Se marca como recibido cuando el paciente paga. Las cuotas formales son de la
   etapa siguiente.
+- *Implementado en FC3 (0093–0094):*
+  - Configuración → Medios de pago: cada medio va a una cuenta en pesos, "a crédito" o
+    "sin asignar" (tabla `fin_medios_pago`; el catálogo sigue en Parámetros).
+  - El ingreso nace con la fecha del tratamiento, en Servicios de salud, sin el nombre del
+    paciente. A una pasarela entra pendiente de abono (1 día hábil hasta FC4).
+  - Finanzas nunca bloquea el registro clínico: si el ingreso falla, el tratamiento se
+    guarda y queda por revisar.
+  - Pantalla **Cobros**: por cobrar (crédito), listos para registrar, sin valor, medio sin
+    cuenta, fecha futura y correcciones sin anular. "Poner al día" registra lo listo y
+    anula ingresos de tratamientos anulados, fila por fila. "Registrar cobro" deja elegir
+    cuenta, fecha y valor.
+  - Al editar un tratamiento (la app crea el corregido y anula el original), un cobro
+    registrado a mano pasa al corregido; un ingreso automático se anula y el corregido
+    genera el suyo.
+  - El ingreso de un tratamiento también se puede anular a mano (vuelve a Cobros).
+  - Los nombres de pacientes en Cobros solo los ve quien tiene acceso a pacientes o
+    tratamientos.
 
 ### HU-7 · Bold: cobro pendiente y liquidación
 - El cobro con Bold entra a la cuenta "Bold por abonar" por el **bruto**, con fecha esperada
@@ -425,3 +452,51 @@ Decisiones del usuario: la **fecha de inicio se configura en la aplicación** (H
 **préstamos con socios no generan intereses** (HU-9). Pregunta que queda para el contador,
 sin bloquear la Etapa 1: si la prepagada se pacta como pago no salarial (solo cambia la
 cuenta contable, no el flujo).
+
+---
+
+## 12. Estado de la implementación (Etapa 1 terminada)
+
+Las seis fases están construidas en `staging`. Migraciones **0089 a 0100**:
+
+| Migración | Contenido |
+|---|---|
+| 0089–0090 | FC1: módulo `finanzas`, `fin_config` (fecha de inicio con historial), categorías, cuentas, socios, asistente `fn_fin_activar` |
+| 0091–0092 | FC2: `fin_movimientos` inmutable, anulación por movimiento inverso, saldos, soportes en el bucket `finanzas` |
+| 0093–0094 | FC3: `fin_medios_pago`, ingreso automático desde tratamientos, Cobros (por cobrar / por revisar), puesta al día |
+| 0095, 0097 | FC4: `fin_tarifas_medio_pago`, liquidación de la pasarela (`fin_liquidaciones_pasarela`, `fin_liquidacion_cobros`) |
+| 0096, 0099 | FC5: saldos por socio, reembolso de la tarjeta, préstamos y devoluciones con tope |
+| 0098, 0100 | FC6: informe por actividades, cierre mensual con arqueo (`fin_periodos`, `fin_arqueos`), alertas (`fin_alertas_enviadas`); reabrir rehace el arqueo y un tratamiento de un mes cerrado entra el primer día abierto |
+
+Pantallas: Inicio, Movimientos, Cobros, Bold, Socios, Informe, Cierre y Configuración
+(General, Cuentas, **Medios de pago con tarifa y simulador**, Socios, Categorías).
+
+Decisiones tomadas al construir (difieren del texto original o lo precisan):
+- La cuenta destino y la tarifa de cada medio de pago se configuran en **Flujo de caja →
+  Configuración → Medios de pago** (no en Parámetros), para no mezclar permisos.
+- Una tarifa usada en una liquidación vigente no se edita ni se borra: se registra una nueva
+  con otra fecha de vigencia. Si un medio no tiene tarifa, el cobro usa la de otro medio que
+  llega a la misma pasarela.
+- Un cobro ya liquidado no se anula suelto: primero se anula la liquidación. Si su
+  tratamiento se anula, queda "por revisar" (anulado con el cobro ya abonado).
+- El informe es de **efectivo** (cuentas disponibles), método directo, con el **neto por
+  categoría** (las anulaciones se compensan). La pasarela y las tarjetas de socios no son
+  efectivo: el abono de la pasarela entra como cobro de operación y el reembolso a un socio
+  sale como financiación. Las divisas se convierten con la última tasa usada; la diferencia
+  aparece como "efecto de la tasa de cambio".
+- El cierre es en orden (desde el mes del inicio) y solo de meses terminados; se reabre el
+  último cerrado, con motivo. Con meses cerrados la fecha de inicio queda fija. Un
+  tratamiento con fecha en un mes cerrado se guarda y su ingreso queda pendiente.
+- Las alertas (plan Pro) van a los usuarios de nivel 1 o con permiso de aprobar en Flujo de
+  caja; los ingresos por revisar se avisan una vez por semana.
+- Exportes (Excel del informe y de movimientos, PDF del informe) con el permiso EXPORT de
+  Flujo de caja y plan Pro.
+
+Pruebas: `scripts/habilitacion/bd-local/probar.sh` (BD, fin1–fin6), vitest
+(`apps/web/lib/finanzas/__tests__`) y la regresión en navegador
+`scripts/finanzas/regresion.sh` (recorridos FC1–FC6, escritorio y móvil a 390 px).
+
+Pendiente para etapas siguientes: cuotas de pacientes y por pagar (Etapa 2), contabilidad
+sobre estos movimientos (Etapa 3), N10 (aviso cuando una tasa se aleja más del 10 % de la
+última usada) y el recargo internacional de la tarifa (se guarda pero el cobro no dice si la
+tarjeta es extranjera).

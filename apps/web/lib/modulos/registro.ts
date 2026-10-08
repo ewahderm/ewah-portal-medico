@@ -9,6 +9,7 @@ import {
   ShieldCheckIcon,
   HardHatIcon,
   ChartNoAxesColumnIncreasingIcon,
+  WalletIcon,
   type LucideIcon,
 } from "lucide-react";
 
@@ -73,6 +74,13 @@ export const REGISTRO_MODULOS: ModuloRegistro[] = [
     descripcion: "Control de stock, lotes y costeo de insumos.",
     href: "/inventario",
     icono: PackageIcon,
+  },
+  {
+    codigo: "finanzas",
+    nombre: "Flujo de caja",
+    descripcion: "Saldos de tus cuentas, lo que entra, lo que sale y en qué.",
+    href: "/finanzas",
+    icono: WalletIcon,
   },
   {
     codigo: "campanas",

@@ -44,6 +44,7 @@ const NAV_GROUPS: GrupoNavegacion[] = [
     label: "Operación",
     items: [
       { href: "/inventario", label: "Inventario", modulo: "inventario" },
+      { href: "/finanzas", label: "Flujo de caja", modulo: "finanzas" },
       { href: "/rrhh", label: "Recursos Humanos", modulo: "rrhh" },
     ],
   },

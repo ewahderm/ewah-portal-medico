@@ -1,0 +1,1 @@
+-- Flujo de caja FC4: usa los medios y la pasarela de fin3.
