@@ -78,17 +78,17 @@ export default async function FinanzasPage() {
             detalle="Efectivo en dólares y euros"
           />
         ) : null}
-        {acceso.gestion ? (
-          <>
-            <Cifra icono={CreditCardIcon} titulo="Por abonar (pasarela)" valor={formatoDinero(resumen.porAbonar)} detalle="Cobros con tarjeta que aún no llegan" />
-            <Cifra
-              icono={HandCoinsIcon}
-              titulo="Se les debe a los socios"
-              valor={formatoDinero(resumen.deudaSocios)}
-              detalle="Gastos pagados con sus tarjetas"
-              tono={resumen.deudaSocios > 0 ? "alerta" : undefined}
-            />
-          </>
+        {activas.some((c) => c.tipo === "pasarela") ? (
+          <Cifra icono={CreditCardIcon} titulo="Por abonar (pasarela)" valor={formatoDinero(resumen.porAbonar)} detalle="Cobros con tarjeta que aún no llegan" />
+        ) : null}
+        {activas.some((c) => c.tipo === "tarjeta_socio") ? (
+          <Cifra
+            icono={HandCoinsIcon}
+            titulo="Se les debe a los socios"
+            valor={formatoDinero(resumen.deudaSocios)}
+            detalle="Gastos pagados con sus tarjetas"
+            tono={resumen.deudaSocios > 0 ? "alerta" : undefined}
+          />
         ) : null}
       </div>
 

@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { ArrowLeftIcon, ArrowRightIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { activarFinanzas } from "@/lib/finanzas/configuracion";
 import { MONEDAS, TIPOS_CUENTA, etiqueta, type Moneda } from "@/lib/finanzas/constantes";
-import { validarAsistente, type CuentaEntrada, type SocioEntrada } from "@/lib/finanzas/cuentas";
-import { formatoDinero, leerMonto } from "@/lib/finanzas/dinero";
+import { validarAsistente, validarFechaInicio, validarSocios, type CuentaEntrada, type SocioEntrada } from "@/lib/finanzas/cuentas";
+import { formatoDinero, leerPorcentaje } from "@/lib/finanzas/dinero";
 import { fechaLegible } from "@/lib/habilitacion/ruta";
 import { cn } from "cn";
 import { toast } from "@/components/ui/toast";
@@ -19,7 +19,7 @@ import { Label } from "@/components/ui/label";
 import { CampoDinero } from "./_components/campo-dinero";
 
 type Paso = "fecha" | "socios" | "cuentas" | "confirmar";
-type FilaCuenta = CuentaEntrada & { clave: number; saldoValido: boolean };
+type FilaCuenta = CuentaEntrada & { clave: number; saldoValido: boolean; saldoTexto: string };
 type FilaSocio = { clave: number; nombre: string; numeroIdentificacion: string; porcentajeTexto: string };
 
 let siguienteClave = 1;
@@ -31,6 +31,7 @@ const nuevaCuenta = (p: Partial<CuentaEntrada> = {}): FilaCuenta => ({
   saldo: 0,
   socioIndice: null,
   saldoValido: true,
+  saldoTexto: "",
   ...p,
 });
 
@@ -56,21 +57,23 @@ export function AsistenteArranque({ hoy, gestion }: { hoy: string; gestion: bool
   const sociosEntrada: SocioEntrada[] = socios.map((s) => ({
     nombre: s.nombre,
     numeroIdentificacion: s.numeroIdentificacion,
-    porcentaje: s.porcentajeTexto.trim() ? leerMonto(s.porcentajeTexto) : null,
+    porcentaje: s.porcentajeTexto.trim() ? leerPorcentaje(s.porcentajeTexto) : null,
   }));
   const indice = pasos.indexOf(paso);
 
   function validarPaso(p: Paso): string | null {
-    const entrada = { fechaInicio: fecha, hoy, socios: sociosEntrada, cuentas };
-    if (p === "fecha") {
-      return validarAsistente({ ...entrada, socios: [], cuentas: [nuevaCuenta({ nombre: "x", tipo: "efectivo" })] }, gestion);
-    }
+    if (p === "fecha") return validarFechaInicio(fecha, hoy);
     if (p === "socios") {
-      if (socios.some((s) => s.porcentajeTexto.trim() && leerMonto(s.porcentajeTexto) === null)) return "Revisa la participación de los socios.";
-      return validarAsistente({ ...entrada, cuentas: [nuevaCuenta({ nombre: "x", tipo: "efectivo" })] }, gestion);
+      if (socios.some((s) => s.porcentajeTexto.trim() && leerPorcentaje(s.porcentajeTexto) === null)) {
+        return "La participación es un porcentaje mayor que 0 y hasta 100, con máximo 2 decimales.";
+      }
+      return validarSocios(sociosEntrada, gestion);
     }
-    if (cuentas.some((c) => !c.saldoValido)) return "Revisa los saldos: alguno no es un número.";
-    return validarAsistente(entrada, gestion);
+    if (cuentas.some((c) => !c.saldoValido)) {
+      const malas = cuentas.filter((c) => !c.saldoValido).map((c) => c.nombre.trim() || etiqueta(TIPOS_CUENTA, c.tipo));
+      return `Revisa el saldo de: ${malas.join(", ")}.`;
+    }
+    return validarAsistente({ fechaInicio: fecha, hoy, socios: sociosEntrada, cuentas }, gestion);
   }
 
   function avanzar() {
@@ -168,12 +171,16 @@ export function AsistenteArranque({ hoy, gestion }: { hoy: string; gestion: bool
                   size="icon-sm"
                   aria-label={`Quitar socio ${i + 1}`}
                   onClick={() => {
+                    // No se borra en silencio la tarjeta (ni la deuda digitada).
+                    if (cuentas.some((c) => c.tipo === "tarjeta_socio" && c.socioIndice === i)) {
+                      setError(`${s.nombre.trim() || "Este socio"} tiene una tarjeta en el paso de cuentas: quítala primero.`);
+                      return;
+                    }
+                    setError(null);
                     setSocios((ss) => ss.filter((x) => x.clave !== s.clave));
                     // Las tarjetas apuntan al socio por posición: se reajustan.
                     setCuentas((cs) =>
-                      cs
-                        .filter((c) => !(c.tipo === "tarjeta_socio" && c.socioIndice === i))
-                        .map((c) => (c.tipo === "tarjeta_socio" && (c.socioIndice ?? 0) > i ? { ...c, socioIndice: (c.socioIndice ?? 0) - 1 } : c)),
+                      cs.map((c) => (c.tipo === "tarjeta_socio" && (c.socioIndice ?? 0) > i ? { ...c, socioIndice: (c.socioIndice ?? 0) - 1 } : c)),
                     );
                   }}
                 >
@@ -263,8 +270,10 @@ export function AsistenteArranque({ hoy, gestion }: { hoy: string; gestion: bool
                       key={`${c.clave}-${c.moneda}`}
                       id={`cuentaSaldo-${c.clave}`}
                       moneda={c.moneda as Moneda}
-                      valorInicial={c.saldo || null}
+                      textoInicial={c.saldoTexto}
+                      vacioEsCero
                       permitirNegativo={c.tipo === "banco"}
+                      onTexto={(t) => actualizarCuenta(c.clave, { saldoTexto: t })}
                       onValor={(v) => actualizarCuenta(c.clave, { saldo: v ?? 0, saldoValido: v !== null })}
                     />
                   </div>

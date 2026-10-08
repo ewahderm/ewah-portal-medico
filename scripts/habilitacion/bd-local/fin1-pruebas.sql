@@ -56,6 +56,35 @@ select t.debe_fallar($q$insert into fin_categorias_clinica (clinica_id, nombre, 
 select t.debe_fallar($q$insert into fin_categorias (codigo, nombre, tipo, actividad, comportamiento, icono, ayuda, orden) values ('HACK', 'x', 'egreso', 'operacion', 'gasto', 'x', 'x', 1)$q$, 'row-level');
 reset role;
 
+-- Ajustes de la revisión (0090).
+select t.como('00000000-0000-0000-0000-00000000000a'); set role authenticated;
+select t.debe_fallar($q$insert into fin_categorias_clinica (clinica_id, categoria_codigo, nombre) values (clinica_actual(), 'ARRENDAMIENTO', 'Nómina')$q$, 'ese nombre');
+select t.debe_fallar($q$insert into fin_categorias_clinica (clinica_id, nombre, tipo, actividad) values (clinica_actual(), ' impuestos ', 'egreso', 'operacion')$q$, 'ese nombre');
+select t.debe_fallar($q$insert into fin_categorias_clinica (clinica_id, nombre, tipo, actividad) values (clinica_actual(), 'combustible', 'egreso', 'operacion')$q$, 'ese nombre');
+insert into fin_categorias_clinica (clinica_id, nombre, tipo, actividad) values (clinica_actual(), 'Crédito bancario', 'ingreso', 'financiacion');
+select t.ok(comportamiento = 'financiacion', 'una propia de financiación no cuenta como ingreso') from v_fin_categorias where nombre = 'Crédito bancario';
+select t.debe_fallar($q$update fin_config set fecha_inicio = '2026-02-01'$q$, 'Explica por qué');
+update fin_config set fecha_inicio = '2026-02-01', motivo_cambio = 'Empezamos a registrar desde febrero';
+select t.ok(jsonb_array_length(historial) = 1 and historial -> 0 ->> 'anterior' = '2026-01-01' and motivo_cambio is null, 'el cambio de fecha queda en el historial con su motivo') from fin_config;
+select t.debe_fallar($q$update fin_config set historial = '[]'$q$, 'no se edita');
+select t.debe_fallar($q$update fin_config set fecha_inicio = '1999-12-31', motivo_cambio = 'Fecha demasiado antigua'$q$, 'fecha_minima');
+select t.debe_fallar($q$select fn_fin_activar('2026-01-01', null)$q$, 'ya está activado|al menos una cuenta');
+update fin_socios set activo = false, porcentaje_participacion = null where nombre = 'Luis Socio';
+select t.debe_fallar($q$insert into fin_cuentas (clinica_id, nombre, tipo, socio_id) values (clinica_actual(), 'Tarjeta de Luis', 'tarjeta_socio', (select id from fin_socios where nombre = 'Luis Socio'))$q$, 'inactivo');
+reset role;
+-- Bajar a Gratis no congela lo existente.
+update clinicas set plan_id = (select id from planes where codigo = 'gratis') where nombre = 'Clinica A';
+select fn_sync_clinica_modulos(id) from clinicas where nombre = 'Clinica A';
+select t.como('00000000-0000-0000-0000-00000000000a'); set role authenticated;
+update fin_cuentas set activa = false, nombre = 'Tarjeta de Ana (vieja)' where tipo = 'tarjeta_socio';
+update fin_socios set activo = true where nombre = 'Luis Socio';
+select t.ok(count(*) = 1, 'en Gratis se puede desactivar la tarjeta del socio') from fin_cuentas where tipo = 'tarjeta_socio' and not activa;
+select t.ok(activo, 'y reactivar un socio') from fin_socios where nombre = 'Luis Socio';
+select t.debe_fallar($q$insert into fin_cuentas (clinica_id, nombre, tipo) values (clinica_actual(), 'Bold', 'pasarela')$q$, 'plan Pro');
+reset role;
+update clinicas set plan_id = (select id from planes where codigo = 'pro') where nombre = 'Clinica A';
+select fn_sync_clinica_modulos(id) from clinicas where nombre = 'Clinica A';
+
 select t.debe_fallar($q$delete from fin_cuentas where nombre = 'Dólares'$q$, 'desactívala');
 select t.debe_fallar($q$delete from fin_socios$q$, 'desactívalo');
 select t.debe_fallar($q$delete from fin_config$q$, 'no se borra');

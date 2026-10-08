@@ -58,13 +58,15 @@ export async function activarFinanzas(input: { fechaInicio: string; cuentas: Cue
   return {};
 }
 
-export async function cambiarFechaInicio(fecha: string): Promise<Resultado> {
+export async function cambiarFechaInicio(fecha: string, motivo: string): Promise<Resultado> {
   if (!FECHA_ISO.test(fecha)) return { error: "Elige la fecha de inicio." };
   if (fecha > hoyBogota()) return { error: "La fecha de inicio no puede ser futura." };
+  if (fecha < "2000-01-01") return { error: "La fecha de inicio es demasiado antigua." };
+  if (motivo.trim().length < 10) return { error: "Explica por qué cambias la fecha (al menos 10 caracteres)." };
   const check = await requireEditar();
   if (!check.ok) return { error: check.error };
   const supabase = await createClient();
-  const { data, error } = await supabase.from("fin_config").update({ fecha_inicio: fecha }).eq("clinica_id", check.usuario.clinica_id).select("fecha_inicio");
+  const { data, error } = await supabase.from("fin_config").update({ fecha_inicio: fecha, motivo_cambio: motivo.trim().slice(0, 500) }).eq("clinica_id", check.usuario.clinica_id).select("fecha_inicio");
   if (error) return { error: mensajeError("cambiarFechaInicio", error, "No se pudo cambiar la fecha.") };
   if (!data?.length) return { error: "No tienes permiso para cambiar la fecha de inicio." };
   revalidar();
@@ -79,28 +81,38 @@ export async function guardarCuenta(input: {
   saldo: number;
   socioId: string | null;
   ultimosDigitos: string | null;
+  sedeId: string | null;
+  bancoId: string | null;
 }): Promise<Resultado> {
   const check = await requireEditar();
   if (!check.ok) return { error: check.error };
   const supabase = await createClient();
   const socios = input.socioId && esUuid(input.socioId) ? 1 : 0;
+  // El plan se exige al crear: editar o desactivar lo que ya existe sigue
+  // permitido aunque la clínica haya bajado a Gratis.
   const error = validarCuenta(
     { nombre: input.nombre, tipo: input.tipo, moneda: input.moneda, saldo: input.saldo, socioIndice: socios ? 0 : null },
-    { gestion: check.gestion, socios },
+    { gestion: check.gestion || !!input.id, socios },
   );
   if (error) return { error };
-  const digitos = input.ultimosDigitos?.trim() || null;
+  const digitos = input.tipo === "efectivo" ? null : input.ultimosDigitos?.trim() || null;
   if (digitos && !/^\d{4}$/.test(digitos)) return { error: "Los últimos dígitos son 4 números." };
+  if ((input.sedeId && !esUuid(input.sedeId)) || (input.bancoId && !esUuid(input.bancoId))) return { error: "Datos inválidos." };
+  const sedeId = input.sedeId || null;
+  const bancoId = input.tipo === "banco" ? input.bancoId || null : null;
   const saldo = saldoParaGuardar(input.tipo as TipoCuenta, input.saldo);
 
   if (input.id) {
     if (!esUuid(input.id)) return { error: "Cuenta inválida." };
     const { data, error: e } = await supabase
       .from("fin_cuentas")
-      .update({ nombre: input.nombre.trim(), saldo_inicial: saldo, ultimos_digitos: digitos })
+      .update({ nombre: input.nombre.trim(), saldo_inicial: saldo, ultimos_digitos: digitos, sede_id: sedeId, banco_id: bancoId })
       .eq("id", input.id)
       .select("id");
-    if (e) return { error: mensajeError("guardarCuenta", e, "No se pudo guardar la cuenta.") };
+    if (e) {
+      if (e.code === "23505") return { error: "Ya existe una cuenta con ese nombre." };
+      return { error: mensajeError("guardarCuenta", e, "No se pudo guardar la cuenta.") };
+    }
     if (!data?.length) return { error: "No tienes permiso para editar cuentas." };
   } else {
     const { error: e } = await supabase.from("fin_cuentas").insert({
@@ -111,6 +123,8 @@ export async function guardarCuenta(input: {
       saldo_inicial: saldo,
       socio_id: input.tipo === "tarjeta_socio" ? input.socioId : null,
       ultimos_digitos: digitos,
+      sede_id: sedeId,
+      banco_id: bancoId,
     });
     if (e) {
       if (e.code === "23505") return { error: "Ya existe una cuenta con ese nombre." };
@@ -144,7 +158,8 @@ export async function guardarSocio(input: {
 }): Promise<Resultado> {
   const check = await requireEditar();
   if (!check.ok) return { error: check.error };
-  if (!check.gestion) return { error: "Los socios están disponibles en el plan Pro." };
+  // Crear socios es del plan Pro; editar o desactivar los existentes no.
+  if (!check.gestion && !input.id) return { error: "Los socios están disponibles en el plan Pro." };
   const error = validarSocio({ nombre: input.nombre, numeroIdentificacion: input.numeroIdentificacion, porcentaje: input.porcentaje });
   if (error) return { error };
   if (input.tipoIdentificacionId && !esUuid(input.tipoIdentificacionId)) return { error: "Tipo de identificación inválido." };

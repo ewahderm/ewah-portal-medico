@@ -66,7 +66,41 @@ export function validarSocio(s: SocioEntrada): string | null {
   const nombre = s.nombre.trim();
   if (nombre.length < 3 || nombre.length > 200) return "Escribe el nombre completo del socio.";
   if (!/^[0-9A-Za-z-]{3,20}$/.test(s.numeroIdentificacion.trim())) return `${nombre}: número de identificación inválido.`;
-  if (s.porcentaje !== null && !(s.porcentaje > 0 && s.porcentaje <= 100)) return `${nombre}: la participación va de 0 a 100 %.`;
+  if (s.porcentaje !== null && !(s.porcentaje > 0 && s.porcentaje <= 100)) return `${nombre}: la participación debe ser mayor que 0 y hasta 100 %.`;
+  return null;
+}
+
+// Validación por paso del asistente; validarAsistente las combina.
+export function validarFechaInicio(fecha: string, hoy: string): string | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return "Elige la fecha de inicio.";
+  if (fecha > hoy) return "La fecha de inicio no puede ser futura.";
+  if (fecha < "2000-01-01") return "La fecha de inicio es demasiado antigua.";
+  return null;
+}
+
+export function validarSocios(socios: SocioEntrada[], gestion: boolean): string | null {
+  if (socios.length > 20) return "Demasiados socios.";
+  if (socios.length > 0 && !gestion) return "Los socios son del plan Pro.";
+  for (const s of socios) {
+    const e = validarSocio(s);
+    if (e) return e;
+  }
+  const ids = socios.map((s) => s.numeroIdentificacion.trim());
+  if (new Set(ids).size !== ids.length) return "Hay dos socios con la misma identificación.";
+  const total = socios.reduce((t, s) => t + (s.porcentaje ?? 0), 0);
+  if (total > 100) return "La participación de los socios suma más del 100 %.";
+  return null;
+}
+
+export function validarCuentas(cuentas: CuentaEntrada[], opciones: { gestion: boolean; socios: number }): string | null {
+  if (cuentas.length === 0) return "Agrega al menos una cuenta.";
+  if (cuentas.length > 30) return "Demasiadas cuentas.";
+  for (const c of cuentas) {
+    const e = validarCuenta(c, opciones);
+    if (e) return e;
+  }
+  const nombres = cuentas.map((c) => c.nombre.trim().toLowerCase());
+  if (new Set(nombres).size !== nombres.length) return "Hay dos cuentas con el mismo nombre.";
   return null;
 }
 
@@ -74,27 +108,11 @@ export function validarAsistente(
   entrada: { fechaInicio: string; hoy: string; cuentas: CuentaEntrada[]; socios: SocioEntrada[] },
   gestion: boolean,
 ): string | null {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(entrada.fechaInicio)) return "Elige la fecha de inicio.";
-  if (entrada.fechaInicio > entrada.hoy) return "La fecha de inicio no puede ser futura.";
-  if (entrada.fechaInicio < "2000-01-01") return "La fecha de inicio es demasiado antigua.";
-  if (entrada.cuentas.length === 0) return "Agrega al menos una cuenta.";
-  if (entrada.cuentas.length > 30 || entrada.socios.length > 20) return "Demasiadas cuentas o socios.";
-  if (entrada.socios.length > 0 && !gestion) return "Los socios son del plan Pro.";
-  for (const s of entrada.socios) {
-    const e = validarSocio(s);
-    if (e) return e;
-  }
-  const ids = entrada.socios.map((s) => s.numeroIdentificacion.trim());
-  if (new Set(ids).size !== ids.length) return "Hay dos socios con la misma identificación.";
-  const total = entrada.socios.reduce((t, s) => t + (s.porcentaje ?? 0), 0);
-  if (total > 100) return "La participación de los socios suma más del 100 %.";
-  for (const c of entrada.cuentas) {
-    const e = validarCuenta(c, { gestion, socios: entrada.socios.length });
-    if (e) return e;
-  }
-  const nombres = entrada.cuentas.map((c) => c.nombre.trim().toLowerCase());
-  if (new Set(nombres).size !== nombres.length) return "Hay dos cuentas con el mismo nombre.";
-  return null;
+  return (
+    validarFechaInicio(entrada.fechaInicio, entrada.hoy) ??
+    validarSocios(entrada.socios, gestion) ??
+    validarCuentas(entrada.cuentas, { gestion, socios: entrada.socios.length })
+  );
 }
 
 export type CuentaConSaldo = { id: string; nombre: string; tipo: TipoCuenta; moneda: Moneda; saldo: number; activa: boolean; socio_id: string | null };

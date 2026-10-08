@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatoDinero, leerMonto } from "@/lib/finanzas/dinero";
+import { formatoDinero, leerMonto, leerPorcentaje } from "@/lib/finanzas/dinero";
 
 describe("leerMonto", () => {
   it.each([
@@ -26,5 +26,14 @@ describe("formatoDinero", () => {
     expect(formatoDinero(200, "USD")).toMatch(/200,00/);
     expect(formatoDinero(1.5, "EUR")).toMatch(/1,50/);
     expect(formatoDinero(null)).toBe("—");
+  });
+});
+
+describe("leerPorcentaje", () => {
+  it.each([["60", 60], ["33,33", 33.33], ["33.33", 33.33], ["50 %", 50], ["100", 100]])("%s → %s", (t, e) => {
+    expect(leerPorcentaje(t)).toBe(e);
+  });
+  it.each(["", "33.333", "1.000", "abc", "-5"])("rechaza %s", (t) => {
+    expect(leerPorcentaje(t)).toBeNull();
   });
 });

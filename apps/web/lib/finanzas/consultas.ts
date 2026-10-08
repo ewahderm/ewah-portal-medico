@@ -19,11 +19,12 @@ export const getAccesoFinanzas = cache(async (): Promise<AccesoFinanzas> => {
   return { puedeVer: !!puedeVer, puedeEditar: !!puedeEditar, gestion: !!gestion };
 });
 
-export type ConfigFinanzas = { fecha_inicio: string; updated_at: string };
+export type CambioFechaInicio = { anterior: string; nueva: string; motivo: string; en: string };
+export type ConfigFinanzas = { fecha_inicio: string; updated_at: string; historial: CambioFechaInicio[] };
 
 // null = sin activar; undefined = la migración aún no está aplicada.
 export async function getConfigFinanzas(supabase: Supabase): Promise<ConfigFinanzas | null | undefined> {
-  const { data, error } = await supabase.from("fin_config").select("fecha_inicio, updated_at").maybeSingle();
+  const { data, error } = await supabase.from("fin_config").select("fecha_inicio, updated_at, historial").maybeSingle();
   if (error) {
     console.error("[finanzas] getConfigFinanzas", error);
     return undefined;
@@ -38,6 +39,7 @@ export type Cuenta = {
   moneda: Moneda;
   socio_id: string | null;
   sede_id: string | null;
+  banco_id: string | null;
   ultimos_digitos: string | null;
   saldo_inicial: number;
   activa: boolean;
@@ -48,7 +50,7 @@ export type Cuenta = {
 export async function getCuentas(supabase: Supabase): Promise<Cuenta[]> {
   const { data } = await supabase
     .from("fin_cuentas")
-    .select("id, nombre, tipo, moneda, socio_id, sede_id, ultimos_digitos, saldo_inicial, activa, orden, es_disponible")
+    .select("id, nombre, tipo, moneda, socio_id, sede_id, banco_id, ultimos_digitos, saldo_inicial, activa, orden, es_disponible")
     .order("activa", { ascending: false })
     .order("orden")
     .order("nombre");
@@ -111,5 +113,18 @@ export async function getTiposIdentificacion(supabase: Supabase): Promise<{ id: 
 // un socio con su ficha.
 export async function getEmpleadosPicker(supabase: Supabase): Promise<{ id: string; nombre: string }[]> {
   const { data } = await supabase.rpc("fn_empleados_picker");
+  return (data ?? []) as { id: string; nombre: string }[];
+}
+
+export async function getSedesFinanzas(supabase: Supabase): Promise<{ id: string; nombre: string }[]> {
+  const { data } = await supabase.from("sedes").select("id, nombre").eq("activo", true).order("orden");
+  return (data ?? []) as { id: string; nombre: string }[];
+}
+
+// Bancos del país de operación de la clínica (catálogo de RRHH).
+export async function getBancos(supabase: Supabase): Promise<{ id: string; nombre: string }[]> {
+  const { data: clinica } = await supabase.from("clinicas").select("pais_operacion_id").maybeSingle();
+  if (!clinica?.pais_operacion_id) return [];
+  const { data } = await supabase.from("bancos").select("id, nombre").eq("pais_id", clinica.pais_operacion_id).eq("activo", true).order("orden").order("nombre");
   return (data ?? []) as { id: string; nombre: string }[];
 }

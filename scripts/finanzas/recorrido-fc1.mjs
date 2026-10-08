@@ -31,6 +31,7 @@ await paso("asistente: fecha futura rechazada", async () => {
   await page.fill("#fechaInicio", `${hoy.slice(0, 4)}-01-01`);
   await page.getByRole("button", { name: /Siguiente/ }).click();
 });
+await page.getByText(/Registra a los socios|¿Por dónde se mueve la plata/).first().waitFor();
 const pro = await page.getByText("Registra a los socios").count();
 console.log(`   plan ${pro ? "Pro" : "Gratis"}`);
 if (pro) {
@@ -38,7 +39,7 @@ if (pro) {
     await page.getByRole("button", { name: "Agregar socio" }).click();
     await page.locator("input[id^=socioNombre-]").fill("Ana María Socia");
     await page.locator("input[id^=socioId-]").fill("52123456");
-    await page.locator("input[id^=socioPct-]").fill("60");
+    await page.locator("input[id^=socioPct-]").fill("60 %");
     await page.getByRole("button", { name: /Siguiente/ }).click();
   });
 }
@@ -48,6 +49,10 @@ await paso("asistente: cuentas con saldos (formato colombiano y dólares)", asyn
   await saldos.nth(0).fill("500.000");
   await page.locator("input[id^=cuentaNombre-]").nth(1).fill("Bancolombia ahorros");
   await saldos.nth(1).fill("12.000.000");
+  // El saldo digitado sobrevive a ir y volver de paso; vacío = 0.
+  await page.getByRole("button", { name: /Atrás/ }).click();
+  await page.getByRole("button", { name: /Siguiente|Saltar/ }).click();
+  if ((await page.locator("input[id^=cuentaSaldo-]").nth(1).inputValue()) !== "12.000.000") throw new Error("se perdió el saldo al volver");
   await page.getByRole("button", { name: "Agregar cuenta" }).click();
   await elegir("input[id^=cuentaTipo-] >> nth=2", "Efectivo");
   await page.locator("input[id^=cuentaNombre-]").nth(2).fill("Dólares");
@@ -59,11 +64,18 @@ await paso("asistente: cuentas con saldos (formato colombiano y dólares)", asyn
     await page.locator("input[id^=cuentaNombre-]").nth(3).fill("Tarjeta de Ana");
     await elegir("input[id^=cuentaSocio-]", "Ana María Socia");
     await page.locator("input[id^=cuentaSaldo-]").nth(3).fill("350.000");
+    // Quitar al socio con tarjeta no la borra en silencio.
+    await page.getByRole("button", { name: /Atrás/ }).click();
+    await page.getByRole("button", { name: "Quitar socio 1" }).click();
+    await page.getByText(/tiene una tarjeta en el paso de cuentas/).waitFor();
+    await page.getByRole("button", { name: /Siguiente/ }).click();
+    await page.getByText("¿Por dónde se mueve la plata").waitFor();
+    if ((await page.locator("input[id^=cuentaNombre-]").nth(3).inputValue()) !== "Tarjeta de Ana") throw new Error("se perdió la tarjeta del socio");
   }
   await page.locator("input[id^=cuentaSaldo-]").nth(0).fill("abc");
   await page.getByText(/Escribe un número/).waitFor();
   await page.getByRole("button", { name: /Siguiente/ }).click();
-  await page.getByText(/Revisa los saldos/).waitFor();
+  await page.getByText(/Revisa el saldo de: Efectivo/).waitFor();
   await page.locator("input[id^=cuentaSaldo-]").nth(0).fill("500.000");
   await page.getByRole("button", { name: /Siguiente/ }).click();
 });
@@ -125,8 +137,12 @@ await paso("configuración: cambiar la fecha de inicio", async () => {
   await page.goto(`${B}/finanzas/configuracion`);
   const hoy = new Date(Date.now() - 5 * 3600e3).toISOString().slice(0, 10);
   await page.fill("#fechaInicioConfig", `${hoy.slice(0, 4)}-02-01`);
+  if (await page.getByRole("button", { name: "Cambiar fecha" }).isEnabled()) throw new Error("cambia la fecha sin motivo");
+  await page.fill("#motivoFecha", "Empezamos a registrar desde febrero");
   await page.getByRole("button", { name: "Cambiar fecha" }).click();
   await page.getByText("Fecha de inicio actualizada").waitFor();
+  await page.getByText(/Cambios anteriores/).waitFor();
+  await page.getByText(/Empezamos a registrar desde febrero/).waitFor();
 });
 await paso("móvil 390 px", async () => {
   const m = await (await browser.newContext({ viewport: { width: 390, height: 844 }, storageState: await ctx.storageState() })).newPage();

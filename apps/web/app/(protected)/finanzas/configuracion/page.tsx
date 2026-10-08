@@ -2,10 +2,12 @@ import { createClient } from "@/lib/supabase/server";
 import { requireUsuario } from "@/lib/auth/session";
 import {
   getAccesoFinanzas,
+  getBancos,
   getCategorias,
   getConfigFinanzas,
   getCuentas,
   getEmpleadosPicker,
+  getSedesFinanzas,
   getSocios,
   getTiposIdentificacion,
 } from "@/lib/finanzas/consultas";
@@ -33,12 +35,14 @@ export default async function ConfiguracionFinanzasPage({ searchParams }: { sear
       </Alert>
     );
   }
-  const [cuentas, socios, categorias, tiposIdentificacion, empleados] = await Promise.all([
+  const [cuentas, socios, categorias, tiposIdentificacion, empleados, sedes, bancos] = await Promise.all([
     getCuentas(supabase),
     getSocios(supabase),
     getCategorias(supabase),
     getTiposIdentificacion(supabase),
     acceso.gestion ? getEmpleadosPicker(supabase) : Promise.resolve([]),
+    getSedesFinanzas(supabase),
+    getBancos(supabase),
   ]);
   const q = await searchParams;
   return (
@@ -46,7 +50,10 @@ export default async function ConfiguracionFinanzasPage({ searchParams }: { sear
       tab={typeof q.tab === "string" ? q.tab : "general"}
       hoy={hoyBogota()}
       fechaInicio={config.fecha_inicio}
+      historialFecha={config.historial ?? []}
       cuentas={cuentas}
+      sedes={sedes}
+      bancos={bancos}
       socios={socios}
       categorias={categorias}
       tiposIdentificacion={tiposIdentificacion}

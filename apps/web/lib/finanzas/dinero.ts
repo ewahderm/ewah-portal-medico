@@ -59,3 +59,11 @@ export function leerMonto(texto: string | null | undefined): number | null {
   const n = Number(`${entero}.${decimal || "0"}`);
   return Number.isFinite(n) ? signo * n : null;
 }
+
+// Porcentaje como "60", "33,33", "33.33" o "50 %": hasta 2 decimales, con
+// coma o punto decimal (aquí el punto nunca es de miles).
+export function leerPorcentaje(texto: string | null | undefined): number | null {
+  const t = String(texto ?? "").replace(/[\s%]/g, "").replace(",", ".");
+  if (!/^\d{1,3}(\.\d{1,2})?$/.test(t)) return null;
+  return Number(t);
+}

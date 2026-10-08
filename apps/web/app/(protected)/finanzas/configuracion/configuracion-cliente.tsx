@@ -13,8 +13,8 @@ import {
 } from "@/lib/finanzas/configuracion";
 import { ACTIVIDADES, MONEDAS, TIPOS_CUENTA, etiqueta, type Moneda } from "@/lib/finanzas/constantes";
 import { saldoParaMostrar } from "@/lib/finanzas/cuentas";
-import { formatoDinero, leerMonto } from "@/lib/finanzas/dinero";
-import type { Categoria, Cuenta, Socio } from "@/lib/finanzas/consultas";
+import { formatoDinero, leerPorcentaje } from "@/lib/finanzas/dinero";
+import type { CambioFechaInicio, Categoria, Cuenta, Socio } from "@/lib/finanzas/consultas";
 import { fechaLegible } from "@/lib/habilitacion/ruta";
 import { cn } from "cn";
 import { toast } from "@/components/ui/toast";
@@ -29,6 +29,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import { CampoDinero } from "../_components/campo-dinero";
 
 type Opcion = { id: string; nombre: string };
@@ -37,7 +38,10 @@ type Props = {
   tab: string;
   hoy: string;
   fechaInicio: string;
+  historialFecha: CambioFechaInicio[];
   cuentas: Cuenta[];
+  sedes: Opcion[];
+  bancos: Opcion[];
   socios: Socio[];
   categorias: Categoria[];
   tiposIdentificacion: Opcion[];
@@ -82,19 +86,23 @@ function MensajeError({ mensaje }: { mensaje: string | null }) {
 }
 
 // ------------------------------------------------------------ General
-function General({ hoy, fechaInicio, puedeEditar }: Props) {
+function General({ hoy, fechaInicio, historialFecha, puedeEditar }: Props) {
   const router = useRouter();
-  const [inicial] = useState(fechaInicio);
+  // Controlado (no defaultValue): tras guardar, la página se refresca y
+  // `fechaInicio` trae el valor nuevo.
   const [fecha, setFecha] = useState(fechaInicio);
+  const [motivo, setMotivo] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pendiente, setPendiente] = useState(false);
+  const cambia = !!fecha && fecha !== fechaInicio;
 
   async function guardar() {
     setPendiente(true);
     setError(null);
-    const r = await cambiarFechaInicio(fecha);
+    const r = await cambiarFechaInicio(fecha, motivo);
     setPendiente(false);
     if (r.error) return setError(r.error);
+    setMotivo("");
     toast.add({ title: "Fecha de inicio actualizada", type: "success" });
     router.refresh();
   }
@@ -104,8 +112,8 @@ function General({ hoy, fechaInicio, puedeEditar }: Props) {
       <CardHeader>
         <CardTitle className="text-base font-semibold">Fecha de inicio</CardTitle>
         <p className="text-sm text-muted-foreground">
-          Desde el {fechaLegible(inicial)} llevas la caja en EWAH. Los saldos iniciales de las cuentas son a esa fecha. Podrás
-          cambiarla mientras no hayas cerrado ningún mes.
+          Desde el {fechaLegible(fechaInicio)} llevas la caja en EWAH. Los saldos iniciales de las cuentas son a esa fecha. Podrás
+          cambiarla mientras no hayas cerrado ningún mes; cada cambio queda registrado con su motivo.
         </p>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -115,21 +123,42 @@ function General({ hoy, fechaInicio, puedeEditar }: Props) {
             <Label htmlFor="fechaInicioConfig">Fecha de inicio</Label>
             <Input id="fechaInicioConfig" type="date" value={fecha} max={hoy} disabled={!puedeEditar} onChange={(e) => setFecha(e.target.value)} />
           </div>
-          {puedeEditar ? (
-            <Button onClick={guardar} disabled={pendiente || fecha === inicial || !fecha}>
+        </div>
+        {puedeEditar && cambia ? (
+          <div className="space-y-2">
+            <Label htmlFor="motivoFecha">¿Por qué la cambias?</Label>
+            <Textarea id="motivoFecha" rows={2} maxLength={500} value={motivo} onChange={(e) => setMotivo(e.target.value)} placeholder="Al menos 10 caracteres" />
+            <p className="text-xs text-muted-foreground">
+              Los saldos iniciales de las cuentas pasarán a ser al {fechaLegible(fecha)}: revísalos en la pestaña Cuentas.
+            </p>
+            <Button onClick={guardar} disabled={pendiente || motivo.trim().length < 10}>
               {pendiente ? "Guardando…" : "Cambiar fecha"}
             </Button>
-          ) : null}
-        </div>
+          </div>
+        ) : null}
+        {historialFecha.length ? (
+          <div className="space-y-1 border-t pt-3">
+            <p className="text-xs font-medium">Cambios anteriores</p>
+            <ul className="space-y-1 text-xs text-muted-foreground">
+              {[...historialFecha].reverse().map((h) => (
+                <li key={h.en}>
+                  {fechaLegible(h.en.slice(0, 10))}: del {fechaLegible(h.anterior)} al {fechaLegible(h.nueva)} — {h.motivo}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   );
 }
 
 // ------------------------------------------------------------ Cuentas
-function Cuentas({ cuentas, socios, puedeEditar, gestion }: Props) {
+function Cuentas({ cuentas, socios, sedes, bancos, puedeEditar, gestion }: Props) {
   const [editando, setEditando] = useState<Cuenta | "nueva" | null>(null);
   const nombreSocio = new Map(socios.map((s) => [s.id, s.nombre]));
+  const nombreSede = new Map(sedes.map((s) => [s.id, s.nombre]));
+  const nombreBanco = new Map(bancos.map((b) => [b.id, b.nombre]));
   return (
     <Card>
       <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -150,13 +179,15 @@ function Cuentas({ cuentas, socios, puedeEditar, gestion }: Props) {
           {cuentas.map((c) => (
             <li key={c.id} className={cn("flex flex-wrap items-center gap-3 py-3", !c.activa && "opacity-60")}>
               <span className="min-w-0 flex-1">
-                <span className="block text-sm font-medium">
+                <span className="block text-sm font-medium break-words">
                   {c.nombre} {!c.activa ? <Badge variant="outline">Inactiva</Badge> : null}
                 </span>
                 <span className="block text-xs text-muted-foreground">
                   {etiqueta(TIPOS_CUENTA, c.tipo)} · {c.moneda}
+                  {c.banco_id ? ` · ${nombreBanco.get(c.banco_id) ?? ""}` : ""}
                   {c.socio_id ? ` · ${nombreSocio.get(c.socio_id) ?? ""}` : ""}
                   {c.ultimos_digitos ? ` · ****${c.ultimos_digitos}` : ""}
+                  {c.sede_id ? ` · ${nombreSede.get(c.sede_id) ?? ""}` : ""}
                 </span>
               </span>
               <span className="text-right text-sm tabular-nums">
@@ -177,6 +208,8 @@ function Cuentas({ cuentas, socios, puedeEditar, gestion }: Props) {
         <CuentaDialog
           cuenta={editando === "nueva" ? null : editando}
           socios={socios.filter((s) => s.activo)}
+          sedes={sedes}
+          bancos={bancos}
           gestion={gestion}
           onCerrar={() => setEditando(null)}
         />
@@ -207,13 +240,29 @@ function EstadoCuenta({ cuenta }: { cuenta: Cuenta }) {
   );
 }
 
-function CuentaDialog({ cuenta, socios, gestion, onCerrar }: { cuenta: Cuenta | null; socios: Socio[]; gestion: boolean; onCerrar: () => void }) {
+function CuentaDialog({
+  cuenta,
+  socios,
+  sedes,
+  bancos,
+  gestion,
+  onCerrar,
+}: {
+  cuenta: Cuenta | null;
+  socios: Socio[];
+  sedes: Opcion[];
+  bancos: Opcion[];
+  gestion: boolean;
+  onCerrar: () => void;
+}) {
   const router = useRouter();
   const [tipo, setTipo] = useState<string>(cuenta?.tipo ?? "banco");
   const [moneda, setMoneda] = useState<string>(cuenta?.moneda ?? "COP");
   const [socioId, setSocioId] = useState<string | null>(cuenta?.socio_id ?? null);
   const [nombre, setNombre] = useState(cuenta?.nombre ?? "");
   const [digitos, setDigitos] = useState(cuenta?.ultimos_digitos ?? "");
+  const [sedeId, setSedeId] = useState<string | null>(cuenta?.sede_id ?? null);
+  const [bancoId, setBancoId] = useState<string | null>(cuenta?.banco_id ?? null);
   const [saldo, setSaldo] = useState<number | null>(cuenta ? saldoParaMostrar(cuenta.tipo, cuenta.saldo_inicial) : 0);
   const [error, setError] = useState<string | null>(null);
   const [pendiente, setPendiente] = useState(false);
@@ -224,7 +273,7 @@ function CuentaDialog({ cuenta, socios, gestion, onCerrar }: { cuenta: Cuenta | 
     if (saldo === null) return setError("Revisa el saldo: no es un número.");
     setPendiente(true);
     setError(null);
-    const r = await guardarCuenta({ id: cuenta?.id ?? null, nombre, tipo, moneda, saldo, socioId, ultimosDigitos: digitos || null });
+    const r = await guardarCuenta({ id: cuenta?.id ?? null, nombre, tipo, moneda, saldo, socioId, ultimosDigitos: digitos || null, sedeId, bancoId });
     setPendiente(false);
     if (r.error) return setError(r.error);
     toast.add({ title: cuenta ? "Cuenta actualizada" : "Cuenta creada", type: "success" });
@@ -273,21 +322,42 @@ function CuentaDialog({ cuenta, socios, gestion, onCerrar }: { cuenta: Cuenta | 
               ) : null}
             </div>
           )}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_8rem]">
+          <div className={cn("grid grid-cols-1 gap-3", tipo !== "efectivo" && "sm:grid-cols-[1fr_8rem]")}>
             <div className="space-y-1">
               <Label htmlFor="nombreCuenta">Nombre</Label>
               <Input id="nombreCuenta" value={nombre} maxLength={60} required onChange={(e) => setNombre(e.target.value)} />
             </div>
-            <div className="space-y-1">
-              <Label htmlFor="digitosCuenta">Últimos 4 (opcional)</Label>
-              <Input id="digitosCuenta" inputMode="numeric" value={digitos} maxLength={4} onChange={(e) => setDigitos(e.target.value.replace(/\D/g, ""))} />
-            </div>
+            {tipo !== "efectivo" ? (
+              <div className="space-y-1">
+                <Label htmlFor="digitosCuenta">Últimos 4 (opcional)</Label>
+                <Input id="digitosCuenta" inputMode="numeric" value={digitos} maxLength={4} onChange={(e) => setDigitos(e.target.value.replace(/\D/g, ""))} />
+              </div>
+            ) : null}
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {tipo === "banco" && bancos.length ? (
+              <div className="space-y-1">
+                <Label htmlFor="bancoCuenta">Banco (opcional)</Label>
+                <Combobox id="bancoCuenta" items={bancos.map((b) => ({ value: b.id, label: b.nombre }))} value={bancoId} onValueChange={(v) => setBancoId(v ? String(v) : null)} />
+              </div>
+            ) : null}
+            {sedes.length > 1 ? (
+              <div className="space-y-1">
+                <Label htmlFor="sedeCuenta">Sede (opcional)</Label>
+                <Combobox
+                  id="sedeCuenta"
+                  items={[{ value: "", label: "General (todas)" }, ...sedes.map((s) => ({ value: s.id, label: s.nombre }))]}
+                  value={sedeId ?? ""}
+                  onValueChange={(v) => setSedeId(v ? String(v) : null)}
+                />
+              </div>
+            ) : null}
           </div>
           <div className="space-y-1">
             <Label htmlFor="saldoCuenta">
               {tipo === "tarjeta_socio" ? "Lo que la clínica le debía al socio" : "Saldo"} a la fecha de inicio ({moneda})
             </Label>
-            <CampoDinero key={moneda} id="saldoCuenta" moneda={moneda as Moneda} valorInicial={saldo} permitirNegativo={tipo === "banco"} onValor={setSaldo} />
+            <CampoDinero key={moneda} id="saldoCuenta" moneda={moneda as Moneda} valorInicial={saldo} vacioEsCero permitirNegativo={tipo === "banco"} onValor={setSaldo} />
           </div>
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={onCerrar} disabled={pendiente}>
@@ -339,7 +409,7 @@ function Socios({ socios, cuentas, tiposIdentificacion, empleados, puedeEditar, 
           {socios.map((s) => (
             <li key={s.id} className={cn("flex flex-wrap items-center gap-3 py-3", !s.activo && "opacity-60")}>
               <span className="min-w-0 flex-1">
-                <span className="block text-sm font-medium">
+                <span className="block text-sm font-medium break-words">
                   {s.nombre} {!s.activo ? <Badge variant="outline">Inactivo</Badge> : null}
                 </span>
                 <span className="block text-xs text-muted-foreground">
@@ -378,8 +448,8 @@ function SocioDialog({ socio, tiposIdentificacion, empleados, onCerrar }: { soci
 
   async function guardar(ev: React.FormEvent) {
     ev.preventDefault();
-    const pct = porcentaje.trim() ? leerMonto(porcentaje) : null;
-    if (porcentaje.trim() && pct === null) return setError("La participación debe ser un número.");
+    const pct = porcentaje.trim() ? leerPorcentaje(porcentaje) : null;
+    if (porcentaje.trim() && pct === null) return setError("La participación es un porcentaje mayor que 0 y hasta 100, con máximo 2 decimales.");
     setPendiente(true);
     setError(null);
     const r = await guardarSocio({ id: socio?.id ?? null, nombre, numeroIdentificacion: numero, tipoIdentificacionId: tipoId, porcentaje: pct, empleadoId, activo });

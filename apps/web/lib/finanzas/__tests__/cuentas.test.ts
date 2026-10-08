@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resumirCuentas, saldoParaGuardar, saldoParaMostrar, validarAsistente, validarCuenta, type CuentaConSaldo } from "@/lib/finanzas/cuentas";
+import { resumirCuentas, saldoParaGuardar, saldoParaMostrar, validarAsistente, validarCuenta, validarFechaInicio, validarSocios, type CuentaConSaldo } from "@/lib/finanzas/cuentas";
 
 const base = { fechaInicio: "2026-01-01", hoy: "2026-10-08", cuentas: [{ nombre: "Caja", tipo: "efectivo", moneda: "COP", saldo: 0 }], socios: [] };
 
@@ -26,6 +26,19 @@ describe("asistente de arranque", () => {
     const tarjeta = { nombre: "Tarjeta de Ana", tipo: "tarjeta_socio", moneda: "COP", saldo: 350000 };
     expect(validarAsistente({ ...base, socios, cuentas: [tarjeta] }, true)).toMatch(/de qué socio/);
     expect(validarAsistente({ ...base, socios, cuentas: [{ ...tarjeta, socioIndice: 0 }] }, true)).toBeNull();
+  });
+});
+
+describe("validación por paso", () => {
+  it("el paso de fecha solo mira la fecha (no exige cuentas todavía)", () => {
+    expect(validarFechaInicio("2026-01-01", "2026-10-08")).toBeNull();
+    expect(validarFechaInicio("2026-10-09", "2026-10-08")).toMatch(/futura/);
+    expect(validarFechaInicio("1999-12-31", "2026-10-08")).toMatch(/antigua/);
+    expect(validarFechaInicio("", "2026-10-08")).toMatch(/Elige/);
+  });
+  it("el paso de socios acepta ninguno", () => {
+    expect(validarSocios([], false)).toBeNull();
+    expect(validarSocios([{ nombre: "Ana Socia", numeroIdentificacion: "52123456", porcentaje: 0 }], true)).toMatch(/mayor que 0/);
   });
 });
 
