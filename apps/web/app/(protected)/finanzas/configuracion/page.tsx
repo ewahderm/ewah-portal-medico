@@ -7,6 +7,7 @@ import {
   getConfigFinanzas,
   getCuentas,
   getEmpleadosPicker,
+  getMediosPagoFinanzas,
   getSedesFinanzas,
   getSocios,
   getTiposIdentificacion,
@@ -15,7 +16,7 @@ import { hoyBogota } from "@/lib/habilitacion/servidor";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ConfiguracionCliente } from "./configuracion-cliente";
 
-// FC1: fecha de inicio, cuentas, socios y categorías.
+// FC1: fecha de inicio, cuentas, socios y categorías. FC3: medios de pago.
 export default async function ConfiguracionFinanzasPage({ searchParams }: { searchParams: Promise<{ [k: string]: string | string[] | undefined }> }) {
   await requireUsuario();
   const acceso = await getAccesoFinanzas();
@@ -35,7 +36,7 @@ export default async function ConfiguracionFinanzasPage({ searchParams }: { sear
       </Alert>
     );
   }
-  const [cuentas, socios, categorias, tiposIdentificacion, empleados, sedes, bancos] = await Promise.all([
+  const [cuentas, socios, categorias, tiposIdentificacion, empleados, sedes, bancos, medios] = await Promise.all([
     getCuentas(supabase),
     getSocios(supabase),
     getCategorias(supabase),
@@ -43,6 +44,7 @@ export default async function ConfiguracionFinanzasPage({ searchParams }: { sear
     acceso.gestion ? getEmpleadosPicker(supabase) : Promise.resolve([]),
     getSedesFinanzas(supabase),
     getBancos(supabase),
+    getMediosPagoFinanzas(supabase),
   ]);
   const q = await searchParams;
   return (
@@ -56,6 +58,7 @@ export default async function ConfiguracionFinanzasPage({ searchParams }: { sear
       bancos={bancos}
       socios={socios}
       categorias={categorias}
+      medios={medios}
       tiposIdentificacion={tiposIdentificacion}
       empleados={empleados}
       puedeEditar={acceso.puedeEditar}

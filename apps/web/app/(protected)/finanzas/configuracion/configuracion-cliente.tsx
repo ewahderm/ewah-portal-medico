@@ -14,7 +14,9 @@ import {
 import { ACTIVIDADES, MONEDAS, TIPOS_CUENTA, etiqueta, type Moneda } from "@/lib/finanzas/constantes";
 import { saldoParaMostrar } from "@/lib/finanzas/cuentas";
 import { formatoDinero, leerPorcentaje } from "@/lib/finanzas/dinero";
-import type { CambioFechaInicio, Categoria, Cuenta, Socio } from "@/lib/finanzas/consultas";
+import type { CambioFechaInicio, Categoria, Cuenta, MedioPagoFinanzas, Socio } from "@/lib/finanzas/consultas";
+import { guardarDestinoMedio } from "@/lib/finanzas/tratamientos-acciones";
+import { destinoDeConfig } from "@/lib/finanzas/tratamientos";
 import { fechaLegible } from "@/lib/habilitacion/ruta";
 import { cn } from "cn";
 import { toast } from "@/components/ui/toast";
@@ -44,13 +46,14 @@ type Props = {
   bancos: Opcion[];
   socios: Socio[];
   categorias: Categoria[];
+  medios: MedioPagoFinanzas[];
   tiposIdentificacion: Opcion[];
   empleados: Opcion[];
   puedeEditar: boolean;
   gestion: boolean;
 };
 
-const TABS = ["general", "cuentas", "socios", "categorias"];
+const TABS = ["general", "cuentas", "medios", "socios", "categorias"];
 
 export function ConfiguracionCliente(props: Props) {
   return (
@@ -58,6 +61,7 @@ export function ConfiguracionCliente(props: Props) {
       <TabsList className="w-full sm:w-fit">
         <TabsTrigger value="general">General</TabsTrigger>
         <TabsTrigger value="cuentas">Cuentas</TabsTrigger>
+        <TabsTrigger value="medios">Medios de pago</TabsTrigger>
         <TabsTrigger value="socios">Socios</TabsTrigger>
         <TabsTrigger value="categorias">Categorías</TabsTrigger>
       </TabsList>
@@ -66,6 +70,9 @@ export function ConfiguracionCliente(props: Props) {
       </TabsContent>
       <TabsContent value="cuentas" className="pt-4">
         <Cuentas {...props} />
+      </TabsContent>
+      <TabsContent value="medios" className="pt-4">
+        <MediosPago {...props} />
       </TabsContent>
       <TabsContent value="socios" className="pt-4">
         <Socios {...props} />
@@ -150,6 +157,86 @@ function General({ hoy, fechaInicio, historialFecha, puedeEditar }: Props) {
         ) : null}
       </CardContent>
     </Card>
+  );
+}
+
+// ------------------------------------------------------------ Medios de pago
+function MediosPago({ medios, cuentas, puedeEditar }: Props) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base font-semibold">Medios de pago</CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Cada tratamiento con valor entra solo al flujo de caja, a la cuenta de su medio de pago. Si el medio es a crédito, queda
+          por cobrar hasta que el paciente pague. Los medios se crean en Parámetros.
+        </p>
+      </CardHeader>
+      <CardContent>
+        {medios.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No hay medios de pago. Créalos en Parámetros → Medios de pago.</p>
+        ) : (
+          <ul className="divide-y">
+            {medios.map((m) => (
+              <DestinoMedioFila key={m.id} medio={m} cuentas={cuentas} puedeEditar={puedeEditar} />
+            ))}
+          </ul>
+        )}
+        <p className="mt-3 text-xs text-muted-foreground">
+          Cambiar la cuenta aplica a los tratamientos nuevos y a los que estén pendientes; lo ya registrado no se mueve.
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function DestinoMedioFila({ medio, cuentas, puedeEditar }: { medio: MedioPagoFinanzas; cuentas: Cuenta[]; puedeEditar: boolean }) {
+  const router = useRouter();
+  const [destino, setDestino] = useState(destinoDeConfig(medio));
+  const [pendiente, setPendiente] = useState(false);
+  // Cuentas en pesos que reciben cobros (no la tarjeta de un socio); la
+  // actual se conserva aunque se haya desactivado, para que se vea.
+  const opciones = [
+    { value: "sin", label: "Sin asignar" },
+    { value: "credito", label: "A crédito (queda por cobrar)" },
+    ...cuentas
+      .filter((c) => c.moneda === "COP" && c.tipo !== "tarjeta_socio" && (c.activa || c.id === medio.cuenta_id))
+      .map((c) => ({ value: c.id, label: `${c.nombre}${c.activa ? "" : " (inactiva)"}` })),
+  ];
+  const sinAsignar = destino === "sin";
+
+  async function cambiar(nuevo: string) {
+    const anterior = destino;
+    setDestino(nuevo);
+    setPendiente(true);
+    const r = await guardarDestinoMedio(medio.id, nuevo);
+    setPendiente(false);
+    if (r.error) {
+      setDestino(anterior);
+      return toast.add({ title: "No se guardó", description: r.error, type: "error" });
+    }
+    toast.add({ title: `${medio.nombre}: guardado`, type: "success" });
+    router.refresh();
+  }
+
+  return (
+    <li className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center">
+      <span className="min-w-0 flex-1 text-sm font-medium break-words">
+        {medio.nombre} {!medio.activo ? <Badge variant="outline">Inactivo</Badge> : null}
+        {sinAsignar ? <span className="block text-xs font-normal text-amber-700">Sus tratamientos quedan por revisar</span> : null}
+      </span>
+      <div className="sm:w-72">
+        <Label htmlFor={`destino-${medio.id}`} className="sr-only">
+          Destino de {medio.nombre}
+        </Label>
+        <Combobox
+          id={`destino-${medio.id}`}
+          items={opciones}
+          value={destino}
+          disabled={!puedeEditar || pendiente}
+          onValueChange={(v) => v && v !== destino && cambiar(String(v))}
+        />
+      </div>
+    </li>
   );
 }
 

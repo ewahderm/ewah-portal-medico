@@ -40,6 +40,8 @@ export function MovimientoFila({
   const [anulando, setAnulando] = useState(false);
   const anulado = m.estado === "anulado";
   const esAnulacion = m.origen === "anulacion";
+  const deTratamiento = m.origen === "tratamiento";
+  const anulable = puedeAnular && !anulado && (m.origen === "manual" || deTratamiento);
   const codigo = codigoCategoria(m);
   const titulo =
     m.tipo === "transferencia"
@@ -64,6 +66,8 @@ export function MovimientoFila({
           <span className={cn("break-words", anulado && "line-through")}>{titulo}</span>
           {anulado ? <Badge variant="outline">Anulado</Badge> : null}
           {esAnulacion ? <Badge variant="secondary">Anulación</Badge> : null}
+          {deTratamiento ? <Badge variant="secondary">Tratamiento</Badge> : null}
+          {m.estado === "pendiente_abono" ? <Badge variant="outline">Pendiente de abono</Badge> : null}
         </span>
         <span className="block text-xs text-muted-foreground">
           {fechaLegible(m.fecha)}
@@ -72,14 +76,14 @@ export function MovimientoFila({
         </span>
         {!compacta && m.descripcion ? <span className="block text-xs break-words text-muted-foreground">{m.descripcion}</span> : null}
         {!compacta && anulado && m.anulado_motivo ? <span className="block text-xs text-muted-foreground">Anulado: {m.anulado_motivo}</span> : null}
-        {!compacta && (m.soporte_nombre_archivo || (puedeAnular && !anulado && m.origen === "manual")) ? (
+        {!compacta && (m.soporte_nombre_archivo || anulable) ? (
           <span className="mt-1 flex flex-wrap gap-2">
             {m.soporte_nombre_archivo ? (
               <Button size="xs" variant="outline" onClick={() => abrirFirmado(() => urlSoporteMovimiento(m.id))}>
                 <PaperclipIcon /> {m.soporte_nombre_archivo}
               </Button>
             ) : null}
-            {puedeAnular && !anulado && m.origen === "manual" ? (
+            {anulable ? (
               <Button size="xs" variant="ghost" onClick={() => setAnulando(true)}>
                 Anular
               </Button>
@@ -129,6 +133,9 @@ function AnularDialog({ movimiento, titulo, onCerrar }: { movimiento: Movimiento
           <DialogDescription>
             {titulo} por {formatoDinero(movimiento.monto_original, movimiento.moneda)} del {fechaLegible(movimiento.fecha)}. No se borra: queda un
             movimiento inverso que lo compensa, con tu motivo.
+            {movimiento.origen === "tratamiento"
+              ? " El tratamiento sigue vigente: volverá a Cobros para registrarlo bien (por ejemplo, tras corregir la cuenta de su medio de pago). Si el tratamiento no se hizo, anúlalo en Tratamientos."
+              : ""}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-2">

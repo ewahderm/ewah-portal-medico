@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { ArrowRightIcon, BanknoteIcon, CreditCardIcon, HandCoinsIcon, LandmarkIcon, SmartphoneIcon, TriangleAlertIcon, WalletIcon, type LucideIcon } from "lucide-react";
+import { ArrowRightIcon, BanknoteIcon, ClipboardListIcon, CreditCardIcon, HandCoinsIcon, LandmarkIcon, SmartphoneIcon, TriangleAlertIcon, WalletIcon, type LucideIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { requireUsuario } from "@/lib/auth/session";
-import { getAccesoFinanzas, getConfigFinanzas, getDatosRegistro, getMovimientos } from "@/lib/finanzas/consultas";
+import { getAccesoFinanzas, getConfigFinanzas, getDatosRegistro, getIngresosPendientes, getMovimientos } from "@/lib/finanzas/consultas";
+import { resumirPendientes } from "@/lib/finanzas/tratamientos";
 import { resumirCuentas } from "@/lib/finanzas/cuentas";
 import { codigoCategoria, resumirPeriodo } from "@/lib/finanzas/movimientos";
 import { formatoDinero } from "@/lib/finanzas/dinero";
@@ -61,11 +62,14 @@ export default async function FinanzasPage() {
   }
 
   const inicioMes = `${hoy.slice(0, 8)}01`;
-  const [datos, delMes, recientes] = await Promise.all([
+  const [datos, delMes, recientes, pendientes] = await Promise.all([
     getDatosRegistro(supabase, acceso, config, hoy),
     getMovimientos(supabase, { desde: inicioMes > config.fecha_inicio ? inicioMes : config.fecha_inicio, hasta: hoy }, 5000),
     getMovimientos(supabase, { desde: config.fecha_inicio, hasta: hoy }, 6),
+    getIngresosPendientes(supabase),
   ]);
+  const cobros = resumirPendientes(pendientes);
+  const atender = cobros.porGenerar.cantidad + cobros.anuladosConIngreso + cobros.porRevisar;
   const resumen = resumirCuentas(datos.cuentas);
   const mes = resumirPeriodo(delMes.map((m) => ({ tipo: m.tipo, categoria: codigoCategoria(m), valor_cop: m.valor_cop, origen: m.origen })));
   const nombreCategoria = new Map(datos.categorias.map((c) => [c.codigo, c.nombre]));
@@ -80,6 +84,21 @@ export default async function FinanzasPage() {
     <div className="space-y-4">
       <RegistrarMovimientoBotones {...datos} puedeCrear={acceso.puedeCrear} />
 
+      {atender ? (
+        <Alert>
+          <ClipboardListIcon />
+          <AlertDescription className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <span>
+              {atender === 1 ? "1 tratamiento necesita" : `${atender} tratamientos necesitan`} atención para entrar al flujo de caja
+              {cobros.mediosSinCuenta.length ? " (hay medios de pago sin cuenta asignada)" : ""}.
+            </span>
+            <Link href="/finanzas/cobros" className="inline-flex shrink-0 items-center gap-1 text-sm text-primary underline-offset-4 hover:underline">
+              Revisar <ArrowRightIcon className="size-4" />
+            </Link>
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Cifra icono={WalletIcon} titulo="Disponible en pesos" valor={formatoDinero(resumen.disponible.COP)} detalle="Bancos, billeteras y efectivo" />
         {resumen.disponible.USD || resumen.disponible.EUR ? (
@@ -92,6 +111,16 @@ export default async function FinanzasPage() {
         ) : null}
         {datos.cuentas.some((c) => c.tipo === "pasarela" && (c.activa || c.saldo !== 0)) ? (
           <Cifra icono={CreditCardIcon} titulo="Por abonar (pasarela)" valor={formatoDinero(resumen.porAbonar)} detalle="Cobros con tarjeta que aún no llegan" />
+        ) : null}
+        {cobros.porCobrar.cantidad ? (
+          <Link href="/finanzas/cobros" className="block">
+            <Cifra
+              icono={ClipboardListIcon}
+              titulo="Por cobrar a pacientes"
+              valor={formatoDinero(cobros.porCobrar.valor)}
+              detalle={`${cobros.porCobrar.cantidad} ${cobros.porCobrar.cantidad === 1 ? "tratamiento" : "tratamientos"} a crédito`}
+            />
+          </Link>
         ) : null}
         {datos.cuentas.some((c) => c.tipo === "tarjeta_socio" && (c.activa || c.saldo !== 0)) ? (
           <Cifra
