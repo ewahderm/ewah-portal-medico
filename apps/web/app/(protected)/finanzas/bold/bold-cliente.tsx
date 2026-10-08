@@ -6,7 +6,7 @@ import { CheckCircle2Icon, PaperclipIcon } from "lucide-react";
 import { anularLiquidacion, liquidarPasarela, urlSoporteLiquidacion } from "@/lib/finanzas/bold-acciones";
 import { subirArchivoFinanzas } from "@/lib/finanzas/subida-cliente";
 import { agruparPorAbono, totalizar, validarLiquidacion, type PendientePasarela } from "@/lib/finanzas/tarifas";
-import type { Liquidacion } from "@/lib/finanzas/consultas";
+import type { Liquidacion, PagoSinEmparejar } from "@/lib/finanzas/consultas";
 import { formatoDinero } from "@/lib/finanzas/dinero";
 import { fechaLegible } from "@/lib/habilitacion/ruta";
 import { ACCEPT_ARCHIVO } from "@/lib/habilitacion/constantes";
@@ -25,12 +25,16 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { abrirFirmado } from "../../habilitacion/_components/abrir-firmado";
 import { CampoDinero } from "../_components/campo-dinero";
+import { MarcaValoresReales, ReportePasarela } from "./reporte-pasarela";
 
 type CuentaOpcion = { id: string; nombre: string; destino: boolean; pasarela: boolean };
 
 export function BoldCliente({
   pendientes,
   liquidaciones,
+  cuentasPasarela,
+  pagosSinEmparejar,
+  totalSinEmparejar,
   cuentas,
   hoy,
   puedeCrear,
@@ -38,6 +42,9 @@ export function BoldCliente({
 }: {
   pendientes: PendientePasarela[];
   liquidaciones: Liquidacion[];
+  cuentasPasarela: { id: string; nombre: string }[];
+  pagosSinEmparejar: PagoSinEmparejar[];
+  totalSinEmparejar: number;
   cuentas: CuentaOpcion[];
   hoy: string;
   puedeCrear: boolean;
@@ -50,7 +57,7 @@ export function BoldCliente({
   const seleccion = pendientes.filter((p) => elegidos.has(p.movimiento_id));
   const total = totalizar(seleccion);
   const variasPasarelas = new Set(seleccion.map((p) => p.cuenta_id)).size > 1;
-  const sinTarifa = pendientes.some((p) => !p.tarifa_id);
+  const sinTarifa = pendientes.some((p) => !p.tarifa_id && !p.pago_id);
 
   const alternar = (ids: string[], marcar: boolean) =>
     setElegidos((s) => {
@@ -64,6 +71,10 @@ export function BoldCliente({
 
   return (
     <div className="space-y-4">
+      {cuentasPasarela.length ? (
+        <ReportePasarela pasarelas={cuentasPasarela} sinEmparejar={pagosSinEmparejar} totalSinEmparejar={totalSinEmparejar} puedeCrear={puedeCrear} />
+      ) : null}
+
       {sinTarifa ? (
         <Alert>
           <AlertDescription>
@@ -130,7 +141,8 @@ export function BoldCliente({
                           ) : null}
                           <span className="min-w-0 flex-1">
                             <span className="block break-words">{p.descripcion ?? "Cobro"}</span>
-                            <span className="block text-xs text-muted-foreground">Cobrado el {fechaLegible(p.fecha)}{p.tarifa_id ? "" : " · sin tarifa"}</span>
+                            <span className="block text-xs text-muted-foreground">Cobrado el {fechaLegible(p.fecha)}{p.tarifa_id || p.pago_id ? "" : " · sin tarifa"}</span>
+                            <MarcaValoresReales real={Boolean(p.pago_id)} />
                           </span>
                           <span className="text-right tabular-nums">
                             <span className="block">{formatoDinero(p.bruto)}</span>

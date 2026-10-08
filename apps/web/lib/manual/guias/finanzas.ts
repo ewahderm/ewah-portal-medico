@@ -136,6 +136,21 @@ export const FINANZAS_COBROS: Guia = {
             "Al confirmar se registran el abono al banco, la comisión, las retenciones (no son gasto: se descuentan en la declaración) y la diferencia si llegó otro valor.",
           ],
         },
+        {
+          tipo: "texto",
+          texto:
+            "**Reporte de la pasarela.** En la pantalla **Pasarelas** puedes subir el reporte de transacciones que descargas de Bold (Excel o texto). Confirma que cada cobro se realizó y trae la comisión y las retenciones **reales** de cada pago, así que el neto esperado de la liquidación es exacto en vez de una estimación.",
+        },
+        {
+          tipo: "pasos",
+          pasos: [
+            "Elige la pasarela (si tienes varias) y el archivo, y revisa el resumen: pagos leídos, comisión, retenciones y lo que se deposita.",
+            "Pulsa `Importar y emparejar`. El sistema liga cada pago con su cobro por valor y fecha, y confirma los tratamientos que esperaban la confirmación.",
+            "Si hay varios cobros del mismo valor, el pago queda en **Pagos sin su cobro** y eliges tú cuál es. Un cobro emparejado muestra *valores reales*.",
+            "Al liquidar, el neto esperado es la suma de lo que la pasarela depositó. Si el abono de tu banco coincide, no queda diferencia.",
+          ],
+        },
+        { tipo: "nota", tono: "info", texto: "El archivo se lee en tu navegador. No se guardan el número de la tarjeta ni el nombre o correo del pagador. Volver a subir el mismo reporte no duplica pagos." },
         { tipo: "imagen", archivo: "finanzas-bold.jpg", alt: "Pendientes de Bold y liquidaciones" },
         { tipo: "nota", tono: "pro", texto: "Las tarifas y la liquidación de las pasarelas son del plan Pro." },
       ],

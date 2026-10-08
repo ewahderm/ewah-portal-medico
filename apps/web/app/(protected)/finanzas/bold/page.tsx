@@ -1,7 +1,7 @@
 import { TriangleAlertIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { requireUsuario } from "@/lib/auth/session";
-import { getAccesoFinanzas, getConfigFinanzas, getCuentas, getLiquidaciones, getPendientesPasarela } from "@/lib/finanzas/consultas";
+import { getAccesoFinanzas, getConfigFinanzas, getCuentas, getLiquidaciones, getPagosSinEmparejar, getPendientesPasarela } from "@/lib/finanzas/consultas";
 import { hoyBogota } from "@/lib/habilitacion/servidor";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { BoldCliente } from "./bold-cliente";
@@ -34,7 +34,12 @@ export default async function BoldPage() {
       </Alert>
     );
   }
-  const [pendientes, cuentas, liquidaciones] = await Promise.all([getPendientesPasarela(supabase), getCuentas(supabase), getLiquidaciones(supabase)]);
+  const [pendientes, cuentas, liquidaciones, sinEmparejar] = await Promise.all([
+    getPendientesPasarela(supabase),
+    getCuentas(supabase),
+    getLiquidaciones(supabase),
+    getPagosSinEmparejar(supabase),
+  ]);
   if (!pendientes) {
     return (
       <Alert variant="destructive">
@@ -49,6 +54,9 @@ export default async function BoldPage() {
       key={pendientes.map((p) => p.movimiento_id).join(",")}
       pendientes={pendientes}
       liquidaciones={liquidaciones}
+      cuentasPasarela={cuentas.filter((c) => c.tipo === "pasarela" && c.activa).map((c) => ({ id: c.id, nombre: c.nombre }))}
+      pagosSinEmparejar={sinEmparejar.pagos}
+      totalSinEmparejar={sinEmparejar.total}
       cuentas={cuentas.map((c) => ({ id: c.id, nombre: c.nombre, destino: c.activa && c.es_disponible && c.moneda === "COP", pasarela: c.tipo === "pasarela" }))}
       hoy={hoyBogota()}
       puedeCrear={acceso.puedeCrear}

@@ -458,3 +458,64 @@ export async function getTratamientosFlujo(supabase: Supabase, vista: "en_flujo"
   }
   return ((data ?? []) as IngresoPendiente[]).map((p) => ({ ...p, valor: p.valor === null ? null : Number(p.valor) }));
 }
+
+// ---------- Reporte de la pasarela (0103) ----------
+
+export type CandidatoPago = {
+  tipo: "cobro" | "tratamiento";
+  movimiento_id: string | null;
+  tratamiento_id: string | null;
+  fecha: string;
+  valor: number;
+  descripcion: string | null;
+  paciente: string | null;
+};
+
+export type PagoSinEmparejar = {
+  id: string;
+  cuenta_id: string;
+  id_externo: string;
+  pagado_en: string;
+  compra: number;
+  comision: number;
+  deposito: number;
+  franquicia: string | null;
+  tipo_tarjeta: string | null;
+  candidatos: CandidatoPago[];
+};
+
+// Pagos exitosos de la pasarela que aún no tienen su cobro (o cuyo cobro se
+// anuló), los más recientes primero, con los cobros candidatos de cada uno.
+export async function getPagosSinEmparejar(supabase: Supabase, limite = 40): Promise<{ pagos: PagoSinEmparejar[]; total: number }> {
+  const { data } = await supabase
+    .from("fin_pagos_pasarela")
+    .select("id, cuenta_id, id_externo, pagado_en, compra, comision, deposito, franquicia, tipo_tarjeta, movimiento_id, movimiento:fin_movimientos(estado)")
+    .eq("exitoso", true)
+    .order("pagado_en", { ascending: false })
+    .limit(2000);
+  const filas = ((data ?? []) as unknown as (Omit<PagoSinEmparejar, "candidatos"> & { movimiento_id: string | null; movimiento: { estado: string } | null })[]).filter(
+    (p) => p.movimiento_id === null || p.movimiento?.estado === "anulado",
+  );
+  const visibles = filas.slice(0, limite);
+  const candidatos = await Promise.all(
+    visibles.map(async (p) => {
+      const { data: c } = await supabase.rpc("fn_fin_candidatos_pago", { p_pago: p.id });
+      return ((c ?? []) as CandidatoPago[]).map((x) => ({ ...x, valor: Number(x.valor) }));
+    }),
+  );
+  return {
+    total: filas.length,
+    pagos: visibles.map((p, i) => ({
+      id: p.id,
+      cuenta_id: p.cuenta_id,
+      id_externo: p.id_externo,
+      pagado_en: p.pagado_en,
+      compra: Number(p.compra),
+      comision: Number(p.comision),
+      deposito: Number(p.deposito),
+      franquicia: p.franquicia,
+      tipo_tarjeta: p.tipo_tarjeta,
+      candidatos: candidatos[i],
+    })),
+  };
+}
