@@ -17,6 +17,8 @@ import { formatoDinero, leerPorcentaje } from "@/lib/finanzas/dinero";
 import type { CambioFechaInicio, Categoria, Cuenta, MedioPagoFinanzas, Socio } from "@/lib/finanzas/consultas";
 import { guardarDestinoMedio } from "@/lib/finanzas/tratamientos-acciones";
 import { destinoDeConfig } from "@/lib/finanzas/tratamientos";
+import { resumenTarifa, type Tarifa } from "@/lib/finanzas/tarifas";
+import { TarifaDialog } from "../_components/tarifa-dialog";
 import { fechaLegible } from "@/lib/habilitacion/ruta";
 import { cn } from "cn";
 import { toast } from "@/components/ui/toast";
@@ -47,6 +49,7 @@ type Props = {
   socios: Socio[];
   categorias: Categoria[];
   medios: MedioPagoFinanzas[];
+  tarifas: Tarifa[];
   tiposIdentificacion: Opcion[];
   empleados: Opcion[];
   puedeEditar: boolean;
@@ -164,7 +167,7 @@ function General({ hoy, fechaInicio, historialFecha, puedeEditar }: Props) {
 }
 
 // ------------------------------------------------------------ Medios de pago
-function MediosPago({ medios, cuentas, puedeEditar }: Props) {
+function MediosPago({ medios, cuentas, tarifas, hoy, puedeEditar, gestion }: Props) {
   return (
     <Card>
       <CardHeader>
@@ -180,7 +183,15 @@ function MediosPago({ medios, cuentas, puedeEditar }: Props) {
         ) : (
           <ul className="divide-y">
             {medios.map((m) => (
-              <DestinoMedioFila key={m.id} medio={m} cuentas={cuentas} puedeEditar={puedeEditar} />
+              <DestinoMedioFila
+                key={m.id}
+                medio={m}
+                cuentas={cuentas}
+                tarifas={tarifas.filter((t) => t.medio_pago_id === m.id)}
+                hoy={hoy}
+                puedeEditar={puedeEditar}
+                gestion={gestion}
+              />
             ))}
           </ul>
         )}
@@ -192,8 +203,24 @@ function MediosPago({ medios, cuentas, puedeEditar }: Props) {
   );
 }
 
-function DestinoMedioFila({ medio, cuentas, puedeEditar }: { medio: MedioPagoFinanzas; cuentas: Cuenta[]; puedeEditar: boolean }) {
+function DestinoMedioFila({
+  medio,
+  cuentas,
+  tarifas,
+  hoy,
+  puedeEditar,
+  gestion,
+}: {
+  medio: MedioPagoFinanzas;
+  cuentas: Cuenta[];
+  tarifas: Tarifa[];
+  hoy: string;
+  puedeEditar: boolean;
+  gestion: boolean;
+}) {
   const router = useRouter();
+  const [verTarifa, setVerTarifa] = useState(false);
+  const vigente = tarifas.find((t) => t.vigente_desde <= hoy);
   const [destino, setDestino] = useState(destinoDeConfig(medio));
   const [pendiente, setPendiente] = useState(false);
   // Cuentas en pesos que reciben cobros (no la tarjeta de un socio); la
@@ -226,7 +253,13 @@ function DestinoMedioFila({ medio, cuentas, puedeEditar }: { medio: MedioPagoFin
       <span className="min-w-0 flex-1 text-sm font-medium break-words">
         {medio.nombre} {!medio.activo ? <Badge variant="outline">Inactivo</Badge> : null}
         {sinAsignar ? <span className="block text-xs font-normal text-amber-700">Sus tratamientos quedan por revisar</span> : null}
+        {vigente ? <span className="block text-xs font-normal text-muted-foreground">Tarifa: {resumenTarifa(vigente)}</span> : null}
       </span>
+      {gestion && destino !== "sin" && destino !== "credito" ? (
+        <Button size="sm" variant="outline" onClick={() => setVerTarifa(true)}>
+          Tarifa
+        </Button>
+      ) : null}
       <div className="sm:w-72">
         <Label htmlFor={`destino-${medio.id}`} className="sr-only">
           Destino de {medio.nombre}
@@ -239,6 +272,7 @@ function DestinoMedioFila({ medio, cuentas, puedeEditar }: { medio: MedioPagoFin
           onValueChange={(v) => v && v !== destino && cambiar(String(v))}
         />
       </div>
+      {verTarifa ? <TarifaDialog medio={medio} tarifas={tarifas} hoy={hoy} puedeEditar={puedeEditar} onCerrar={() => setVerTarifa(false)} /> : null}
     </li>
   );
 }

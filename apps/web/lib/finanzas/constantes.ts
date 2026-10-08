@@ -32,7 +32,7 @@ export const SECCIONES_FINANZAS = [
   { href: "/finanzas", label: "Inicio", disponible: true },
   { href: "/finanzas/movimientos", label: "Movimientos", disponible: true },
   { href: "/finanzas/cobros", label: "Cobros", disponible: true },
-  { href: "/finanzas/bold", label: "Bold", disponible: false },
+  { href: "/finanzas/bold", label: "Bold", disponible: true },
   { href: "/finanzas/socios", label: "Socios", disponible: false },
   { href: "/finanzas/informe", label: "Informe", disponible: false },
   { href: "/finanzas/cierre", label: "Cierre", disponible: false },

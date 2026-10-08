@@ -9,8 +9,8 @@ import { requirePermiso } from "@/lib/auth/requirePermiso";
 import { EXTENSIONES, esUuid } from "@/lib/habilitacion/servidor";
 import { MODULO_FINANZAS } from "@/lib/finanzas/constantes";
 
-export type AreaFinanzas = "movimientos";
-const AREAS: AreaFinanzas[] = ["movimientos"];
+export type AreaFinanzas = "movimientos" | "liquidaciones";
+const AREAS: AreaFinanzas[] = ["movimientos", "liquidaciones"];
 
 export async function prepararSubidaFinanzas(
   area: AreaFinanzas,

@@ -5,6 +5,7 @@ import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { MODULO_FINANZAS, type Actividad, type Moneda, type TipoCuenta } from "@/lib/finanzas/constantes";
 import type { IngresoPendiente } from "@/lib/finanzas/tratamientos";
+import type { PendientePasarela, Tarifa } from "@/lib/finanzas/tarifas";
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 
@@ -258,4 +259,62 @@ export async function getIngresosPendientes(supabase: Supabase): Promise<Ingreso
     return null;
   }
   return ((data ?? []) as IngresoPendiente[]).map((p) => ({ ...p, valor: p.valor === null ? null : Number(p.valor) }));
+}
+
+// ---------- FC4: tarifas y pasarela ----------
+
+const aNumero = <T extends Record<string, unknown>>(fila: T, campos: (keyof T)[]): T => {
+  const r = { ...fila };
+  for (const c of campos) if (r[c] !== null && r[c] !== undefined) (r as Record<keyof T, unknown>)[c] = Number(r[c]);
+  return r;
+};
+
+export async function getTarifas(supabase: Supabase): Promise<Tarifa[]> {
+  const { data } = await supabase
+    .from("fin_tarifas_medio_pago")
+    .select("id, medio_pago_id, vigente_desde, porcentaje_comision, comision_incluye_iva, valor_fijo_comision, porcentaje_retefuente, porcentaje_reteica, porcentaje_reteiva, recargo_internacional, dias_habiles_abono")
+    .order("vigente_desde", { ascending: false });
+  return ((data ?? []) as Tarifa[]).map((t) =>
+    aNumero(t, ["porcentaje_comision", "valor_fijo_comision", "porcentaje_retefuente", "porcentaje_reteica", "porcentaje_reteiva", "recargo_internacional"]),
+  );
+}
+
+export async function getPendientesPasarela(supabase: Supabase): Promise<PendientePasarela[] | null> {
+  const { data, error } = await supabase.rpc("fn_fin_pendientes_pasarela");
+  if (error) {
+    console.error("[finanzas] fn_fin_pendientes_pasarela", error);
+    return null;
+  }
+  return ((data ?? []) as PendientePasarela[]).map((p) => aNumero(p, ["bruto", "comision", "retefuente", "reteica", "reteiva", "neto"]));
+}
+
+export type Liquidacion = {
+  id: string;
+  fecha: string;
+  cuenta_pasarela_id: string;
+  cuenta_banco_id: string;
+  cobros: number;
+  bruto: number;
+  comision: number;
+  retefuente: number;
+  reteica: number;
+  reteiva: number;
+  neto_esperado: number;
+  neto_real: number;
+  diferencia: number;
+  soporte_nombre_archivo: string | null;
+  anulada: boolean;
+  anulada_motivo: string | null;
+};
+
+export async function getLiquidaciones(supabase: Supabase, limite = 30): Promise<Liquidacion[]> {
+  const { data } = await supabase
+    .from("fin_liquidaciones_pasarela")
+    .select("id, fecha, cuenta_pasarela_id, cuenta_banco_id, cobros, bruto, comision, retefuente, reteica, reteiva, neto_esperado, neto_real, diferencia, soporte_nombre_archivo, anulada, anulada_motivo")
+    .order("fecha", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(limite);
+  return ((data ?? []) as Liquidacion[]).map((l) =>
+    aNumero(l, ["bruto", "comision", "retefuente", "reteica", "reteiva", "neto_esperado", "neto_real", "diferencia"]),
+  );
 }

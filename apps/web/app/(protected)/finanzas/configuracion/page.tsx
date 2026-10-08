@@ -8,6 +8,7 @@ import {
   getCuentas,
   getEmpleadosPicker,
   getMediosPagoFinanzas,
+  getTarifas,
   getSedesFinanzas,
   getSocios,
   getTiposIdentificacion,
@@ -36,7 +37,7 @@ export default async function ConfiguracionFinanzasPage({ searchParams }: { sear
       </Alert>
     );
   }
-  const [cuentas, socios, categorias, tiposIdentificacion, empleados, sedes, bancos, medios] = await Promise.all([
+  const [cuentas, socios, categorias, tiposIdentificacion, empleados, sedes, bancos, medios, tarifas] = await Promise.all([
     getCuentas(supabase),
     getSocios(supabase),
     getCategorias(supabase),
@@ -45,6 +46,7 @@ export default async function ConfiguracionFinanzasPage({ searchParams }: { sear
     getSedesFinanzas(supabase),
     getBancos(supabase),
     getMediosPagoFinanzas(supabase),
+    acceso.gestion ? getTarifas(supabase) : Promise.resolve([]),
   ]);
   const q = await searchParams;
   return (
@@ -59,6 +61,7 @@ export default async function ConfiguracionFinanzasPage({ searchParams }: { sear
       socios={socios}
       categorias={categorias}
       medios={medios}
+      tarifas={tarifas}
       tiposIdentificacion={tiposIdentificacion}
       empleados={empleados}
       puedeEditar={acceso.puedeEditar}

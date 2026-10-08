@@ -67,6 +67,7 @@ export function MovimientoFila({
           {anulado ? <Badge variant="outline">Anulado</Badge> : null}
           {esAnulacion ? <Badge variant="secondary">Anulación</Badge> : null}
           {deTratamiento ? <Badge variant="secondary">Tratamiento</Badge> : null}
+          {m.origen === "bold_liquidacion" ? <Badge variant="secondary">Liquidación</Badge> : null}
           {m.estado === "pendiente_abono" ? <Badge variant="outline">Pendiente de abono</Badge> : null}
         </span>
         <span className="block text-xs text-muted-foreground">

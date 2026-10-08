@@ -110,7 +110,9 @@ export default async function FinanzasPage() {
           />
         ) : null}
         {datos.cuentas.some((c) => c.tipo === "pasarela" && (c.activa || c.saldo !== 0)) ? (
-          <Cifra icono={CreditCardIcon} titulo="Por abonar (pasarela)" valor={formatoDinero(resumen.porAbonar)} detalle="Cobros con tarjeta que aún no llegan" />
+          <Link href="/finanzas/bold" className="block">
+            <Cifra icono={CreditCardIcon} titulo="Por abonar (pasarela)" valor={formatoDinero(resumen.porAbonar)} detalle="Cobros con tarjeta que aún no llegan" />
+          </Link>
         ) : null}
         {cobros.porCobrar.cantidad ? (
           <Link href="/finanzas/cobros" className="block">
