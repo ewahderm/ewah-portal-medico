@@ -74,11 +74,19 @@
 }
 
 .ewah-calendario .rbc-event {
-  position: relative;
   border: none;
   border-radius: var(--radius-md);
   padding: 2px 6px;
   font-size: 0.75rem;
+}
+
+/* La insignia de estado se ancla a la esquina del evento. En día y semana
+   el calendario ya posiciona cada evento con position: absolute (su hora);
+   forzar relative ahí lo saca de su franja y lo apila bajo el anterior. Solo
+   en el mes y en la fila de "todo el día" el evento va en el flujo normal. */
+.ewah-calendario .rbc-month-view .rbc-event,
+.ewah-calendario .rbc-allday-cell .rbc-event {
+  position: relative;
 }
 
 .ewah-calendario .rbc-event.rbc-selected {
