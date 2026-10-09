@@ -264,7 +264,7 @@ export function AsistenteArranque({ hoy, gestion }: { hoy: string; gestion: bool
                   ) : null}
                   <div className="space-y-1">
                     <Label htmlFor={`cuentaSaldo-${c.clave}`}>
-                      {c.tipo === "tarjeta_socio" ? "Lo que la clínica le debía al socio" : c.tipo === "pasarela" ? "Cobros por abonar" : "Saldo"} ({c.moneda})
+                      {c.tipo === "tarjeta_socio" ? "Lo que la clínica le debía al socio" : c.tipo === "tarjeta_empresa" ? "Lo que se debía en la tarjeta" : c.tipo === "pasarela" ? "Cobros por abonar" : "Saldo"} ({c.moneda})
                     </Label>
                     <CampoDinero
                       key={`${c.clave}-${c.moneda}`}
@@ -301,8 +301,8 @@ export function AsistenteArranque({ hoy, gestion }: { hoy: string; gestion: bool
                       {c.tipo === "tarjeta_socio" && c.socioIndice !== null && c.socioIndice !== undefined ? ` · ${socios[c.socioIndice]?.nombre ?? ""}` : ""}
                     </span>
                   </span>
-                  <span className={c.tipo === "tarjeta_socio" && c.saldo > 0 ? "text-destructive" : undefined}>
-                    {c.tipo === "tarjeta_socio" ? "Se le debe " : ""}
+                  <span className={(c.tipo === "tarjeta_socio" || c.tipo === "tarjeta_empresa") && c.saldo > 0 ? "text-destructive" : undefined}>
+                    {c.tipo === "tarjeta_socio" ? "Se le debe " : c.tipo === "tarjeta_empresa" ? "Se debe " : ""}
                     {formatoDinero(c.saldo, c.moneda as Moneda)}
                   </span>
                 </li>

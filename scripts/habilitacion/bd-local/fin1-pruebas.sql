@@ -3,9 +3,9 @@
 \set ON_ERROR_STOP 1
 select id as b from clinicas where nombre = 'Clinica B' \gset
 select id as sede_b from sedes where clinica_id = :'b' limit 1 \gset
-select t.ok(count(*) = 25 and count(*) filter (where automatica) = 5
+select t.ok(count(*) = 26 and count(*) filter (where automatica) = 6
   and count(*) filter (where actividad = 'inversion') = 1 and count(*) filter (where actividad = 'financiacion') = 4,
-  'catálogo: 25 categorías, 5 automáticas, 1 de inversión y 4 de financiación') from fin_categorias;
+  'catálogo: 26 categorías (con el pago de la tarjeta de la empresa, 0104), 6 automáticas, 1 de inversión y 4 de financiación') from fin_categorias;
 select t.ok(not exists (select 1 from fin_categorias where codigo = 'CUOTA_APTOS'), 'Cuota Aptos no existe (decisión del usuario)');
 
 -- Administrador de la clínica A: asistente de arranque.
@@ -49,7 +49,7 @@ insert into fin_categorias_clinica (clinica_id, categoria_codigo, nombre) values
 insert into fin_categorias_clinica (clinica_id, nombre, tipo, actividad) values (clinica_actual(), 'Papelería', 'egreso', 'operacion');
 select t.ok(nombre = 'Combustible' and nombre_original = 'Gasolina' and actividad = 'operacion', 'renombrar una global conserva su actividad') from v_fin_categorias where codigo = 'GASOLINA';
 select t.ok(propia and puc_codigo_defecto is null and comportamiento = 'gasto', 'la propia queda sin cuenta PUC hasta el contador') from v_fin_categorias where nombre = 'Papelería';
-select t.ok(count(*) = 26, 'la clínica ve 25 globales + 1 propia') from v_fin_categorias;
+select t.ok(count(*) = 27, 'la clínica ve 26 globales + 1 propia') from v_fin_categorias;
 select t.debe_fallar($q$insert into fin_categorias_clinica (clinica_id, categoria_codigo, activa) values (clinica_actual(), 'COMISION_PASARELA', false)$q$, 'automáticas');
 select t.debe_fallar($q$update fin_categorias_clinica set actividad = 'inversion' where nombre = 'Papelería'$q$, 'no cambia de tipo');
 select t.debe_fallar($q$insert into fin_categorias_clinica (clinica_id, nombre, tipo) values (clinica_actual(), 'Incompleta', 'egreso')$q$, 'fin_categoria_propia_completa');
@@ -95,7 +95,7 @@ select fn_sync_clinica_modulos(:'b');
 select t.como('00000000-0000-0000-0000-00000000000b'); set role authenticated;
 select t.ok(count(*) = 0, 'otra clínica no ve la configuración, cuentas ni socios ajenos')
   from (select id from fin_config union all select id from fin_cuentas union all select id from fin_socios union all select id from fin_categorias_clinica) x;
-select t.ok(count(*) = 25, 'ni sus categorías propias') from v_fin_categorias;
+select t.ok(count(*) = 26, 'ni sus categorías propias') from v_fin_categorias;
 select t.debe_fallar($q$select fn_fin_activar('2026-06-01', '[{"nombre":"Tarjeta","tipo":"tarjeta_socio","socio_indice":0}]', '[{"nombre":"Socio Gratis","numero_identificacion":"123456"}]')$q$, 'row-level');
 select fn_fin_activar('2026-06-01', '[{"nombre":"Caja","tipo":"efectivo"},{"nombre":"Nequi","tipo":"nequi","saldo_inicial":80000}]');
 select t.ok(count(*) = 2, 'en Gratis se activa con cuentas simples') from fin_cuentas;

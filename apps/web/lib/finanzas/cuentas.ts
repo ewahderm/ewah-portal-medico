@@ -8,8 +8,8 @@ export type CuentaEntrada = {
   nombre: string;
   tipo: string;
   moneda: string;
-  // Lo que digita el usuario. En la tarjeta del socio es lo que la clínica
-  // le debe (positivo); se guarda negativo porque es un pasivo.
+  // Lo que digita el usuario. En una tarjeta de crédito (del socio o de la
+  // empresa) es lo que se debe (positivo); se guarda negativo: es un pasivo.
   saldo: number;
   socioIndice?: number | null;
 };
@@ -20,7 +20,11 @@ export type SocioEntrada = {
   porcentaje: number | null;
 };
 
-export const NO_DISPONIBLES: readonly TipoCuenta[] = ["pasarela", "tarjeta_socio"];
+export const NO_DISPONIBLES: readonly TipoCuenta[] = ["pasarela", "tarjeta_socio", "tarjeta_empresa"];
+
+// Cuentas cuyo saldo es una deuda (se muestra en positivo como "se debe").
+export const TARJETAS: readonly TipoCuenta[] = ["tarjeta_socio", "tarjeta_empresa"];
+export const esTarjeta = (tipo: string): boolean => (TARJETAS as readonly string[]).includes(tipo);
 
 export function esTipoCuenta(v: string): v is TipoCuenta {
   return TIPOS_CUENTA.some((t) => t.value === v);
@@ -36,12 +40,12 @@ export function requierePro(tipo: TipoCuenta): boolean {
 
 // Saldo que se guarda en la BD a partir de lo que el usuario digitó.
 export function saldoParaGuardar(tipo: TipoCuenta, saldo: number): number {
-  return tipo === "tarjeta_socio" ? -Math.abs(saldo) : saldo;
+  return esTarjeta(tipo) ? -Math.abs(saldo) : saldo;
 }
 
-// Lo que se muestra al usuario: la deuda con el socio en positivo.
+// Lo que se muestra al usuario: la deuda de una tarjeta en positivo.
 export function saldoParaMostrar(tipo: TipoCuenta, saldo: number): number {
-  return tipo === "tarjeta_socio" ? Math.abs(saldo) : saldo;
+  return esTarjeta(tipo) ? Math.abs(saldo) : saldo;
 }
 
 export function validarCuenta(c: CuentaEntrada, opciones: { gestion: boolean; socios: number }): string | null {
@@ -52,7 +56,11 @@ export function validarCuenta(c: CuentaEntrada, opciones: { gestion: boolean; so
   if (c.moneda !== "COP" && c.tipo !== "efectivo") return `"${nombre}": solo el efectivo puede estar en dólares o euros.`;
   if (requierePro(c.tipo) && !opciones.gestion) return `"${nombre}": las cuentas de pasarela y de tarjeta de socio son del plan Pro.`;
   if (!Number.isFinite(c.saldo) || Math.abs(c.saldo) > 1e13) return `"${nombre}": el saldo no es un número válido.`;
-  if (c.tipo !== "banco" && c.tipo !== "tarjeta_socio" && c.saldo < 0) return `"${nombre}": el saldo no puede ser negativo.`;
+  if (c.tipo !== "banco" && !esTarjeta(c.tipo) && c.saldo < 0) return `"${nombre}": el saldo no puede ser negativo.`;
+  if (c.tipo === "tarjeta_empresa") {
+    if (c.saldo < 0) return `"${nombre}": escribe lo que se debe en la tarjeta como un valor positivo.`;
+    if (c.moneda !== "COP") return `"${nombre}": la tarjeta de la empresa se lleva en pesos.`;
+  }
   if (c.tipo === "tarjeta_socio") {
     if (c.saldo < 0) return `"${nombre}": escribe lo que se le debe al socio como un valor positivo.`;
     if (c.socioIndice === null || c.socioIndice === undefined || c.socioIndice < 0 || c.socioIndice >= opciones.socios) {
@@ -122,14 +130,17 @@ export type ResumenCuentas = {
   porAbonar: number;
   deudaSocios: number;
   deudaPorSocio: Map<string, number>;
+  // Lo que se debe en las tarjetas de crédito de la empresa.
+  deudaTarjetasEmpresa: number;
 };
 
 // Totales del tablero. La pasarela es plata por llegar y la tarjeta del
 // socio es deuda: ninguna cuenta como disponible.
 export function resumirCuentas(cuentas: CuentaConSaldo[]): ResumenCuentas {
-  const r: ResumenCuentas = { disponible: { COP: 0, USD: 0, EUR: 0 }, porAbonar: 0, deudaSocios: 0, deudaPorSocio: new Map() };
+  const r: ResumenCuentas = { disponible: { COP: 0, USD: 0, EUR: 0 }, porAbonar: 0, deudaSocios: 0, deudaPorSocio: new Map(), deudaTarjetasEmpresa: 0 };
   for (const c of cuentas) {
     if (c.tipo === "pasarela") r.porAbonar += c.saldo;
+    else if (c.tipo === "tarjeta_empresa") r.deudaTarjetasEmpresa += Math.max(0, -c.saldo);
     else if (c.tipo === "tarjeta_socio") {
       const deuda = Math.max(0, -c.saldo);
       r.deudaSocios += deuda;

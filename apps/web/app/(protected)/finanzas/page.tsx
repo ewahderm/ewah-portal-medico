@@ -24,6 +24,7 @@ const ICONOS: Record<TipoCuenta, LucideIcon> = {
   efectivo: BanknoteIcon,
   pasarela: CreditCardIcon,
   tarjeta_socio: HandCoinsIcon,
+  tarjeta_empresa: CreditCardIcon,
 };
 
 const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
@@ -124,6 +125,17 @@ export default async function FinanzasPage() {
             />
           </Link>
         ) : null}
+        {datos.cuentas.some((c) => c.tipo === "tarjeta_empresa" && (c.activa || c.saldo !== 0)) ? (
+          <Link href="/finanzas/movimientos" className="block">
+            <Cifra
+              icono={CreditCardIcon}
+              titulo="Tarjetas de crédito de la empresa"
+              valor={formatoDinero(resumen.deudaTarjetasEmpresa)}
+              detalle="Lo que se debe: se paga con una transferencia desde el banco"
+              tono={resumen.deudaTarjetasEmpresa > 0 ? "alerta" : undefined}
+            />
+          </Link>
+        ) : null}
         {datos.cuentas.some((c) => c.tipo === "tarjeta_socio" && (c.activa || c.saldo !== 0)) ? (
 <Link href="/finanzas/socios" className="block">
           <Cifra
@@ -220,7 +232,7 @@ export default async function FinanzasPage() {
             <ul className="divide-y">
               {visibles.map((c) => {
                 const Icono = ICONOS[c.tipo];
-                const deuda = c.tipo === "tarjeta_socio";
+                const deuda = c.tipo === "tarjeta_socio" || c.tipo === "tarjeta_empresa";
                 return (
                   <li key={c.id}>
                     <Link href={`/finanzas/movimientos?cuenta=${c.id}`} className="flex items-center gap-3 py-3 hover:bg-muted/50">

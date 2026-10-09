@@ -108,8 +108,11 @@ function RegistrarMovimientoDialog({ tipoInicial, datos, onCerrar }: { tipoInici
     () => datos.categorias.filter((c) => c.activa && !c.automatica && (c.tipo === tipo || c.tipo === "ambos") && (datos.gestion || !["prestamo_socio", "aporte_socio"].includes(c.comportamiento))),
     [datos.categorias, datos.gestion, tipo],
   );
-  // Egreso: cuentas disponibles y tarjetas de socio; ingreso y transferencia: solo disponibles.
-  const cuentasOrigen = cuentasActivas.filter((c) => (c.tipo === "tarjeta_socio" ? tipo === "egreso" && datos.gestion : c.tipo !== "pasarela"));
+  // Egreso: cuentas disponibles y tarjetas de crédito; ingreso y transferencia: solo disponibles.
+  // Transferir hacia la tarjeta de la empresa es pagarla.
+  const cuentasOrigen = cuentasActivas.filter((c) =>
+    c.tipo === "tarjeta_socio" ? tipo === "egreso" && datos.gestion : c.tipo === "tarjeta_empresa" ? tipo === "egreso" : c.tipo !== "pasarela",
+  );
   const cuentasDestino = cuentasActivas.filter((c) => c.tipo !== "pasarela" && c.tipo !== "tarjeta_socio" && c.id !== cuentaId);
   // HU-4: aviso (sin bloquear) si una caja o billetera quedaría en negativo.
   const quedaNegativa =
@@ -122,7 +125,7 @@ function RegistrarMovimientoDialog({ tipoInicial, datos, onCerrar }: { tipoInici
     setSocioId(null);
     setProveedorId(null);
     setError(null);
-    if (t !== "egreso" && cuenta?.tipo === "tarjeta_socio") setCuentaId(null);
+    if (t !== "egreso" && (cuenta?.tipo === "tarjeta_socio" || cuenta?.tipo === "tarjeta_empresa")) setCuentaId(null);
   }
 
   function elegirCategoria(codigo: string) {
@@ -409,7 +412,7 @@ function SelectorCuenta({ cuentas, valor, onCambio, etiqueta: titulo }: { cuenta
             <span className="block text-xs text-muted-foreground">{etiqueta(TIPOS_CUENTA, c.tipo)}</span>
           </span>
           <span className={cn("shrink-0 text-xs tabular-nums", c.saldo < 0 ? "text-destructive" : "text-muted-foreground")}>
-            {c.tipo === "tarjeta_socio" ? `Debe ${formatoDinero(Math.abs(c.saldo), c.moneda)}` : formatoDinero(c.saldo, c.moneda)}
+            {c.tipo === "tarjeta_socio" || c.tipo === "tarjeta_empresa" ? `Debe ${formatoDinero(Math.abs(c.saldo), c.moneda)}` : formatoDinero(c.saldo, c.moneda)}
           </span>
         </button>
       ))}

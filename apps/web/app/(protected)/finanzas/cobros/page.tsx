@@ -50,7 +50,7 @@ export default async function CobrosPage({ searchParams }: { searchParams: Promi
       vista={vista}
       pendientes={pendientes}
       otraVista={otraVista}
-      cuentas={cuentas.filter((c) => c.activa && c.moneda === "COP" && c.tipo !== "tarjeta_socio").map((c) => ({ id: c.id, nombre: c.nombre }))}
+      cuentas={cuentas.filter((c) => c.activa && c.moneda === "COP" && c.tipo !== "tarjeta_socio" && c.tipo !== "tarjeta_empresa").map((c) => ({ id: c.id, nombre: c.nombre }))}
       hoy={hoyBogota()}
       fechaInicio={config.fecha_inicio}
       puedeCrear={acceso.puedeCrear}

@@ -16,6 +16,7 @@ export const TIPOS_CUENTA = [
   { value: "daviplata", label: "Daviplata", ayuda: "Billetera digital.", pro: false },
   { value: "efectivo", label: "Efectivo", ayuda: "Caja en pesos, dólares o euros.", pro: false },
   { value: "pasarela", label: "Pasarela de pago", ayuda: "Bold, Wompi, PayU, ePayco…: cobros con tarjeta o link que llegan al banco días después.", pro: true },
+  { value: "tarjeta_empresa", label: "Tarjeta de crédito de la empresa", ayuda: "Compras con la tarjeta de crédito de la clínica: quedan como deuda hasta que pagas el extracto desde el banco.", pro: false },
   { value: "tarjeta_socio", label: "Tarjeta de crédito de socio", ayuda: "Gastos que paga un socio con su tarjeta: la clínica se los debe.", pro: true },
 ] as const;
 export type TipoCuenta = (typeof TIPOS_CUENTA)[number]["value"];

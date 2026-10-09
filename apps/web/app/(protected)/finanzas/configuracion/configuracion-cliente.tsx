@@ -229,7 +229,7 @@ function DestinoMedioFila({
     { value: "sin", label: "Sin asignar" },
     { value: "credito", label: "A crédito (queda por cobrar)" },
     ...cuentas
-      .filter((c) => c.moneda === "COP" && c.tipo !== "tarjeta_socio" && (c.activa || c.id === medio.cuenta_id))
+      .filter((c) => c.moneda === "COP" && c.tipo !== "tarjeta_socio" && c.tipo !== "tarjeta_empresa" && (c.activa || c.id === medio.cuenta_id))
       .map((c) => ({ value: c.id, label: `${c.nombre}${c.activa ? "" : " (inactiva)"}` })),
   ];
   const sinAsignar = destino === "sin";
@@ -338,7 +338,7 @@ function Cuentas({ cuentas, socios, sedes, bancos, puedeEditar, gestion }: Props
                 </span>
               </span>
               <span className="text-right text-sm tabular-nums">
-                <span className="block text-xs text-muted-foreground">{c.tipo === "tarjeta_socio" ? "Deuda inicial" : "Saldo inicial"}</span>
+                <span className="block text-xs text-muted-foreground">{c.tipo === "tarjeta_socio" || c.tipo === "tarjeta_empresa" ? "Deuda inicial" : "Saldo inicial"}</span>
                 {formatoDinero(saldoParaMostrar(c.tipo, c.saldo_inicial), c.moneda)}
               </span>
               {puedeEditar ? <EstadoCuenta cuenta={c} /> : null}
@@ -503,7 +503,7 @@ function CuentaDialog({
           </div>
           <div className="space-y-1">
             <Label htmlFor="saldoCuenta">
-              {tipo === "tarjeta_socio" ? "Lo que la clínica le debía al socio" : "Saldo"} a la fecha de inicio ({moneda})
+              {tipo === "tarjeta_socio" ? "Lo que la clínica le debía al socio" : tipo === "tarjeta_empresa" ? "Lo que se debía en la tarjeta" : "Saldo"} a la fecha de inicio ({moneda})
             </Label>
             <CampoDinero key={moneda} id="saldoCuenta" moneda={moneda as Moneda} valorInicial={saldo} vacioEsCero permitirNegativo={tipo === "banco"} onValor={setSaldo} />
           </div>

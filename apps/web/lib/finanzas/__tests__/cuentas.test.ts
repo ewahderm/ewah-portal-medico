@@ -71,3 +71,24 @@ describe("cuentas", () => {
     expect(r.deudaPorSocio.get("s1")).toBe(400000);
   });
 });
+
+describe("tarjeta de crédito de la empresa", () => {
+  const opciones = { gestion: false, socios: 0 };
+  it("la deuda se escribe en positivo y se guarda negativa, sin plan Pro ni socio", () => {
+    expect(saldoParaGuardar("tarjeta_empresa", 500000)).toBe(-500000);
+    expect(saldoParaMostrar("tarjeta_empresa", -500000)).toBe(500000);
+    expect(validarCuenta({ nombre: "Visa empresa", tipo: "tarjeta_empresa", moneda: "COP", saldo: 500000 }, opciones)).toBeNull();
+    expect(validarCuenta({ nombre: "Visa empresa", tipo: "tarjeta_empresa", moneda: "COP", saldo: -1 }, opciones)).toMatch(/positivo/);
+    expect(validarCuenta({ nombre: "Visa empresa", tipo: "tarjeta_empresa", moneda: "USD", saldo: 0 }, opciones)).toMatch(/dólares|pesos/);
+  });
+
+  it("su deuda se resume aparte y no cuenta como plata disponible", () => {
+    const r = resumirCuentas([
+      { id: "b", nombre: "Banco", tipo: "banco", moneda: "COP", saldo: 1000000, socio_id: null },
+      { id: "t", nombre: "Visa empresa", tipo: "tarjeta_empresa", moneda: "COP", saldo: -300000, socio_id: null },
+    ]);
+    expect(r.disponible.COP).toBe(1000000);
+    expect(r.deudaTarjetasEmpresa).toBe(300000);
+    expect(r.deudaSocios).toBe(0);
+  });
+});
