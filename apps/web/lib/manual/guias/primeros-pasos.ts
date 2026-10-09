@@ -215,7 +215,58 @@ export const USUARIOS: Guia = {
           ],
         },
         { tipo: "imagen", archivo: "usuarios.jpg", alt: "Usuarios y roles" },
-        { tipo: "nota", tono: "info", texto: "Si alguien olvidó su contraseña o quedó bloqueado, usa `Restablecer contraseña` en su fila." },
+      ],
+    },
+    {
+      id: "gestionar",
+      titulo: "Gestionar un usuario: rol, correo, contraseña y estado",
+      bloques: [
+        { tipo: "texto", texto: "En la fila de cada persona pulsa `Gestionar`. Desde ahí puedes:" },
+        {
+          tipo: "lista",
+          items: [
+            "**Cambiar el rol** (por ejemplo, de Recepción a Administrador).",
+            "**Cambiar el correo** con el que inicia sesión: para corregir un correo mal escrito o para entregarle la cuenta a otra persona. La contraseña no cambia.",
+            "**Contraseña:** `Enviar enlace por correo` (la persona define la suya; es lo recomendado) o `Contraseña` para definir una temporal y entregársela. Si la cuenta estaba bloqueada por intentos fallidos, queda desbloqueada.",
+            "**Desactivar** la cuenta cuando alguien deja la clínica: ya no entra ni ve datos, pero su historia (citas, tratamientos y evoluciones a su nombre) se conserva. Se puede volver a activar.",
+          ],
+        },
+        {
+          tipo: "nota",
+          tono: "aviso",
+          texto:
+            "Para que la clínica nunca quede sin dueño, EWAH no deja desactivar ni quitarle el rol al **último administrador activo**. Tampoco puedes desactivarte o cambiarte el rol a ti mismo: lo hace otro administrador.",
+        },
+        {
+          tipo: "nota",
+          tono: "info",
+          texto:
+            "Si un administrador pierde el acceso y no hay otro que lo ayude, puede usar **¿Olvidaste tu contraseña?** en la pantalla de inicio de sesión, o escribir a EWAH Tech: el equipo de soporte puede enviarle el enlace, definir una contraseña temporal o corregir su correo.",
+        },
+      ],
+    },
+    {
+      id: "entregar",
+      titulo: "Configurar la clínica para otra persona y entregársela",
+      bloques: [
+        {
+          tipo: "texto",
+          texto:
+            "Si configuras EWAH para un cliente (por ejemplo, como asesor o implementador), puedes registrar la clínica tú, dejarla lista y entregarla. La clínica no queda atada a tu correo: cualquier usuario con rol Administrador tiene el mismo acceso.",
+        },
+        {
+          tipo: "pasos",
+          pasos: [
+            "Regístrala con un **alias de tu correo**, por ejemplo `tucorreo+clinica-perez@gmail.com`. En Gmail te llega a tu misma bandeja, pero para EWAH es un correo distinto: así no gastas tu correo principal, que solo puede pertenecer a una clínica.",
+            "Configura todo con el asistente (**Administración → Configurar clínica**).",
+            "Entrega la cuenta: en **Usuarios → Gestionar** sobre tu usuario, **cambia el correo** por el del dueño y pulsa `Enviar enlace por correo` para que defina su contraseña. Otra opción es crearle su propio usuario Administrador y que él **desactive** el tuyo.",
+          ],
+        },
+        {
+          tipo: "nota",
+          tono: "aviso",
+          texto: "No te quedes con acceso a una clínica que ya entregaste: verías las historias de sus pacientes, y eso va contra la protección de datos de salud.",
+        },
       ],
     },
     {

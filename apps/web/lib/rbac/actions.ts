@@ -120,7 +120,10 @@ export async function restablecerPassword(
 
   const admin = await getCurrentUsuario();
   if (!admin) return { error: "Sesión inválida." };
-  if (!esAdministrador(admin)) {
+  // El super administrador de EWAH Tech también puede, en cualquier clínica:
+  // así apoya a un administrador que perdió el acceso.
+  const superAdmin = esAdministrador(admin) ? false : Boolean((await (await createClient()).rpc("es_super_admin")).data);
+  if (!esAdministrador(admin) && !superAdmin) {
     return { error: "Solo un Administrador puede restablecer contraseñas." };
   }
 
@@ -134,7 +137,7 @@ export async function restablecerPassword(
     .eq("id", usuarioId)
     .maybeSingle();
 
-  if (!objetivo || objetivo.clinica_id !== admin.clinica_id) {
+  if (!objetivo || (!superAdmin && objetivo.clinica_id !== admin.clinica_id)) {
     return { error: "Usuario inválido." };
   }
 
@@ -153,6 +156,7 @@ export async function restablecerPassword(
     .eq("id", usuarioId);
 
   revalidatePath("/usuarios");
+  revalidatePath("/plataforma");
   return null;
 }
 

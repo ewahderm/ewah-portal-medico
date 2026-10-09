@@ -68,6 +68,7 @@ export default async function PlataformaPage() {
                   <TableCell className="text-right">
                     <ClinicaFilaAcciones
                       clinicaId={clinica.id}
+                      nombreClinica={clinica.nombre_comercial || clinica.nombre}
                       planCodigoActual={clinica.planes?.codigo ?? ""}
                       activo={clinica.activo}
                       planes={(planes ?? []).map((p) => ({ value: p.codigo, label: p.nombre }))}

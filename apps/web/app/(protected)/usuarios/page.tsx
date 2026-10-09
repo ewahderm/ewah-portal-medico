@@ -14,8 +14,8 @@ import {
 import { InviteDialog } from "./invite-dialog";
 import { ExportarXlsxLink } from "../_components/exportar-xlsx-link";
 import { CreateRolDialog } from "./create-rol-dialog";
+import { GestionarUsuarioDialog } from "./gestionar-usuario-dialog";
 import { PermissionMatrixDialog } from "./permission-matrix-dialog";
-import { ResetPasswordDialog } from "./reset-password-dialog";
 
 export default async function UsuariosPage() {
   const usuario = await requireUsuario();
@@ -121,7 +121,11 @@ export default async function UsuariosPage() {
                     )}
                   </TableCell>
                   <TableCell className="text-right">
-                    <ResetPasswordDialog usuarioId={u.id} nombre={u.nombre} />
+                    <GestionarUsuarioDialog
+                      usuario={u}
+                      roles={(roles ?? []).map((r) => ({ id: r.id, nombre: r.nombre }))}
+                      esUnoMismo={u.id === usuario.id}
+                    />
                   </TableCell>
                 </TableRow>
               ))}

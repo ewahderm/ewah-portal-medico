@@ -6,14 +6,17 @@ import { toast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 import { exigirExito } from "@/lib/forms/resultado";
+import { UsuariosClinicaDialog } from "./usuarios-clinica-dialog";
 
 export function ClinicaFilaAcciones({
   clinicaId,
+  nombreClinica,
   planCodigoActual,
   activo,
   planes,
 }: {
   clinicaId: string;
+  nombreClinica: string;
   planCodigoActual: string;
   activo: boolean;
   planes: { value: string; label: string }[];
@@ -54,7 +57,8 @@ export function ClinicaFilaAcciones({
 
   return (
     <div className="flex flex-col items-end gap-1.5">
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <UsuariosClinicaDialog clinicaId={clinicaId} nombreClinica={nombreClinica} />
         <Combobox
           items={planes}
           value={planCodigoActual}
