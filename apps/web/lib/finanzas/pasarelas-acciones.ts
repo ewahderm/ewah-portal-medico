@@ -36,7 +36,9 @@ export async function importarPagosPasarela(input: {
   cuentaId: string;
   perfil: string;
   pagos: PagoPasarela[];
-}): Promise<Resultado & { total?: number; nuevos?: number; repetidos?: number; emparejados?: number; sinEmparejar?: number }> {
+  nombreArchivo?: string | null;
+  conError?: number;
+}): Promise<Resultado & { total?: number; nuevos?: number; repetidos?: number; cambiados?: number; emparejados?: number; sinEmparejar?: number }> {
   if (!esUuid(input.cuentaId)) return { error: "Elige la pasarela." };
   if (!PERFILES.some((p) => p.id === input.perfil)) return { error: "Formato de reporte no reconocido." };
   if (!Array.isArray(input.pagos) || input.pagos.length === 0) return { error: "El reporte no trae pagos." };
@@ -45,9 +47,15 @@ export async function importarPagosPasarela(input: {
   const check = await requirePermiso(MODULO_FINANZAS, "CREATE");
   if (!check.ok) return { error: check.error };
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("fn_fin_importar_pagos", { p_cuenta: input.cuentaId, p_perfil: input.perfil, p_pagos: input.pagos });
+  const { data, error } = await supabase.rpc("fn_fin_importar_pagos", {
+    p_cuenta: input.cuentaId,
+    p_perfil: input.perfil,
+    p_pagos: input.pagos,
+    p_nombre_archivo: typeof input.nombreArchivo === "string" ? input.nombreArchivo.slice(0, 255) : null,
+    p_con_error: Number.isInteger(input.conError) && (input.conError ?? 0) >= 0 ? input.conError : 0,
+  });
   if (error) return { error: mensajeError("importarPagosPasarela", error, "No se pudo importar el reporte.") };
-  const imp = (data ?? {}) as { total?: number; nuevos?: number; repetidos?: number };
+  const imp = (data ?? {}) as { total?: number; nuevos?: number; repetidos?: number; cambiados?: number };
 
   // Empareja lo inequívoco; si falla, lo importado queda y se puede reintentar.
   const { data: con, error: errorCon } = await supabase.rpc("fn_fin_conciliar_pagos", { p_cuenta: input.cuentaId });
@@ -58,6 +66,7 @@ export async function importarPagosPasarela(input: {
     total: Number(imp.total ?? 0),
     nuevos: Number(imp.nuevos ?? 0),
     repetidos: Number(imp.repetidos ?? 0),
+    cambiados: Number(imp.cambiados ?? 0),
     emparejados: Number(c.emparejados ?? 0),
     sinEmparejar: Number(c.sin_emparejar ?? 0),
   };
@@ -87,6 +96,31 @@ export async function vincularPagoPasarela(input: { pagoId: string; movimientoId
   const supabase = await createClient();
   const { error } = await supabase.rpc("fn_fin_vincular_pago", { p_pago: input.pagoId, p_movimiento: mov, p_tratamiento: trat });
   if (error) return { error: mensajeError("vincularPagoPasarela", error, "No se pudo emparejar el pago.") };
+  revalidar();
+  return {};
+}
+
+// Acepta (actualiza el pago) o descarta un cambio que trajo un reporte
+// posterior de la pasarela para un pago ya importado.
+export async function resolverCambioPago(cambioId: string, aceptar: boolean): Promise<Resultado> {
+  if (!esUuid(cambioId)) return { error: "Datos inválidos." };
+  const check = await requirePermiso(MODULO_FINANZAS, "CREATE");
+  if (!check.ok) return { error: check.error };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("fn_fin_resolver_cambio_pago", { p_cambio: cambioId, p_aceptar: aceptar });
+  if (error) return { error: mensajeError("resolverCambioPago", error, "No se pudo revisar el cambio.") };
+  revalidar();
+  return {};
+}
+
+export async function anularPagoPasarela(pagoId: string, motivo: string): Promise<Resultado> {
+  if (!esUuid(pagoId)) return { error: "Datos inválidos." };
+  if (motivo.trim().length < 10) return { error: "Explica por qué se anula el pago (al menos 10 caracteres)." };
+  const check = await requirePermiso(MODULO_FINANZAS, "CREATE");
+  if (!check.ok) return { error: check.error };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("fn_fin_anular_pago", { p_pago: pagoId, p_motivo: motivo.trim() });
+  if (error) return { error: mensajeError("anularPagoPasarela", error, "No se pudo anular el pago.") };
   revalidar();
   return {};
 }

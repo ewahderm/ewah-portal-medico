@@ -1,7 +1,16 @@
 import { TriangleAlertIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { requireUsuario } from "@/lib/auth/session";
-import { getAccesoFinanzas, getConfigFinanzas, getCuentas, getLiquidaciones, getPagosSinEmparejar, getPendientesPasarela } from "@/lib/finanzas/consultas";
+import {
+  getAccesoFinanzas,
+  getCambiosPagos,
+  getConfigFinanzas,
+  getCuentas,
+  getImportacionesPasarela,
+  getLiquidaciones,
+  getPagosSinEmparejar,
+  getPendientesPasarela,
+} from "@/lib/finanzas/consultas";
 import { hoyBogota } from "@/lib/habilitacion/servidor";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { BoldCliente } from "./bold-cliente";
@@ -34,11 +43,13 @@ export default async function BoldPage() {
       </Alert>
     );
   }
-  const [pendientes, cuentas, liquidaciones, sinEmparejar] = await Promise.all([
+  const [pendientes, cuentas, liquidaciones, sinEmparejar, cambios, importaciones] = await Promise.all([
     getPendientesPasarela(supabase),
     getCuentas(supabase),
     getLiquidaciones(supabase),
     getPagosSinEmparejar(supabase),
+    getCambiosPagos(supabase),
+    getImportacionesPasarela(supabase),
   ]);
   if (!pendientes) {
     return (
@@ -57,6 +68,8 @@ export default async function BoldPage() {
       cuentasPasarela={cuentas.filter((c) => c.tipo === "pasarela" && c.activa).map((c) => ({ id: c.id, nombre: c.nombre }))}
       pagosSinEmparejar={sinEmparejar.pagos}
       totalSinEmparejar={sinEmparejar.total}
+      cambios={cambios}
+      importaciones={importaciones}
       cuentas={cuentas.map((c) => ({ id: c.id, nombre: c.nombre, destino: c.activa && c.es_disponible && c.moneda === "COP", pasarela: c.tipo === "pasarela" }))}
       hoy={hoyBogota()}
       puedeCrear={acceso.puedeCrear}

@@ -41,7 +41,7 @@ describe("validarTarifa", () => {
 
 const p = (id: string, fecha_esperada: string | null, bruto: number): PendientePasarela => ({
   movimiento_id: id, fecha: "2026-03-02", fecha_esperada, cuenta_id: "c", medio_pago_id: "m", descripcion: null, bruto,
-  tarifa_id: "t", pago_id: null, ...desglose(bruto, TARIFA_BOLD),
+  tarifa_id: "t", pago_id: null, cambio_pendiente: false, ...desglose(bruto, TARIFA_BOLD),
 });
 
 describe("pendientes de la pasarela", () => {

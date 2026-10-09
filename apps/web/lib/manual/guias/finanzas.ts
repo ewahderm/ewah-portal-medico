@@ -378,6 +378,22 @@ export const FINANZAS_COBROS: Guia = {
           ],
         },
         {
+          tipo: "texto",
+          texto:
+            "**Reportes diarios y el extracto del mes.** Puedes subir el reporte todos los días, saltarte algunos y, a fin de mes, subir el extracto completo del mes. Cada pago se reconoce por su **número de transacción**, así que nada se duplica:",
+        },
+        {
+          tipo: "lista",
+          items: [
+            "Los pagos que ya habías subido aparecen como *ya estaban* y se ignoran.",
+            "Los de los días que no subiste entran como *nuevos* y se emparejan con su cobro.",
+            "Si un pago que ya estaba **vuelve con otros datos** (la pasarela lo reversó o cambió la comisión), no se cambia solo: aparece en **Cambiaron en la pasarela** con el antes y el después. `Aceptar cambio` actualiza el pago; `Descartar` lo deja como estaba. Si su cobro ya se liquidó, primero anula esa liquidación.",
+            "Si importaste un reporte en la pasarela equivocada, o un pago no debió entrar, pulsa `Anular` en *Pagos sin su cobro* y escribe el motivo. El pago deja de contar, pero queda en el historial.",
+            "En **Reportes subidos** ves cada archivo que se subió, cuándo, quién, y cuántos pagos fueron nuevos, ya estaban, cambiaron o tuvieron error. Así sabes qué días quedaron cubiertos.",
+            "Si una importación falla a mitad de camino, **no queda nada a medias**: o entran todos los pagos del archivo o ninguno. Vuelve a subirlo.",
+          ],
+        },
+        {
           tipo: "nota",
           tono: "info",
           texto:

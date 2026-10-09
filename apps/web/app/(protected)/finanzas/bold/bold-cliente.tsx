@@ -6,7 +6,7 @@ import { CheckCircle2Icon, PaperclipIcon } from "lucide-react";
 import { anularLiquidacion, liquidarPasarela, urlSoporteLiquidacion } from "@/lib/finanzas/bold-acciones";
 import { subirArchivoFinanzas } from "@/lib/finanzas/subida-cliente";
 import { agruparPorAbono, totalizar, validarLiquidacion, type PendientePasarela } from "@/lib/finanzas/tarifas";
-import type { Liquidacion, PagoSinEmparejar } from "@/lib/finanzas/consultas";
+import type { CambioPago, ImportacionPasarela, Liquidacion, PagoSinEmparejar } from "@/lib/finanzas/consultas";
 import { formatoDinero } from "@/lib/finanzas/dinero";
 import { fechaLegible } from "@/lib/habilitacion/ruta";
 import { ACCEPT_ARCHIVO } from "@/lib/habilitacion/constantes";
@@ -35,6 +35,8 @@ export function BoldCliente({
   cuentasPasarela,
   pagosSinEmparejar,
   totalSinEmparejar,
+  cambios,
+  importaciones,
   cuentas,
   hoy,
   puedeCrear,
@@ -45,6 +47,8 @@ export function BoldCliente({
   cuentasPasarela: { id: string; nombre: string }[];
   pagosSinEmparejar: PagoSinEmparejar[];
   totalSinEmparejar: number;
+  cambios: CambioPago[];
+  importaciones: ImportacionPasarela[];
   cuentas: CuentaOpcion[];
   hoy: string;
   puedeCrear: boolean;
@@ -72,7 +76,14 @@ export function BoldCliente({
   return (
     <div className="space-y-4">
       {cuentasPasarela.length ? (
-        <ReportePasarela pasarelas={cuentasPasarela} sinEmparejar={pagosSinEmparejar} totalSinEmparejar={totalSinEmparejar} puedeCrear={puedeCrear} />
+        <ReportePasarela
+          pasarelas={cuentasPasarela}
+          sinEmparejar={pagosSinEmparejar}
+          totalSinEmparejar={totalSinEmparejar}
+          cambios={cambios}
+          importaciones={importaciones}
+          puedeCrear={puedeCrear}
+        />
       ) : null}
 
       {sinTarifa ? (
@@ -143,6 +154,9 @@ export function BoldCliente({
                             <span className="block break-words">{p.descripcion ?? "Cobro"}</span>
                             <span className="block text-xs text-muted-foreground">Cobrado el {fechaLegible(p.fecha)}{p.tarifa_id || p.pago_id ? "" : " · sin tarifa"}</span>
                             <MarcaValoresReales real={Boolean(p.pago_id)} />
+                            {p.cambio_pendiente ? (
+                              <span className="block text-xs text-amber-700">La pasarela cambió este pago: revísalo arriba antes de liquidarlo.</span>
+                            ) : null}
                           </span>
                           <span className="text-right tabular-nums">
                             <span className="block">{formatoDinero(p.bruto)}</span>

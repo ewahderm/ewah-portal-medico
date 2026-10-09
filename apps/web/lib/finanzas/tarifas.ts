@@ -68,6 +68,8 @@ export type PendientePasarela = {
   tarifa_id: string | null;
   // Pago del reporte de la pasarela con el que se emparejó: sus valores son los reales.
   pago_id: string | null;
+  // Un reporte posterior trajo otros datos para ese pago y nadie los ha revisado.
+  cambio_pendiente: boolean;
   comision: number;
   retefuente: number;
   reteica: number;

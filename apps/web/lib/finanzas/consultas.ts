@@ -491,6 +491,7 @@ export async function getPagosSinEmparejar(supabase: Supabase, limite = 40): Pro
     .from("fin_pagos_pasarela")
     .select("id, cuenta_id, id_externo, pagado_en, compra, comision, deposito, franquicia, tipo_tarjeta, movimiento_id, movimiento:fin_movimientos(estado)")
     .eq("exitoso", true)
+    .eq("anulado", false)
     .order("pagado_en", { ascending: false })
     .limit(2000);
   const filas = ((data ?? []) as unknown as (Omit<PagoSinEmparejar, "candidatos"> & { movimiento_id: string | null; movimiento: { estado: string } | null })[]).filter(
@@ -518,4 +519,76 @@ export async function getPagosSinEmparejar(supabase: Supabase, limite = 40): Pro
       candidatos: candidatos[i],
     })),
   };
+}
+
+export type DatosPago = {
+  estado_externo: string;
+  exitoso: boolean;
+  compra: number;
+  comision: number;
+  retefuente: number;
+  reteica: number;
+  reteiva: number;
+  total_deduccion: number;
+  deposito: number;
+};
+
+export type CambioPago = {
+  id: string;
+  pago_id: string;
+  id_externo: string;
+  pagado_en: string;
+  cuenta_id: string;
+  liquidado: boolean;
+  antes: DatosPago;
+  despues: DatosPago;
+};
+
+// Pagos que volvieron en un reporte posterior con otros datos (reverso,
+// otra comisión…) y que alguien debe aceptar o descartar.
+export async function getCambiosPagos(supabase: Supabase): Promise<CambioPago[]> {
+  const { data } = await supabase
+    .from("fin_pagos_pasarela_cambios")
+    .select("id, pago_id, antes, despues, pago:fin_pagos_pasarela(id_externo, pagado_en, cuenta_id, movimiento:fin_movimientos(liquidacion_id, estado))")
+    .eq("estado", "pendiente")
+    .order("created_at", { ascending: false })
+    .limit(100);
+  return ((data ?? []) as unknown as {
+    id: string;
+    pago_id: string;
+    antes: DatosPago;
+    despues: DatosPago;
+    pago: { id_externo: string; pagado_en: string; cuenta_id: string; movimiento: { liquidacion_id: string | null; estado: string } | null } | null;
+  }[]).map((c) => ({
+    id: c.id,
+    pago_id: c.pago_id,
+    id_externo: c.pago?.id_externo ?? "",
+    pagado_en: c.pago?.pagado_en ?? "",
+    cuenta_id: c.pago?.cuenta_id ?? "",
+    liquidado: Boolean(c.pago?.movimiento?.liquidacion_id && c.pago.movimiento.estado !== "anulado"),
+    antes: c.antes,
+    despues: c.despues,
+  }));
+}
+
+export type ImportacionPasarela = {
+  id: string;
+  cuenta_id: string;
+  nombre_archivo: string | null;
+  total: number;
+  nuevos: number;
+  repetidos: number;
+  cambiados: number;
+  con_error: number;
+  created_at: string;
+  usuario: { nombre: string } | null;
+};
+
+export async function getImportacionesPasarela(supabase: Supabase, limite = 15): Promise<ImportacionPasarela[]> {
+  const { data } = await supabase
+    .from("fin_importaciones_pasarela")
+    .select("id, cuenta_id, nombre_archivo, total, nuevos, repetidos, cambiados, con_error, created_at, usuario:usuarios!fin_importaciones_pasarela_created_by_fkey(nombre)")
+    .order("created_at", { ascending: false })
+    .limit(limite);
+  return (data ?? []) as unknown as ImportacionPasarela[];
 }
