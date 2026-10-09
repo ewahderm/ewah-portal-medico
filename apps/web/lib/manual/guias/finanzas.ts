@@ -3,11 +3,65 @@ import type { Guia } from "@/lib/manual/tipos";
 export const FINANZAS_INICIO: Guia = {
   slug: "flujo-de-caja",
   titulo: "Flujo de caja: activación, cuentas y movimientos",
-  resumen: "Activa el módulo con tu fecha de inicio y saldos, y registra lo que entra, lo que sale y las transferencias.",
+  resumen:
+    "Explicado sin términos contables: qué es una cuenta, cómo anotar lo que entra y lo que sale, y cómo registrar pagos con efectivo, banco, tarjeta de la empresa o tarjeta de un socio.",
   grupo: "Flujo de caja",
   icono: "wallet",
   ruta: "/finanzas",
   secciones: [
+    {
+      id: "idea",
+      titulo: "La idea en dos minutos",
+      bloques: [
+        {
+          tipo: "texto",
+          texto:
+            "El flujo de caja es el **cuaderno de la plata de tu clínica**: anota cada vez que entra plata (un paciente paga) y cada vez que sale (pagas el arriendo, compras insumos). Con eso EWAH te dice cuánta plata tienes hoy, dónde está y en qué se fue. No necesitas saber contabilidad: solo responder tres preguntas cada vez que se mueve plata.",
+        },
+        {
+          tipo: "lista",
+          items: [
+            "**¿Cuánto?** El valor.",
+            "**¿En qué?** La categoría: arriendo, nómina, insumos, servicios públicos…",
+            "**¿Con qué se pagó o a dónde llegó?** La cuenta: efectivo, banco, Nequi, la tarjeta de crédito…",
+          ],
+        },
+        {
+          tipo: "nota",
+          tono: "info",
+          texto:
+            "Los pagos de los pacientes **no los anotas tú**: cuando registras un tratamiento, su cobro entra solo al flujo de caja. Tú anotas sobre todo lo que **sale** (gastos) y los movimientos entre tus cuentas.",
+        },
+      ],
+    },
+    {
+      id: "cuentas",
+      titulo: "Las cuentas: los bolsillos de la clínica",
+      bloques: [
+        {
+          tipo: "texto",
+          texto:
+            "Una **cuenta** es cada lugar donde está (o se debe) la plata de la clínica. Piensa en ellas como **bolsillos**. Crea uno por cada lugar real; puedes tener los que quieras.",
+        },
+        {
+          tipo: "lista",
+          items: [
+            "**Efectivo:** la caja menor, la plata en billetes que hay en la clínica.",
+            "**Banco:** cada cuenta bancaria (ahorros o corriente). Si pagas con **tarjeta débito**, la plata sale de aquí: usa la cuenta del banco.",
+            "**Nequi / Daviplata:** las billeteras digitales.",
+            "**Pasarela de pago:** Bold, Wompi, PayU… Es plata que los pacientes ya pagaron con tarjeta y que la pasarela te consignará en unos días. Está \"en camino\".",
+            "**Tarjeta de crédito de la empresa:** la tarjeta de crédito a nombre de la clínica. No es plata que tengas: es lo que **le debes** al banco de la tarjeta.",
+            "**Tarjeta de crédito de un socio:** la tarjeta personal de un socio con la que paga cosas de la clínica. Es lo que la clínica **le debe** a ese socio. (Plan Pro.)",
+          ],
+        },
+        {
+          tipo: "nota",
+          tono: "aviso",
+          texto:
+            "Las tarjetas de crédito y la pasarela **no suman** a \"plata disponible\": la pasarela todavía no ha llegado y las tarjetas son deudas. Por eso el tablero las muestra aparte.",
+        },
+      ],
+    },
     {
       id: "activar",
       titulo: "Actívalo con el asistente",
@@ -16,13 +70,13 @@ export const FINANZAS_INICIO: Guia = {
           tipo: "pasos",
           pasos: [
             "Entra a **Operación → Flujo de caja**. La primera vez aparece el asistente.",
-            "Elige la **fecha de inicio**: desde cuándo llevas la caja en EWAH (hoy o una fecha pasada, por ejemplo el 1 de enero).",
-            "Si tu plan es Pro, registra a los **socios** (para sus tarjetas y préstamos).",
-            "Crea tus **cuentas** con el saldo que tenían en la fecha de inicio: efectivo, bancos, Nequi, Daviplata, la pasarela de pago (Bold, Wompi…) y la tarjeta de crédito de cada socio.",
+            "Elige la **fecha de inicio**: el día desde el que vas a llevar la caja en EWAH. Lo más fácil es el primer día del mes actual.",
+            "Si tu plan es Pro, registra a los **socios** (si alguno paga cosas de la clínica con su tarjeta o le presta plata).",
+            "Crea tus **cuentas** y escribe **cuánta plata tenía cada una ese día** (míralo en el extracto del banco o cuenta la caja). En una tarjeta de crédito escribe **cuánto se debía** ese día.",
             "Confirma. Desde ese día los tratamientos entran solos al flujo de caja.",
           ],
         },
-        { tipo: "nota", tono: "info", texto: "La fecha de inicio se puede cambiar después (con motivo) en **Configuración → General**, mientras no hayas cerrado ningún mes." },
+        { tipo: "nota", tono: "info", texto: "Si te equivocaste en la fecha de inicio o en un saldo, se corrige después (con motivo) en **Configuración**, mientras no hayas cerrado ningún mes." },
       ],
     },
     {
@@ -32,41 +86,108 @@ export const FINANZAS_INICIO: Guia = {
         {
           tipo: "texto",
           texto:
-            "El **Inicio** muestra lo disponible en pesos y divisas, lo que está por abonar en la pasarela, lo que se les debe a los socios por sus tarjetas, lo que está por cobrar a pacientes, lo que entró y salió en el mes (y en qué se fue la plata), los últimos movimientos y el saldo de cada cuenta.",
+            "El **Inicio** te responde de un vistazo: cuánta plata tienes **disponible**, cuánta está **en camino** desde la pasarela, cuánto **debes** en las tarjetas de crédito (de la empresa y de los socios), cuánto te deben los pacientes **a crédito**, lo que entró y salió en el mes y en qué se fue, los últimos movimientos y el saldo de cada cuenta.",
         },
         { tipo: "imagen", archivo: "finanzas.jpg", alt: "Tablero del flujo de caja" },
       ],
     },
     {
       id: "registrar",
-      titulo: "Registra entradas, salidas y transferencias",
+      titulo: "Anotar un gasto (salió plata)",
       bloques: [
         {
           tipo: "pasos",
           pasos: [
-            "Pulsa `Entró plata`, `Salió plata` o `Pasar entre cuentas`.",
-            "Escribe el **monto** (en dólares o euros pide la tasa a pesos).",
-            "Elige la **categoría** (arrendamiento, nómina, insumos, préstamo a socio…) y la **cuenta**.",
-            "Completa a quién se le pagó o quién pagó, la sede, la fecha, una nota y, si quieres, la foto o el PDF de la factura.",
+            "Pulsa `Salió plata`.",
+            "Escribe **cuánto** pagaste.",
+            "Elige **en qué** (la categoría). Cada categoría trae una ayuda corta; si ninguna encaja, usa *Otros gastos*.",
+            "Elige **con qué se pagó**: la cuenta de donde salió la plata (ver la tabla de abajo).",
+            "Si quieres, completa a quién se le pagó, la sede, la fecha, una nota y la foto o el PDF de la factura.",
             "Pulsa `Registrar`.",
           ],
         },
+        {
+          tipo: "texto",
+          texto: "**¿Qué cuenta elijo en \"con qué se pagó\"?**",
+        },
+        {
+          tipo: "lista",
+          items: [
+            "Pagaste **en efectivo** de la caja → **Efectivo**.",
+            "Pagaste con **transferencia** o con la **tarjeta débito** de la clínica → **el banco** de donde salió.",
+            "Pagaste por **Nequi o Daviplata** → esa billetera.",
+            "Pagaste con la **tarjeta de crédito de la clínica** → **la tarjeta de crédito de la empresa**. El banco no baja hoy: aumenta lo que debes en la tarjeta.",
+            "Un **socio pagó con su tarjeta personal** → **la tarjeta de ese socio**. La caja no baja: la clínica le queda debiendo a él.",
+          ],
+        },
         { tipo: "imagen", archivo: "finanzas-registrar.jpg", alt: "Registrar una salida de plata" },
+      ],
+    },
+    {
+      id: "tarjetas",
+      titulo: "Tarjetas de crédito: comprar hoy, pagar después",
+      bloques: [
+        {
+          tipo: "texto",
+          texto:
+            "Con una tarjeta de crédito pasan **dos cosas en dos días distintos**, y EWAH las anota por separado para que tus números siempre cuadren:",
+        },
+        {
+          tipo: "pasos",
+          pasos: [
+            "**El día de la compra:** anotas el gasto con `Salió plata` y eliges la tarjeta. Ejemplo: el 3 de marzo pagas el software ($300.000) con la tarjeta de la clínica. Queda el gasto y la tarjeta pasa a deber $300.000. Tu banco no se mueve.",
+            "**El día que pagas el extracto:** usas `Pasar entre cuentas`, **desde** el banco **hacia** la tarjeta, por lo que pagaste. Ejemplo: el 15 de abril pagas $300.000. El banco baja y la deuda de la tarjeta vuelve a cero.",
+          ],
+        },
+        {
+          tipo: "lista",
+          items: [
+            "No anotes el pago del extracto como un gasto nuevo: el gasto ya lo anotaste el día de la compra. Si lo haces dos veces, parecerá que gastaste el doble.",
+            "No puedes pagar más de lo que debe la tarjeta: EWAH te avisa cuánto se debe a esa fecha.",
+            "Con la tarjeta de un **socio** es igual, pero el pago se hace desde **Socios → Reembolsar tarjeta** (le devuelves la plata al socio).",
+            "Si la tarjeta te cobra **intereses o cuota de manejo**, anótalos como un gasto más con la tarjeta (categoría *Otros gastos* o una propia).",
+          ],
+        },
         {
           tipo: "nota",
           tono: "info",
-          texto: "Un gasto pagado con la **tarjeta de un socio** no baja la caja: queda como deuda con ese socio hasta que se le reembolse.",
+          texto:
+            "En el **Informe**, la plata sale de tu caja el día que **pagas la tarjeta** (aparece como *Pago de tarjeta de crédito*), porque ese día es cuando la plata realmente se va del banco.",
+        },
+      ],
+    },
+    {
+      id: "pasar",
+      titulo: "Mover plata entre tus cuentas",
+      bloques: [
+        {
+          tipo: "texto",
+          texto:
+            "`Pasar entre cuentas` sirve cuando la plata **cambia de bolsillo pero sigue siendo tuya**: no es un gasto ni un ingreso. Ejemplos:",
+        },
+        {
+          tipo: "lista",
+          items: [
+            "Consignas al banco el efectivo de la caja → **desde** Efectivo **hacia** el banco.",
+            "Sacas plata del banco para la caja menor → **desde** el banco **hacia** Efectivo.",
+            "Pagas el extracto de la tarjeta de crédito de la clínica → **desde** el banco **hacia** la tarjeta.",
+          ],
+        },
+        {
+          tipo: "nota",
+          tono: "info",
+          texto: "Lo que llega de la pasarela (Bold…) **no** se pasa a mano: se **liquida** en la pantalla Pasarelas (ver la guía de cobros y pasarelas).",
         },
       ],
     },
     {
       id: "movimientos",
-      titulo: "Consulta y anula movimientos",
+      titulo: "Consultar y corregir",
       bloques: [
         {
           tipo: "texto",
           texto:
-            "En **Movimientos** filtras por fechas, tipo, cuenta y categoría. Un movimiento no se edita ni se borra: `Anular` (con motivo) crea el movimiento inverso que lo compensa.",
+            "En **Movimientos** ves todo lo anotado, del más reciente al más antiguo, y puedes filtrar por fechas, tipo, cuenta y categoría. Un movimiento **no se edita ni se borra**: si te equivocaste, pulsa `Anular` y escribe por qué. EWAH crea el movimiento contrario que lo deja en cero y conserva el historial. Después lo anotas bien.",
         },
         { tipo: "imagen", archivo: "finanzas-movimientos.jpg", alt: "Lista de movimientos" },
       ],
@@ -335,7 +456,7 @@ export const FINANZAS_SOCIOS_CIERRE: Guia = {
         {
           tipo: "texto",
           texto:
-            "En **Socios** ves por cada socio lo que la clínica le debe (gastos con su tarjeta y préstamos que él hizo) y lo que él le debe a la clínica. Desde su tarjeta: `Reembolsar tarjeta`, `Prestarle`, `Nos presta`, `Nos devuelve` y `Le devolvemos`.",
+            "En **Socios** ves, por cada socio, lo que la clínica le debe (lo que él pagó con su tarjeta por la clínica y lo que le prestó) y lo que él le debe a la clínica (si la clínica le prestó). Desde su tarjeta: `Reembolsar tarjeta`, `Prestarle`, `Nos presta`, `Nos devuelve` y `Le devolvemos`.",
         },
         { tipo: "imagen", archivo: "finanzas-socios.jpg", alt: "Socios con su deuda y préstamos" },
         { tipo: "nota", tono: "info", texto: "Nunca se reembolsa ni se devuelve más de lo pendiente. Los préstamos con socios no generan intereses." },
