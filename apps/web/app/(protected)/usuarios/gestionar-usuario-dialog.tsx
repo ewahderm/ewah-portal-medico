@@ -141,6 +141,7 @@ export function GestionarUsuarioDialog({
             <div className="flex flex-col gap-2 sm:flex-row">
               <Button
                 variant="outline"
+                size="sm"
                 disabled={!u.activo || pendiente !== null}
                 onClick={() =>
                   ejecutar("enlace", () => enviarEnlaceRestablecer(u.id), "Enlace enviado", `Le llegará a ${u.email} para que defina una contraseña nueva.`)
