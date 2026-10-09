@@ -68,6 +68,7 @@ export function DatosBasicosClinicaDialog({
   practicasMedicas,
   sedes,
   serviciosHabilitados,
+  abiertoInicial = false,
 }: {
   trigger: ReactElement;
   clinica: ClinicaDatosBasicos;
@@ -82,9 +83,11 @@ export function DatosBasicosClinicaDialog({
   practicasMedicas: PracticaMedica[];
   sedes: Opcion[];
   serviciosHabilitados: ServicioHabilitado[];
+  // El asistente de configuración enlaza aquí con ?abrir=datos-basicos.
+  abiertoInicial?: boolean;
 }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(abiertoInicial);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { EwahLogo } from "@/components/ewah-logo";
 import { MobileNav } from "./_components/mobile-nav";
 import { NavGroup } from "./_components/nav-group";
+import { VolverAsistente } from "./_components/volver-asistente";
 
 type EntradaNavegacion = {
   href: string;
@@ -135,6 +136,7 @@ export default async function ProtectedLayout({
       ? {
           ...grupo,
           items: [
+            ...(esAdministrador(usuario) ? [{ href: "/configuracion-clinica", label: "Configurar clínica" }] : []),
             ...grupo.items,
             ...(esAdministrador(usuario) ? [{ href: "/exportar", label: "Exportar datos" }] : []),
           ],
@@ -234,6 +236,7 @@ export default async function ProtectedLayout({
           {children}
         </ViewTransition>
       </main>
+      <VolverAsistente />
     </div>
   );
 }

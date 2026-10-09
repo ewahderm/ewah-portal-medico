@@ -96,7 +96,7 @@ const ORDEN_GRUPOS: ModuloCatalogo[] = [
   "rrhh",
 ];
 
-export default async function ParametrosPage() {
+export default async function ParametrosPage({ searchParams }: { searchParams: Promise<{ [k: string]: string | string[] | undefined }> }) {
   const usuario = await requireUsuario();
   const supabase = await createClient();
 
@@ -452,6 +452,13 @@ export default async function ParametrosPage() {
       .sort((a, b) => posicionUbicacion(a.tabla) - posicionUbicacion(b.tabla)),
   })).filter((g) => g.pestañas.length > 0 && (g.modulo === "general" || codigosModulosActivos.has(g.modulo)));
 
+  // Enlaces directos (?grupo=…&catalogo=…), por ejemplo desde el asistente
+  // de configuración. Un valor desconocido cae en la primera pestaña.
+  const q = await searchParams;
+  const grupoPedido = typeof q.grupo === "string" ? q.grupo : "";
+  const grupoInicial = grupos.some((g) => g.modulo === grupoPedido) ? grupoPedido : grupos[0]?.modulo;
+  const catalogoInicial = typeof q.catalogo === "string" ? q.catalogo : "";
+
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-3">
@@ -464,6 +471,7 @@ export default async function ParametrosPage() {
         </div>
         {esAdministrador(usuario) && paisOperacionId ? (
           <DatosBasicosClinicaDialog
+            abiertoInicial={q.abrir === "datos-basicos"}
             clinica={datosBasicosClinica}
             paises={paises}
             departamentos={departamentos}
@@ -485,7 +493,7 @@ export default async function ParametrosPage() {
         ) : null}
       </div>
 
-      <Tabs defaultValue={grupos[0]?.modulo}>
+      <Tabs defaultValue={grupoInicial}>
         <TabsList className="w-full sm:w-fit">
           {grupos.map(({ modulo }) => {
             const Icono = GRUPOS[modulo].icono;
@@ -499,7 +507,7 @@ export default async function ParametrosPage() {
 
         {grupos.map(({ modulo, pestañas }) => (
           <TabsContent key={modulo} value={modulo} className="pt-4">
-            <Tabs defaultValue={pestañas[0]?.tabla}>
+            <Tabs defaultValue={modulo === grupoInicial && pestañas.some((p) => p.tabla === catalogoInicial) ? catalogoInicial : pestañas[0]?.tabla}>
               <TabsList className="w-full sm:w-fit">
                 {pestañas.map((catalogo) => (
                   <TabsTrigger key={catalogo.tabla} value={catalogo.tabla}>

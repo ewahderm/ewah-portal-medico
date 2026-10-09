@@ -1,35 +1,13 @@
 import Link from "next/link";
-import { CircleCheckIcon, CircleIcon, LockIcon } from "lucide-react";
+import { ArrowRightIcon, CircleAlertIcon, LockIcon, WandSparklesIcon } from "lucide-react";
 import { esAdministrador, requireUsuario } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { REGISTRO_MODULOS } from "@/lib/modulos/registro";
-
-// Primeros pasos de una clínica nueva: sin sede, consultorio y tipos de
-// tratamiento no se puede agendar ni registrar nada, y los formularios
-// quedaban con listas vacías sin explicar por qué. Cada paso lleva a
-// Parámetros; la tarjeta desaparece cuando todo está listo.
-async function pasosIniciales(supabase: Awaited<ReturnType<typeof createClient>>, clinicaId: string) {
-  const contar = async (tabla: string) => {
-    const { count } = await supabase.from(tabla).select("id", { count: "exact", head: true }).eq("activo", true);
-    return count ?? 0;
-  };
-  const [sedes, consultorios, tipos, medios, { data: clinica }] = await Promise.all([
-    contar("sedes"),
-    contar("consultorios"),
-    contar("tipos_tratamiento"),
-    contar("medios_pago"),
-    supabase.from("clinicas").select("direccion, telefono").eq("id", clinicaId).maybeSingle(),
-  ]);
-  return [
-    { texto: "Crea tu sede (Parámetros → Generales → Sedes)", hecho: sedes > 0 },
-    { texto: "Crea al menos un consultorio (Parámetros → Generales → Consultorios)", hecho: consultorios > 0 },
-    { texto: "Crea tus tipos de tratamiento (Parámetros → Tratamientos)", hecho: tipos > 0 },
-    { texto: "Crea tus medios de pago (Parámetros → Tratamientos → Medios de pago)", hecho: medios > 0 },
-    { texto: "Completa los datos básicos de la clínica: dirección, teléfono y actividad económica", hecho: !!(clinica?.direccion && clinica?.telefono) },
-  ];
-}
+import { Button } from "@/components/ui/button";
+import { leerConfiguracion } from "@/lib/configuracion/estado";
+import { resumirConfiguracion } from "@/lib/configuracion/lista";
 
 export default async function DashboardPage() {
   const usuario = await requireUsuario();
@@ -46,8 +24,13 @@ export default async function DashboardPage() {
   );
 
   const modulosVisibles = chequeos.filter((c) => c.puedeVer);
-  const pasos = esAdministrador(usuario) ? await pasosIniciales(supabase, usuario.clinica_id) : [];
-  const faltan = pasos.filter((p) => !p.hecho).length;
+  // Lo que le falta a la clínica, del asistente de configuración (solo administradores).
+  const config = esAdministrador(usuario) ? await leerConfiguracion(usuario.clinica_id) : null;
+  const resumen = config ? resumirConfiguracion(config.modulos) : null;
+  const pendientes = config
+    ? config.modulos.flatMap((m) => m.puntos.filter((p) => p.tipo === "obligatorio" && p.estado === "pendiente").map((p) => ({ ...p, modulo: m.titulo })))
+    : [];
+  const unicos = pendientes.filter((p, i) => pendientes.findIndex((x) => x.id === p.id) === i);
 
   return (
     <div className="space-y-6">
@@ -62,35 +45,45 @@ export default async function DashboardPage() {
         </CardContent>
       </Card>
 
-      {faltan > 0 ? (
+      {resumen && resumen.faltan > 0 ? (
         <Card className="border-primary/40 bg-accent/30">
           <CardHeader>
-            <CardTitle>Primeros pasos</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <WandSparklesIcon className="size-5 text-primary" /> Configura tu clínica
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             <p className="text-muted-foreground">
-              Te faltan {faltan} de {pasos.length} pasos para poder agendar citas y registrar tratamientos.
+              {resumen.faltan === 1 ? "Te falta 1 cosa esencial" : `Te faltan ${resumen.faltan} cosas esenciales`} para que todos tus módulos funcionen completos.
+              El asistente te guía paso a paso y te dice qué afecta cada una.
             </p>
-            <ul className="space-y-2">
-              {pasos.map((p) => (
-                <li key={p.texto} className="flex items-start gap-2">
-                  {p.hecho ? (
-                    <CircleCheckIcon className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
-                  ) : (
-                    <CircleIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
-                  )}
-                  <span className={p.hecho ? "text-muted-foreground line-through" : undefined}>
-                    {p.texto}
-                    <span className="sr-only">{p.hecho ? " (listo)" : " (pendiente)"}</span>
+            <ul className="space-y-1.5">
+              {unicos.slice(0, 4).map((p) => (
+                <li key={p.id} className="flex items-start gap-2">
+                  <CircleAlertIcon className="mt-0.5 size-4 shrink-0 text-amber-600" aria-hidden />
+                  <span>
+                    {p.titulo} <span className="text-muted-foreground">· {p.modulo}</span>
                   </span>
                 </li>
               ))}
+              {unicos.length > 4 ? <li className="pl-6 text-muted-foreground">Y {unicos.length - 4} más.</li> : null}
             </ul>
-            <Link href="/parametros" className="inline-block font-medium text-primary underline underline-offset-4">
-              Ir a Parámetros
-            </Link>
+            <Button render={<Link href="/configuracion-clinica?paso=1" />}>
+              Abrir el asistente de configuración <ArrowRightIcon />
+            </Button>
           </CardContent>
         </Card>
+      ) : resumen && resumen.recomendados > 0 ? (
+        <Link
+          href="/configuracion-clinica"
+          className="flex items-center gap-3 rounded-xl border px-4 py-3 text-sm transition-colors hover:bg-muted/60"
+        >
+          <WandSparklesIcon className="size-5 shrink-0 text-primary" />
+          <span className="flex-1">
+            Tu clínica tiene lo esencial. Hay {resumen.recomendados} {resumen.recomendados === 1 ? "sugerencia" : "sugerencias"} para aprovecharla mejor.
+          </span>
+          <ArrowRightIcon className="size-4 text-muted-foreground" />
+        </Link>
       ) : null}
 
       {modulosVisibles.length > 0 ? (

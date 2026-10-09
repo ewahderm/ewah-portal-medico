@@ -54,22 +54,33 @@ export const CREAR_CLINICA: Guia = {
     },
     {
       id: "dashboard",
-      titulo: "El Dashboard y los primeros pasos",
+      titulo: "El Dashboard y el asistente de configuración",
       bloques: [
         {
           tipo: "texto",
           texto:
-            "Al entrar ves el **Dashboard**: tu cuenta, los módulos que puedes usar y, si eres administrador, la lista **Primeros pasos** con lo que falta para empezar a agendar y registrar tratamientos.",
+            "Al entrar ves el **Dashboard**: tu cuenta y los módulos que puedes usar. Si eres administrador y a tu clínica le falta algo por configurar, arriba aparece la tarjeta **Configura tu clínica** con lo que falta.",
         },
         {
-          tipo: "lista",
-          items: [
-            "Crea tu sede (**Parámetros → Generales → Sedes**).",
-            "Crea al menos un consultorio (**Parámetros → Generales → Consultorios**).",
-            "Crea tus tipos de tratamiento (**Parámetros → Tratamientos**).",
-            "Crea tus medios de pago (**Parámetros → Tratamientos → Medios de pago**).",
-            "Completa los datos básicos de la clínica: dirección, teléfono y actividad económica.",
+          tipo: "texto",
+          texto:
+            "**El asistente de configuración** te lleva módulo por módulo (tu clínica, pacientes, tratamientos, agenda y los demás que tengas activos) y en cada uno te dice tres cosas: **qué es** cada dato, **qué deja de funcionar si no lo configuras** y un botón que te lleva directo a la pantalla donde se configura.",
+        },
+        {
+          tipo: "pasos",
+          pasos: [
+            "Ábrelo desde la tarjeta **Configura tu clínica** del Dashboard o desde **Administración → Configurar clínica**.",
+            "Pulsa `Empezar paso a paso`. Verás el primer módulo con sus puntos: los **Esenciales** (sin ellos algo no funciona) y los **Recomendados** (todo funciona, pero queda incompleto).",
+            "Pulsa el botón de cada punto pendiente (por ejemplo `Crear sede`). Te lleva a la pantalla exacta. Cuando termines, usa el botón flotante **Volver al asistente de configuración** (abajo a la izquierda) para seguir donde ibas.",
+            "Pulsa `Siguiente` para pasar al siguiente módulo, o `Omitir por ahora` si quieres dejarlo para después.",
+            "Al terminar, o cuando quieras, pulsa `Ver toda la lista`: muestra cada módulo con su estado (*Completo*, *Faltan N* o *Sugerencias*) y lo que falta.",
           ],
+        },
+        {
+          tipo: "nota",
+          tono: "info",
+          texto:
+            "Omitir no borra nada: lo pendiente sigue en la lista con su aviso de qué afecta, para que lo completes cuando puedas. La lista se actualiza sola a medida que configuras.",
         },
         { tipo: "imagen", archivo: "dashboard.jpg", alt: "Dashboard con los módulos", pie: "Cada tarjeta abre un módulo. La insignia **Pro** indica que tu plan aún no lo incluye." },
         {
