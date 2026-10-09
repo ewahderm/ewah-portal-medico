@@ -58,11 +58,11 @@ export function AsistenteConfiguracion({ modulos, resumen, paso }: { modulos: Mo
           </div>
         </div>
         {paso === 0 ? (
-          <Button render={<Link href={`${RUTA_ASISTENTE}?paso=${primerPasoPendiente(modulos)}`} />} className="shrink-0">
+          <Button nativeButton={false} render={<Link href={`${RUTA_ASISTENTE}?paso=${primerPasoPendiente(modulos)}`} />} className="shrink-0">
             {resumen.listos === 0 ? "Empezar paso a paso" : "Continuar paso a paso"} <ArrowRightIcon />
           </Button>
         ) : (
-          <Button variant="outline" render={<Link href={RUTA_ASISTENTE} />} className="shrink-0">
+          <Button variant="outline" nativeButton={false} render={<Link href={RUTA_ASISTENTE} />} className="shrink-0">
             <ListChecksIcon /> Ver toda la lista
           </Button>
         )}
@@ -218,7 +218,7 @@ function Paso({ modulos, paso, omitidos }: { modulos: ModuloConfiguracion[]; pas
       ) : null}
 
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <Button variant="ghost" render={<Link href={paso > 1 ? `${RUTA_ASISTENTE}?paso=${paso - 1}` : RUTA_ASISTENTE} />}>
+        <Button variant="ghost" nativeButton={false} render={<Link href={paso > 1 ? `${RUTA_ASISTENTE}?paso=${paso - 1}` : RUTA_ASISTENTE} />}>
           <ArrowLeftIcon /> {paso > 1 ? "Anterior" : "Volver a la lista"}
         </Button>
         <div className="flex flex-col gap-2 sm:flex-row">
@@ -274,7 +274,7 @@ function FilaPunto({ punto: p, paso, compacta = false }: { punto: Punto; paso: n
           size="sm"
           variant={!listo && esencial ? "default" : "outline"}
           className="shrink-0 self-start"
-          render={<Link href={p.href} onClick={() => recordarVolver(paso)} />}
+          nativeButton={false} render={<Link href={p.href} onClick={() => recordarVolver(paso)} />}
         >
           {listo ? "Revisar" : p.accion}
         </Button>

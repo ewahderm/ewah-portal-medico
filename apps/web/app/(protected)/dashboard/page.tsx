@@ -68,7 +68,7 @@ export default async function DashboardPage() {
               ))}
               {unicos.length > 4 ? <li className="pl-6 text-muted-foreground">Y {unicos.length - 4} más.</li> : null}
             </ul>
-            <Button render={<Link href="/configuracion-clinica?paso=1" />}>
+            <Button nativeButton={false} render={<Link href="/configuracion-clinica?paso=1" />}>
               Abrir el asistente de configuración <ArrowRightIcon />
             </Button>
           </CardContent>
