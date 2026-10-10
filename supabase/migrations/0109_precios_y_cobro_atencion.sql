@@ -111,8 +111,12 @@ create index cobros_atencion_clinica_fecha_idx on cobros_atencion (clinica_id, f
 
 -- Detalle histórico: qué tratamientos cubrió y por cuánto cada uno. Es de
 -- solo agregar; el cobro vigente de un tratamiento es tratamientos.cobro_id.
+-- Las llaves de cobro_id (aquí y en tratamientos) se crean después del
+-- traspaso del legado: una llave diferida deja verificaciones pendientes y
+-- Postgres no permite reactivar disparadores de la tabla con eventos
+-- pendientes en la misma transacción.
 create table cobros_atencion_items (
-  cobro_id uuid not null references cobros_atencion(id) on delete cascade deferrable initially deferred,
+  cobro_id uuid not null,
   tratamiento_id uuid not null references tratamientos(id),
   valor numeric(14,2) check (valor >= 0),
   primary key (cobro_id, tratamiento_id)
@@ -124,7 +128,7 @@ create index cobros_atencion_items_tratamiento_idx on cobros_atencion_items (tra
 -- lo traen se cobran solos, ver abajo).
 alter table tratamientos alter column medio_pago_id drop not null;
 alter table tratamientos add column valor_cobrado numeric(14,2) check (valor_cobrado >= 0);
-alter table tratamientos add column cobro_id uuid references cobros_atencion(id) deferrable initially deferred;
+alter table tratamientos add column cobro_id uuid;
 create index tratamientos_cobro_id_idx on tratamientos (cobro_id);
 
 -- ============================================================
@@ -149,6 +153,13 @@ select t.id, t.id, t.costo from tratamientos t where t.medio_pago_id is not null
 update tratamientos set cobro_id = id where medio_pago_id is not null and not anulado;
 
 alter table tratamientos enable trigger tratamientos_auditoria;
+
+-- Ahora sí, las llaves (diferidas: el cobro automático inserta el detalle y
+-- marca el tratamiento antes de crear el cobro).
+alter table cobros_atencion_items add constraint cobros_atencion_items_cobro_id_fkey
+  foreign key (cobro_id) references cobros_atencion(id) on delete cascade deferrable initially deferred;
+alter table tratamientos add constraint tratamientos_cobro_id_fkey
+  foreign key (cobro_id) references cobros_atencion(id) deferrable initially deferred;
 
 -- Exclusiones del flujo: ahora por cobro (mismo id en el legado).
 create table fin_cobros_excluidos (

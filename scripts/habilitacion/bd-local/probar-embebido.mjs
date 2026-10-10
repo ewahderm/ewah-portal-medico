@@ -129,8 +129,11 @@ function* sentencias(texto, vars) {
   if (resto) yield { sql: resto, gset: false };
 }
 
-async function correr(archivoOTexto, nombre, { esTexto = false, silencioso = false } = {}) {
-  const texto = esTexto ? archivoOTexto : readFileSync(archivoOTexto, "utf8").replace(/\r\n/g, "\n");
+async function correr(archivoOTexto, nombre, { esTexto = false, silencioso = false, transaccion = false } = {}) {
+  let texto = esTexto ? archivoOTexto : readFileSync(archivoOTexto, "utf8").replace(/\r\n/g, "\n");
+  // Supabase aplica cada migración en UNA transacción: algunos errores (p. ej.
+  // "pending trigger events" de una llave diferida) solo aparecen así.
+  if (transaccion) texto = "begin;\n" + texto + "\ncommit;\n";
   const cliente = new pg.Client({ host: "127.0.0.1", port: PUERTO, user: "postgres", password: "postgres", database: "hab_prueba" });
   await cliente.connect();
   const avisos = [];
@@ -203,7 +206,7 @@ try {
     const num = f.slice(0, 4);
     if (num === "0061") await correr(alinearIds(), "(alinear ids)", { esTexto: true, silencioso: true });
     if (num === "0080") await correr(PERFIL_LEGADO_0080, "(perfil legado 0080)", { esTexto: true, silencioso: true });
-    await correr(join(MIGRACIONES, f), f, { silencioso: true });
+    await correr(join(MIGRACIONES, f), f, { silencioso: true, transaccion: true });
     console.log("  OK " + f);
   }
 
