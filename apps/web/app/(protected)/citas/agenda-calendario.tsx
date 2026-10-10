@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   Calendar,
@@ -145,6 +145,16 @@ export function AgendaCalendario({
   tieneEntitlementAnexos: boolean;
 }) {
   const router = useRouter();
+  // Lista del celular: el día cambia en pantalla al tocar, sin esperar al
+  // servidor (~1 s). Si no, cada toque partía del día viejo y los toques
+  // seguidos pedían el mismo día: parecía que los botones no servían.
+  const [fechaDia, setFechaDia] = useState(fechaISO);
+  const [fechaDiaPrevia, setFechaDiaPrevia] = useState(fechaISO);
+  if (fechaISO !== fechaDiaPrevia) {
+    setFechaDiaPrevia(fechaISO);
+    setFechaDia(fechaISO);
+  }
+  const [cargandoDia, iniciarCarga] = useTransition();
   // Guarda solo el id, no una copia de la cita — así, cuando EstadoAcciones
   // llama a router.refresh() (al "Atender") y `citas` baja fresco del
   // servidor, el detalle abierto en ese momento lee el dato actualizado en
@@ -225,15 +235,17 @@ export function AgendaCalendario({
     <>
     <AgendaDia
       citas={citas}
-      fecha={fechaISO}
+      fecha={fechaDia}
+      cargando={cargandoDia}
       usuarioActualId={usuarioActualId}
       puedeCrear={puedeCrear}
       onAbrir={setCitaSeleccionadaId}
       onNueva={(dia) => setNuevaCita({ fecha: dia })}
       onCambiarFecha={(dia) => {
+        setFechaDia(dia);
         const params = new URLSearchParams(window.location.search);
         params.set("fecha", dia);
-        router.push(`/citas?${params.toString()}`);
+        iniciarCarga(() => router.push(`/citas?${params.toString()}`));
       }}
     />
     <div className="ewah-calendario hidden md:block" style={{ height: "70vh" }}>

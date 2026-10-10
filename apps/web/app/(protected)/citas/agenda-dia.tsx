@@ -18,6 +18,7 @@ import { colorPorProfesional } from "./colores-profesional";
 export function AgendaDia({
   citas,
   fecha,
+  cargando,
   usuarioActualId,
   puedeCrear,
   onAbrir,
@@ -26,6 +27,8 @@ export function AgendaDia({
 }: {
   citas: CitaRow[];
   fecha: string;
+  /** Llegando del servidor las citas del día recién elegido. */
+  cargando: boolean;
   usuarioActualId: string;
   puedeCrear: boolean;
   onAbrir: (id: string) => void;
@@ -99,7 +102,11 @@ export function AgendaDia({
         </div>
       </div>
 
-      {delDia.length === 0 ? (
+      {delDia.length === 0 && cargando ? (
+        <div className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground" aria-live="polite">
+          Cargando citas…
+        </div>
+      ) : delDia.length === 0 ? (
         <div className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
           {soloMias ? "No tienes citas este día." : "No hay citas este día."}
           {soloMias ? (
@@ -109,7 +116,7 @@ export function AgendaDia({
           ) : null}
         </div>
       ) : (
-        <ul className="space-y-2">
+        <ul className={cn("space-y-2 transition-opacity", cargando && "opacity-60")} aria-busy={cargando}>
           {delDia.map((c) => (
             <li key={c.id}>
               <TarjetaCita cita={c} mostrarProfesional={!soloMias} onAbrir={() => onAbrir(c.id)} />
