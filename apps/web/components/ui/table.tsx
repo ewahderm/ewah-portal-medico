@@ -2,14 +2,59 @@
 
 import * as React from "react"
 import { cn } from "cn"
+import "./table-tarjetas.css"
 
-function Table({ className, ...props }: React.ComponentProps<"table">) {
+// Copia el texto de cada encabezado a las celdas de su columna (data-label),
+// teniendo en cuenta colSpan. La hoja table-tarjetas.css lo muestra como
+// etiqueta cuando, en celular, cada fila se dibuja como tarjeta.
+function etiquetarCeldas(tabla: HTMLTableElement) {
+  const filaEncabezado = tabla.tHead?.rows[tabla.tHead.rows.length - 1]
+  if (!filaEncabezado) return
+  const titulos: string[] = []
+  for (const th of Array.from(filaEncabezado.cells)) {
+    for (let i = 0; i < th.colSpan; i++) titulos.push((th.textContent ?? "").trim())
+  }
+  for (const cuerpo of [...Array.from(tabla.tBodies), ...(tabla.tFoot ? [tabla.tFoot] : [])]) {
+    for (const fila of Array.from(cuerpo.rows)) {
+      let columna = 0
+      for (const celda of Array.from(fila.cells)) {
+        const titulo = celda.colSpan > 1 ? "" : (titulos[columna] ?? "")
+        if (celda.dataset.label !== titulo) celda.dataset.label = titulo
+        columna += celda.colSpan
+      }
+    }
+  }
+}
+
+function Table({
+  className,
+  tarjetas = true,
+  ...props
+}: React.ComponentProps<"table"> & {
+  /** En celular, cada fila como tarjeta (por defecto). false para tablas que
+   * deben conservar la cuadrícula (por ejemplo, una matriz de casillas). */
+  tarjetas?: boolean
+}) {
+  const ref = React.useRef<HTMLTableElement>(null)
+
+  React.useEffect(() => {
+    const tabla = ref.current
+    if (!tarjetas || !tabla) return
+    etiquetarCeldas(tabla)
+    // Las filas cambian al filtrar, paginar o refrescar: se vuelven a etiquetar.
+    const observador = new MutationObserver(() => etiquetarCeldas(tabla))
+    observador.observe(tabla, { childList: true, subtree: true, characterData: true })
+    return () => observador.disconnect()
+  }, [tarjetas])
+
   return (
     <div
       data-slot="table-container"
+      data-tarjetas={tarjetas ? "" : undefined}
       className="relative w-full overflow-x-auto"
     >
       <table
+        ref={ref}
         data-slot="table"
         className={cn("w-full caption-bottom text-sm", className)}
         {...props}

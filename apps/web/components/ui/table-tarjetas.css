@@ -1,0 +1,93 @@
+/* En celular cada fila de una tabla se vuelve una tarjeta (como la Agenda):
+   la primera columna es el título, las demás van debajo como "etiqueta:
+   valor" y los botones al pie. Así nada obliga a desplazarse de lado. La
+   etiqueta de cada celda (data-label) la pone Table a partir del
+   encabezado. Fuera de capas a propósito: gana sobre `hidden` de Tailwind,
+   para mostrar en la tarjeta las columnas que en una fila angosta se
+   escondían. En escritorio no aplica. */
+@media (max-width: 767px) {
+  [data-tarjetas] {
+    overflow-x: visible;
+  }
+  [data-tarjetas] > table,
+  [data-tarjetas] > table > tbody,
+  [data-tarjetas] > table > tfoot {
+    display: block;
+  }
+  [data-tarjetas] > table > thead {
+    display: none;
+  }
+  [data-tarjetas] > table > tbody > tr,
+  [data-tarjetas] > table > tfoot > tr {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    margin-bottom: 0.5rem;
+    padding: 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    background: var(--card);
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  }
+  [data-tarjetas] > table > tbody > tr:last-child {
+    margin-bottom: 0;
+  }
+  [data-tarjetas] > table > tbody > tr > td,
+  [data-tarjetas] > table > tfoot > tr > td {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+    min-width: 0;
+    padding: 0.125rem 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-align: right;
+  }
+  [data-tarjetas] > table > tbody > tr > td::before,
+  [data-tarjetas] > table > tfoot > tr > td::before {
+    content: attr(data-label);
+    flex-shrink: 0;
+    max-width: 45%;
+    color: var(--muted-foreground);
+    font-size: 0.75rem;
+    font-weight: 400;
+    text-align: left;
+  }
+  /* Título de la tarjeta: la primera columna, sin etiqueta y a la izquierda. */
+  [data-tarjetas] > table > tbody > tr > td:first-child {
+    justify-content: flex-start;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    text-align: left;
+  }
+  [data-tarjetas] > table > tbody > tr > td:first-child::before,
+  [data-tarjetas] > table > tbody > tr > td[data-label=""]::before,
+  [data-tarjetas] > table > tbody > tr > td:not([data-label])::before {
+    content: none;
+  }
+  /* Celdas sin encabezado (acciones) y vacías de mensaje: al pie, a lo ancho. */
+  [data-tarjetas] > table > tbody > tr > td[data-label=""]:not(:first-child) {
+    justify-content: flex-end;
+    margin-top: 0.25rem;
+    padding-top: 0.5rem;
+    border-top: 1px dashed var(--border);
+  }
+  [data-tarjetas] > table > tbody > tr > td[colspan] {
+    justify-content: center;
+    text-align: center;
+  }
+  [data-tarjetas] > table > tbody > tr > td:empty {
+    display: none;
+  }
+  /* En la fila angosta se recortaban textos largos (truncate, max-w-*); en
+     la tarjeta hay espacio a lo alto, así que se muestran completos. */
+  [data-tarjetas] > table > tbody > tr > td .truncate {
+    overflow: visible;
+    white-space: normal;
+    text-overflow: clip;
+  }
+  [data-tarjetas] > table > tbody > tr > td [class*="max-w-"] {
+    max-width: none;
+  }
+}
