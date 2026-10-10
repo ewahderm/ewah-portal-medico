@@ -87,6 +87,7 @@
     white-space: normal;
     text-overflow: clip;
   }
+  [data-tarjetas] > table > tbody > tr > td[class*="max-w-"],
   [data-tarjetas] > table > tbody > tr > td [class*="max-w-"] {
     max-width: none;
   }
