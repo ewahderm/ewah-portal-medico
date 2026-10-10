@@ -1,8 +1,17 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { BanIcon, ReceiptIcon } from "lucide-react";
-import { anularCobroAtencion, cobrarAtencion } from "@/lib/tratamientos/cobros";
+import { BanIcon, DownloadIcon, FileTextIcon, ReceiptIcon, XIcon } from "lucide-react";
+import {
+  anularCobroAtencion,
+  cobrarAtencion,
+  guardarFacturaCobro,
+  quitarArchivoFactura,
+  subirArchivoFactura,
+  urlArchivoFactura,
+  type CobroDeAtencion,
+} from "@/lib/tratamientos/cobros";
+import { FileInput } from "@/components/ui/file-input";
 import { repartirTotal, sumaValores } from "@/lib/tratamientos/precios";
 import { formatoMoneda, hoy } from "@/lib/format";
 import { toItems, type Opcion } from "@/lib/forms/opciones";
@@ -297,6 +306,163 @@ export function AnularCobroDialog({ cobroId, valor, onAnulado }: { cobroId: stri
         <Button variant="destructive" className="w-full" disabled={pending || motivo.trim().length < 10} onClick={anular}>
           {pending ? "Anulando..." : "Confirmar anulación"}
         </Button>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Factura electrónica del cobro: número, CUFE y los archivos (PDF/XML) que
+// emite el sistema de facturación. Se registra después de cobrar y se puede
+// corregir (cada cambio queda en la auditoría); lo cobrado no cambia.
+export function FacturaCobroDialog({
+  cobro,
+  editable,
+  onGuardado,
+}: {
+  cobro: CobroDeAtencion;
+  editable: boolean;
+  onGuardado: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [numero, setNumero] = useState(cobro.factura_numero ?? "");
+  const [cufe, setCufe] = useState(cobro.factura_cufe ?? "");
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+  const tiene = Boolean(cobro.factura_numero || cobro.factura_cufe || cobro.factura_pdf_path || cobro.factura_xml_path);
+  const cufeLimpio = cufe.replace(/s/g, "");
+  const cufeIncompleto = cufeLimpio !== "" && !/^[0-9a-fA-F]{96}$/.test(cufeLimpio);
+
+  function guardar() {
+    setError(null);
+    startTransition(async () => {
+      const r = await guardarFacturaCobro({ cobroId: cobro.id, numero, cufe });
+      if (r.error) return setError(r.error);
+      toast.add({ title: "Factura guardada", type: "success" });
+      onGuardado();
+    });
+  }
+
+  function subir(tipo: "pdf" | "xml", input: HTMLInputElement) {
+    const archivo = input.files?.[0];
+    if (!archivo) return;
+    setError(null);
+    const datos = new FormData();
+    datos.append("archivo", archivo);
+    startTransition(async () => {
+      const r = await subirArchivoFactura(cobro.id, tipo, datos);
+      input.value = "";
+      if (r.error) return setError(r.error);
+      toast.add({ title: tipo === "pdf" ? "PDF de la factura subido" : "XML de la factura subido", type: "success" });
+      onGuardado();
+    });
+  }
+
+  function quitar(tipo: "pdf" | "xml") {
+    setError(null);
+    startTransition(async () => {
+      const r = await quitarArchivoFactura(cobro.id, tipo);
+      if (r.error) return setError(r.error);
+      onGuardado();
+    });
+  }
+
+  async function descargar(path: string) {
+    const url = await urlArchivoFactura(path);
+    if (url) window.open(url, "_blank", "noopener");
+    else setError("No se pudo descargar el archivo.");
+  }
+
+  const archivo = (tipo: "pdf" | "xml", path: string | null) => (
+    <div className="space-y-2">
+      <Label>{tipo === "pdf" ? "PDF de la factura" : "XML de la factura"}</Label>
+      {path ? (
+        <div className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm">
+          <FileTextIcon className="size-4 shrink-0 text-muted-foreground" />
+          <span className="min-w-0 flex-1 truncate">{path.split("/").pop()}</span>
+          <Button variant="outline" size="icon-sm" aria-label={`Descargar ${tipo.toUpperCase()}`} onClick={() => descargar(path)}>
+            <DownloadIcon />
+          </Button>
+          {editable ? (
+            <Button variant="ghost" size="icon-sm" aria-label={`Quitar ${tipo.toUpperCase()}`} disabled={pending} onClick={() => quitar(tipo)}>
+              <XIcon />
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
+      {editable ? (
+        <FileInput
+          accept={tipo === "pdf" ? "application/pdf,.pdf" : ".xml,application/xml,text/xml"}
+          aria-label={path ? `Reemplazar ${tipo.toUpperCase()}` : `Subir ${tipo.toUpperCase()}`}
+          disabled={pending}
+          onChange={(e) => subir(tipo, e.currentTarget)}
+        />
+      ) : !path ? (
+        <p className="text-sm text-muted-foreground">Sin archivo.</p>
+      ) : null}
+    </div>
+  );
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (next) {
+          setNumero(cobro.factura_numero ?? "");
+          setCufe(cobro.factura_cufe ?? "");
+          setError(null);
+        }
+        setOpen(next);
+      }}
+    >
+      <DialogTrigger
+        render={
+          <Button variant={tiene ? "outline" : "secondary"} size="xs" aria-label="Factura electrónica">
+            <FileTextIcon /> {tiene ? "Factura" : "Agregar factura"}
+          </Button>
+        }
+      />
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Factura electrónica · {formatoMoneda(cobro.valor)}</DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-muted-foreground">
+          La factura que emitiste por este cobro. Puedes agregarla o corregirla en cualquier momento; cada cambio queda registrado.
+        </p>
+        {error ? (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        ) : null}
+        <div className="space-y-2">
+          <Label htmlFor="factura-numero">Número de factura</Label>
+          <Input id="factura-numero" value={numero} readOnly={!editable} maxLength={40} onChange={(e) => setNumero(e.target.value)} placeholder="Ej: FE-1234" />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="factura-cufe">CUFE</Label>
+          <Textarea
+            id="factura-cufe"
+            rows={3}
+            value={cufe}
+            readOnly={!editable}
+            onChange={(e) => setCufe(e.target.value)}
+            className="font-mono text-xs break-all"
+            placeholder="Pega el CUFE completo (96 caracteres)"
+          />
+          <p className={cufeIncompleto ? "text-xs text-destructive" : "text-xs text-muted-foreground"}>
+            {cufeIncompleto
+              ? `Tiene ${cufeLimpio.length} caracteres: el CUFE completo tiene 96 (números y letras de la a a la f).`
+              : "Sale en la factura y en el XML. Con él se consulta la factura en la DIAN."}
+          </p>
+        </div>
+        {editable ? (
+          <Button className="w-full" disabled={pending || cufeIncompleto} onClick={guardar}>
+            {pending ? "Guardando..." : "Guardar número y CUFE"}
+          </Button>
+        ) : null}
+        <div className="space-y-4 border-t pt-4">
+          {archivo("pdf", cobro.factura_pdf_path)}
+          {archivo("xml", cobro.factura_xml_path)}
+        </div>
       </DialogContent>
     </Dialog>
   );

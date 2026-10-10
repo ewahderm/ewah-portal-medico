@@ -44,7 +44,6 @@ type TratamientoRow = {
   valor_cobrado: number | null;
   cobro_id: string | null;
   notas: string | null;
-  cufe: string | null;
   anulado: boolean;
   anulado_motivo: string | null;
   corrige_a: string | null;
@@ -114,7 +113,7 @@ export default async function TratamientosPage({
   let historialQuery = supabase
     .from("tratamientos")
     .select(
-      `id, fecha, edad_paciente, costo, valor_cobrado, cobro_id, notas, cufe, anulado, anulado_motivo, corrige_a,
+      `id, fecha, edad_paciente, costo, valor_cobrado, cobro_id, notas, anulado, anulado_motivo, corrige_a,
        paciente_id, tipo_tratamiento_id, profesional_id, sede_id, medio_pago_id,
        pacientes(primer_nombre, segundo_nombre, primer_apellido, segundo_apellido),
        tipos_tratamiento(nombre),
@@ -360,7 +359,6 @@ export default async function TratamientosPage({
                           valor_cobrado: t.valor_cobrado,
                           cobro_id: t.cobro_id,
                           notas: t.notas,
-                          cufe: t.cufe,
                         }}
                         trigger={
                           <Button variant="outline" size="sm" aria-label="Editar">
@@ -391,7 +389,6 @@ export default async function TratamientosPage({
                           valor_cobrado: t.valor_cobrado,
                           cobro_id: t.cobro_id,
                           notas: t.notas,
-                          cufe: t.cufe,
                         }}
                         trigger={
                           <Button variant="outline" size="sm" aria-label="Corregir">

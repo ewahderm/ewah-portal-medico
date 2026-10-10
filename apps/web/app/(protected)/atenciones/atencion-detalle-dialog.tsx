@@ -29,7 +29,7 @@ import { formatoMoneda } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { TratamientoDialog } from "../tratamientos/tratamiento-dialog";
 import { listarCobrosDeAtencion, type CobroDeAtencion } from "@/lib/tratamientos/cobros";
-import { AnularCobroDialog, CobrarAtencionDialog } from "./cobrar-atencion-dialog";
+import { AnularCobroDialog, CobrarAtencionDialog, FacturaCobroDialog } from "./cobrar-atencion-dialog";
 import { AnularDialog } from "../tratamientos/anular-dialog";
 import { RevertirAnulacionButton } from "../tratamientos/revertir-anulacion-button";
 import { InsumosDialog } from "../tratamientos/insumos-dialog";
@@ -347,7 +347,6 @@ export function AtencionDetalleDialog({
                                 valor_cobrado: t.valor_cobrado,
                                 cobro_id: t.cobro_id,
                                 notas: t.notas,
-                                cufe: t.cufe,
                               }}
                               onGuardado={refrescarTratamientos}
                               trigger={
@@ -379,7 +378,6 @@ export function AtencionDetalleDialog({
                                 valor_cobrado: t.valor_cobrado,
                                 cobro_id: t.cobro_id,
                                 notas: t.notas,
-                                cufe: t.cufe,
                               }}
                               onGuardado={refrescarTratamientos}
                               trigger={
@@ -450,6 +448,12 @@ export function AtencionDetalleDialog({
                               Anulado{c.anulado_motivo ? `: ${c.anulado_motivo}` : ""}
                             </span>
                           ) : null}
+                          {c.factura_numero || c.factura_cufe ? (
+                            <span className="block text-xs text-muted-foreground break-all">
+                              Factura {c.factura_numero ?? "sin número"}
+                              {c.factura_cufe ? ` · CUFE ${c.factura_cufe.slice(0, 10)}…` : ""}
+                            </span>
+                          ) : null}
                         </span>
                         <span className="flex shrink-0 items-center gap-2">
                           <span className={cn("font-semibold tabular-nums", c.anulado && "line-through")}>{formatoMoneda(c.valor)}</span>
@@ -458,6 +462,11 @@ export function AtencionDetalleDialog({
                           ) : null}
                         </span>
                       </div>
+                      {!c.anulado ? (
+                        <div className="mt-2 flex justify-end border-t border-dashed pt-2">
+                          <FacturaCobroDialog cobro={c} editable={puedeCrearTratamiento} onGuardado={refrescarTratamientos} />
+                        </div>
+                      ) : null}
                     </li>
                   ))}
                 </ul>

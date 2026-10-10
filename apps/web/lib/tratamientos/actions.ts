@@ -70,7 +70,6 @@ function datosTratamientoDesdeForm(formData: FormData) {
     costoTexto: String(formData.get("costo") ?? "").trim(),
     valorCobradoTexto: String(formData.get("valorCobrado") ?? "").trim(),
     notas: campoOpcional(formData, "notas"),
-    cufe: campoOpcional(formData, "cufe"),
   };
 }
 
@@ -180,7 +179,6 @@ export async function crearTratamiento(
       costo: Number(datos.costoTexto),
       valor_cobrado: datos.valorCobradoTexto ? Number(datos.valorCobradoTexto) : Number(datos.costoTexto),
       notas: datos.notas,
-      cufe: datos.cufe,
       corrige_a: corrigeA,
       atencion_id: atencionIdFinal,
       created_by: check.usuario.id,
@@ -245,7 +243,6 @@ export async function editarTratamiento(
       costo: Number(datos.costoTexto),
       valor_cobrado: datos.valorCobradoTexto ? Number(datos.valorCobradoTexto) : Number(datos.costoTexto),
       notas: datos.notas,
-      cufe: datos.cufe,
       corrige_a: editaId,
       atencion_id: original?.atencion_id,
       created_by: checkCrear.usuario.id,
@@ -627,7 +624,6 @@ export type TratamientoDeAtencion = {
   valor_cobrado: number | null;
   cobro_id: string | null;
   notas: string | null;
-  cufe: string | null;
   anulado: boolean;
   anulado_motivo: string | null;
   tipos_tratamiento: { nombre: string } | null;
@@ -647,7 +643,7 @@ export async function listarTratamientosDeAtencion(atencionId: string): Promise<
     .from("tratamientos")
     .select(
       `id, paciente_id, tipo_tratamiento_id, profesional_id, sede_id, medio_pago_id,
-       fecha, costo, valor_cobrado, cobro_id, notas, cufe, anulado, anulado_motivo,
+       fecha, costo, valor_cobrado, cobro_id, notas, anulado, anulado_motivo,
        tipos_tratamiento(nombre), sedes(nombre),
        profesional:usuarios!tratamientos_profesional_id_fkey(nombre),
        tratamiento_fotos(count), tratamiento_anexos(count), tratamiento_consentimientos(count)`,

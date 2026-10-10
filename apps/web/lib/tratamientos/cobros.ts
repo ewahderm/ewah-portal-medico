@@ -29,6 +29,11 @@ export type CobroDeAtencion = {
   anulado: boolean;
   anulado_motivo: string | null;
   automatico: boolean;
+  // Factura electrónica del cobro (0110): se registra después de cobrar.
+  factura_numero: string | null;
+  factura_cufe: string | null;
+  factura_pdf_path: string | null;
+  factura_xml_path: string | null;
   medios_pago: { nombre: string } | null;
   cobros_atencion_items: { tratamiento_id: string; valor: number | null }[];
 };
@@ -39,7 +44,9 @@ export async function listarCobrosDeAtencion(atencionId: string): Promise<CobroD
   const supabase = await createClient();
   const { data } = await supabase
     .from("cobros_atencion")
-    .select("id, fecha, valor, notas, anulado, anulado_motivo, automatico, medios_pago(nombre), cobros_atencion_items(tratamiento_id, valor)")
+    .select(
+      "id, fecha, valor, notas, anulado, anulado_motivo, automatico, factura_numero, factura_cufe, factura_pdf_path, factura_xml_path, medios_pago(nombre), cobros_atencion_items(tratamiento_id, valor)",
+    )
     .eq("atencion_id", atencionId)
     .eq("clinica_id", usuario.clinica_id)
     .order("created_at");
@@ -106,4 +113,75 @@ export async function obtenerPreciosTratamiento(): Promise<PrecioTratamiento[]> 
     .select("tipo_tratamiento_id, valor, vigente_desde, created_at")
     .eq("clinica_id", usuario.clinica_id);
   return (data ?? []).map((p) => ({ ...p, valor: Number(p.valor) }));
+}
+
+// ---------- Factura electrónica del cobro (0110) ----------
+
+const MAX_FACTURA_BYTES = 10 * 1024 * 1024;
+
+export async function guardarFacturaCobro(input: { cobroId: string; numero: string; cufe: string }): Promise<ResultadoAccion> {
+  if (!UUID.test(input.cobroId)) return { error: "Cobro inválido." };
+  const check = await requirePermiso("tratamientos", "CREATE");
+  if (!check.ok) return { error: check.error };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("fn_cobro_factura", {
+    p_cobro: input.cobroId,
+    p_numero: input.numero.trim() || null,
+    p_cufe: input.cufe.trim() || null,
+  });
+  if (error) {
+    console.error("guardarFacturaCobro", error);
+    return { error: error.code === "P0001" ? error.message : "No se pudo guardar la factura." };
+  }
+  revalidar();
+  return {};
+}
+
+// Sube el PDF o el XML de la factura al bucket privado y lo enlaza al cobro.
+// Un archivo anterior no se borra (la auditoría guarda su ruta).
+export async function subirArchivoFactura(cobroId: string, tipo: "pdf" | "xml", formData: FormData): Promise<ResultadoAccion> {
+  if (!UUID.test(cobroId) || (tipo !== "pdf" && tipo !== "xml")) return { error: "Datos inválidos." };
+  const archivo = formData.get("archivo");
+  if (!(archivo instanceof File) || archivo.size === 0) return { error: "Selecciona el archivo." };
+  if (archivo.size > MAX_FACTURA_BYTES) return { error: "El archivo no puede pesar más de 10 MB." };
+  const extension = archivo.name.split(".").pop()?.toLowerCase();
+  if (extension !== tipo) return { error: tipo === "pdf" ? "Sube un archivo PDF." : "Sube el archivo XML de la factura." };
+  const check = await requirePermiso("tratamientos", "CREATE");
+  if (!check.ok) return { error: check.error };
+
+  const supabase = await createClient();
+  const path = `${check.usuario.clinica_id}/${cobroId}/factura-${Date.now()}.${tipo}`;
+  const { error: errorSubida } = await supabase.storage
+    .from("cobro-facturas")
+    .upload(path, archivo, { contentType: tipo === "pdf" ? "application/pdf" : "application/xml" });
+  if (errorSubida) {
+    console.error("subirArchivoFactura", errorSubida);
+    return { error: "No se pudo subir el archivo." };
+  }
+  const { error } = await supabase.rpc("fn_cobro_factura_archivo", { p_cobro: cobroId, p_tipo: tipo, p_path: path });
+  if (error) {
+    console.error("subirArchivoFactura", error);
+    return { error: error.code === "P0001" ? error.message : "No se pudo enlazar el archivo." };
+  }
+  revalidar();
+  return {};
+}
+
+export async function quitarArchivoFactura(cobroId: string, tipo: "pdf" | "xml"): Promise<ResultadoAccion> {
+  if (!UUID.test(cobroId) || (tipo !== "pdf" && tipo !== "xml")) return { error: "Datos inválidos." };
+  const check = await requirePermiso("tratamientos", "CREATE");
+  if (!check.ok) return { error: check.error };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("fn_cobro_factura_archivo", { p_cobro: cobroId, p_tipo: tipo, p_path: null });
+  if (error) return { error: error.code === "P0001" ? error.message : "No se pudo quitar el archivo." };
+  revalidar();
+  return {};
+}
+
+export async function urlArchivoFactura(path: string): Promise<string | null> {
+  const usuario = await getCurrentUsuario();
+  if (!usuario || !path.startsWith(`${usuario.clinica_id}/`)) return null;
+  const supabase = await createClient();
+  const { data } = await supabase.storage.from("cobro-facturas").createSignedUrl(path, 60 * 10, { download: true });
+  return data?.signedUrl ?? null;
 }

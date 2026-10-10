@@ -36,7 +36,6 @@ type Correccion = {
   // Con cobro vigente, lo cobrado no cambia al editar (lo pagado es lo pagado).
   cobro_id: string | null;
   notas: string | null;
-  cufe: string | null;
 };
 
 // Todo tratamiento nuevo cuelga de una atención — si no viene de
@@ -395,16 +394,6 @@ export function TratamientoDialog({
               rows={3}
               placeholder="Evolución, indicaciones, reacciones..."
               defaultValue={prefill?.notas ?? ""}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="cufe">CUFE (opcional)</Label>
-            <Input
-              id="cufe"
-              name="cufe"
-              placeholder="Código de la factura electrónica"
-              defaultValue={prefill?.cufe ?? ""}
             />
           </div>
 

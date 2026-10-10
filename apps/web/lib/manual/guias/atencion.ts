@@ -200,7 +200,7 @@ export const TRATAMIENTOS: Guia = {
             "Elige el **Tipo de tratamiento** y el **Profesional**. Dentro de una atención, el paciente, la fecha y el lugar (consultorio y sede) ya vienen de la atención y no se vuelven a escribir.",
             "El **Precio** se llena solo con el precio vigente de ese tratamiento. Puedes cambiarlo si hoy cobras otro.",
             "**Valor cobrado** arranca igual al precio. Cámbialo solo si a *este* tratamiento le haces un descuento propio. El descuento de toda la atención se hace al cobrarla.",
-            "Si facturaste electrónicamente, agrega el **CUFE**. Pulsa `Registrar tratamiento`.",
+            "Pulsa `Registrar tratamiento`. La factura electrónica (número, CUFE y archivos) no va aquí: se registra en el cobro de la atención.",
           ],
         },
         { tipo: "imagen", archivo: "tratamiento-nuevo.jpg", alt: "Formulario Nuevo tratamiento" },
@@ -228,6 +228,20 @@ export const TRATAMIENTOS: Guia = {
             "Si haces un **descuento**, escribe el **Total a cobrar**: EWAH lo reparte entre los tratamientos en proporción a su valor. Quita la marca *Aplica descuento* en los tratamientos que nunca llevan descuento. También puedes ajustar a mano el valor de cada uno.",
             "Elige el **Medio de pago** y la fecha, y pulsa `Cobrar`.",
           ],
+        },
+        {
+          tipo: "pasos",
+          pasos: [
+            "Cuando emitas la **factura electrónica**, pulsa `Factura` en el cobro.",
+            "Escribe el **número de factura** y pega el **CUFE** completo (96 caracteres, sale en la factura y en el XML).",
+            "Si quieres, sube el **PDF** y el **XML** que te entrega tu sistema de facturación, y pulsa `Guardar`. Quedan para descargarlos desde la atención.",
+          ],
+        },
+        {
+          tipo: "nota",
+          tono: "info",
+          texto:
+            "La factura se puede agregar o corregir después de cobrar sin anular el cobro: cada cambio queda en la auditoría con quién y cuándo. Un archivo reemplazado no se borra.",
         },
         {
           tipo: "lista",
