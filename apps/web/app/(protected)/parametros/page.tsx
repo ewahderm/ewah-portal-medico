@@ -520,14 +520,14 @@ export default async function ParametrosPage({ searchParams }: { searchParams: P
                 "esGlobal" in catalogo ? (
                   <TabsContent key={catalogo.tabla} value={catalogo.tabla} className="pt-4">
                     <Card>
-                      <CardHeader className="flex flex-row items-center justify-between">
-                        <div>
+                      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="min-w-0">
                           <CardTitle>{catalogo.nombre}</CardTitle>
                           <p className="mt-1 text-sm text-muted-foreground">
                             {catalogo.descripcion}
                           </p>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           {esAdministrador(usuario) ? (
                             <ExportarXlsxLink href={`/api/exportar/parametros/${catalogo.tabla}`} />
                           ) : null}
@@ -556,12 +556,12 @@ export default async function ParametrosPage({ searchParams }: { searchParams: P
                 ) : (
                   <TabsContent key={catalogo.tabla} value={catalogo.tabla} className="pt-4">
                     <Card>
-                      <CardHeader className="flex flex-row items-center justify-between">
-                        <div>
+                      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="min-w-0">
                           <CardTitle>{catalogo.nombre}</CardTitle>
                           <p className="mt-1 text-sm text-muted-foreground">{catalogo.descripcion}</p>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           {esAdministrador(usuario) ? (
                             <ExportarXlsxLink href={`/api/exportar/parametros-bespoke/${catalogo.tabla}`} />
                           ) : null}

@@ -204,6 +204,7 @@ export default async function CitasPage({
               usuarioActualId={usuario.id}
               tiposTratamiento={tiposTratamiento}
               sedes={sedes}
+              consultorios={consultorios}
               mediosPago={mediosPago}
               insumos={insumos}
               lotes={lotes}

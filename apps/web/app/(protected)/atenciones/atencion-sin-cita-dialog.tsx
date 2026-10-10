@@ -15,7 +15,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Combobox } from "@/components/ui/combobox";
-import type { Opcion } from "@/lib/forms/opciones";
+import { toItems, type Opcion } from "@/lib/forms/opciones";
 import { hoy } from "@/lib/format";
 import { AtencionDetalleDialog } from "./atencion-detalle-dialog";
 import { PacienteRapidoDialog } from "../pacientes/paciente-rapido-dialog";
@@ -29,6 +29,7 @@ export function AtencionSinCitaDialog({
   usuarioActualId,
   tiposTratamiento,
   sedes,
+  consultorios,
   mediosPago,
   insumos,
   lotes,
@@ -48,6 +49,8 @@ export function AtencionSinCitaDialog({
   usuarioActualId: string;
   tiposTratamiento: Opcion[];
   sedes: Opcion[];
+  /** Dónde se atiende: el consultorio (de él sale la sede). */
+  consultorios: { id: string; nombre: string; sede_id: string }[];
   mediosPago: Opcion[];
   insumos: { id: string; nombre: string }[];
   lotes: {
@@ -94,6 +97,16 @@ export function AtencionSinCitaDialog({
     [pacientesLocal, pacientesPendientesTotal],
   );
   const pacientePendiente = pacientesPendientesTotal.has(pacienteId);
+  // "Consultorio 1 · Sede Principal": con varias sedes, el nombre del
+  // consultorio solo puede repetirse.
+  const itemsConsultorio = useMemo(
+    () =>
+      consultorios.map((c) => {
+        const sede = sedes.find((s) => s.id === c.sede_id)?.nombre;
+        return { value: c.id, label: sede ? `${c.nombre} · ${sede}` : c.nombre };
+      }),
+    [consultorios, sedes],
+  );
 
   useCerrarAlExito(pending, !state?.error, () => {
     setOpen(false);
@@ -109,7 +122,7 @@ export function AtencionSinCitaDialog({
             <DialogTitle>Atención sin cita</DialogTitle>
           </DialogHeader>
 
-          <form action={formAction} className="space-y-5">
+          <form action={formAction} className="space-y-4">
             {state?.error ? (
               <Alert variant="destructive">
                 <AlertDescription>{state.error}</AlertDescription>
@@ -152,7 +165,7 @@ export function AtencionSinCitaDialog({
               ) : null}
             </div>
 
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="profesionalId">Profesional</Label>
                 {/* Quien atiende es siempre quien está logueado (el servidor
@@ -168,6 +181,35 @@ export function AtencionSinCitaDialog({
                 <Input id="fecha" name="fecha" type="date" required defaultValue={hoy()} />
               </div>
             </div>
+
+            {consultorios.length > 0 ? (
+              <div className="space-y-2">
+                <Label htmlFor="consultorioId">Consultorio</Label>
+                <Combobox
+                  id="consultorioId"
+                  name="consultorioId"
+                  required
+                  items={itemsConsultorio}
+                  defaultValue={consultorios.length === 1 ? consultorios[0].id : undefined}
+                  placeholder="¿Dónde se atiende?"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Los tratamientos de esta atención quedan en este consultorio y su sede.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label htmlFor="sedeId">Sede</Label>
+                <Combobox
+                  id="sedeId"
+                  name="sedeId"
+                  required
+                  items={toItems(sedes)}
+                  defaultValue={sedes.length === 1 ? sedes[0].id : undefined}
+                  placeholder="¿Dónde se atiende?"
+                />
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="motivo">Motivo (opcional)</Label>

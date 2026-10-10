@@ -30,7 +30,7 @@ export async function crearAtencionDesdeCita(citaId: string): Promise<{ error: s
 
   const { data: cita } = await supabase
     .from("citas")
-    .select("id, paciente_id, profesional_id, fecha")
+    .select("id, paciente_id, profesional_id, fecha, consultorio_id")
     .eq("id", citaId)
     .maybeSingle();
   if (!cita || !cita.paciente_id) return { error: "La cita indicada no es válida." };
@@ -43,6 +43,8 @@ export async function crearAtencionDesdeCita(citaId: string): Promise<{ error: s
       cita_id: citaId,
       profesional_id: cita.profesional_id,
       fecha: cita.fecha,
+      // La atención ocurre en el consultorio de la cita (la sede la deduce la BD).
+      consultorio_id: cita.consultorio_id,
       created_by: check.usuario.id,
     })
     .select("id")
@@ -68,9 +70,16 @@ export async function crearAtencionSinCita(
   const pacienteId = String(formData.get("pacienteId") ?? "");
   const fecha = String(formData.get("fecha") ?? "").trim();
   const motivo = campoOpcional(formData, "motivo");
+  // Dónde se atiende: el consultorio (y de él sale la sede). Si la clínica
+  // no tiene consultorios todavía, basta con la sede.
+  const consultorioId = campoOpcional(formData, "consultorioId");
+  const sedeId = consultorioId ? null : campoOpcional(formData, "sedeId");
 
   if (!pacienteId || !fecha) {
     return { error: "Paciente y fecha son obligatorios." };
+  }
+  if (!consultorioId && !sedeId) {
+    return { error: "Indica el consultorio donde se atiende al paciente." };
   }
 
   const check = await requirePermiso();
@@ -87,12 +96,20 @@ export async function crearAtencionSinCita(
       profesional_id: profesionalId,
       fecha,
       motivo,
+      consultorio_id: consultorioId,
+      sede_id: sedeId,
       created_by: check.usuario.id,
     })
     .select("id")
     .single();
 
-  if (error || !atencion) return { error: "No se pudo crear la atención." };
+  if (error || !atencion) {
+    return {
+      error: /no es válid/.test(error?.message ?? "")
+        ? "El consultorio o la sede indicados no son válidos."
+        : "No se pudo crear la atención.",
+    };
+  }
 
   revalidatePath(`/pacientes/${pacienteId}`);
   return { atencionId: atencion.id };
@@ -105,6 +122,10 @@ export type AtencionDetalle = {
   profesional_id: string;
   fecha: string;
   motivo: string | null;
+  /** Dónde ocurrió la atención; null en las del legado. */
+  sede_id: string | null;
+  sede: { nombre: string } | null;
+  consultorio: { nombre: string } | null;
   profesional: { nombre: string } | null;
   paciente: {
     primer_nombre: string;
@@ -127,7 +148,9 @@ export async function obtenerAtencion(atencionId: string): Promise<AtencionDetal
   const { data } = await supabase
     .from("atenciones")
     .select(
-      `id, paciente_id, cita_id, profesional_id, fecha, motivo,
+      `id, paciente_id, cita_id, profesional_id, fecha, motivo, sede_id,
+       sede:sedes!atenciones_sede_id_fkey(nombre),
+       consultorio:consultorios!atenciones_consultorio_id_fkey(nombre),
        profesional:usuarios!atenciones_profesional_id_fkey(nombre),
        pacientes(primer_nombre, segundo_nombre, primer_apellido, segundo_apellido),
        cita:citas(hora_inicio, hora_fin, consultorios(nombre, sedes(nombre)))`,

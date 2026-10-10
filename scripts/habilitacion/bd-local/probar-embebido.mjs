@@ -211,7 +211,7 @@ try {
     .filter((f) => f.endsWith("-datos.sql"))
     .map((f) => f.replace("-datos.sql", ""))
     .sort((a, b) => a.localeCompare(b, "en", { numeric: true }));
-  const orden = [...fases.filter((f) => /^f\d/.test(f)), ...fases.filter((f) => /^sst/.test(f)), ...fases.filter((f) => /^ma/.test(f)), ...fases.filter((f) => /^rp/.test(f)), ...fases.filter((f) => /^fin/.test(f))];
+  const orden = [...fases.filter((f) => /^f\d/.test(f)), ...fases.filter((f) => /^sst/.test(f)), ...fases.filter((f) => /^ma/.test(f)), ...fases.filter((f) => /^rp/.test(f)), ...fases.filter((f) => /^fin/.test(f)), ...fases.filter((f) => /^at/.test(f))];
   for (const fase of orden) {
     if (FILTRO.length && !FILTRO.some((p) => fase === p)) continue;
     console.log(`Pruebas ${fase}:`);

@@ -23,7 +23,7 @@ function Tabs({
 }
 
 const tabsListVariants = cva(
-  "group/tabs-list inline-flex w-fit items-center justify-center rounded-xl p-1 text-muted-foreground group-data-horizontal/tabs:h-11 group-data-vertical/tabs:h-fit group-data-vertical/tabs:flex-col data-[variant=line]:rounded-none",
+  "group/tabs-list inline-flex w-fit items-center justify-center rounded-xl p-1 text-muted-foreground group-data-horizontal/tabs:min-h-11 group-data-vertical/tabs:h-fit group-data-vertical/tabs:flex-col data-[variant=line]:rounded-none",
   {
     variants: {
       variant: {
@@ -42,12 +42,15 @@ function TabsList({
   variant = "default",
   ...props
 }: TabsPrimitive.List.Props & VariantProps<typeof tabsListVariants>) {
+  // En celular las pestañas que no caben bajan a otra fila (antes se
+  // desplazaban de lado y, al estar centradas, la primera quedaba fuera de
+  // alcance a la izquierda). Desde md siguen en una sola fila.
   return (
-    <div className="max-w-full overflow-x-auto">
+    <div className="max-w-full md:overflow-x-auto">
       <TabsPrimitive.List
         data-slot="tabs-list"
         data-variant={variant}
-        className={cn(tabsListVariants({ variant }), "flex-nowrap", className)}
+        className={cn(tabsListVariants({ variant }), "flex-wrap md:flex-nowrap", className)}
         {...props}
       />
     </div>

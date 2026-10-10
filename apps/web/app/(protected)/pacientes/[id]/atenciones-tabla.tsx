@@ -19,6 +19,8 @@ export type AtencionRow = {
   fecha: string;
   motivo: string | null;
   cita_id: string | null;
+  sede: { nombre: string } | null;
+  consultorio: { nombre: string } | null;
   profesional: { nombre: string } | null;
   tratamientos_count: number;
   evoluciones_count: number;
@@ -78,6 +80,8 @@ export function AtencionesTabla({
           <TableRow>
             <TableHead>Fecha</TableHead>
             <TableHead>Origen</TableHead>
+            <TableHead className="hidden md:table-cell">Motivo</TableHead>
+            <TableHead className="hidden md:table-cell">Lugar</TableHead>
             <TableHead className="hidden md:table-cell">Profesional</TableHead>
             <TableHead className="hidden md:table-cell">Resumen</TableHead>
             <TableHead />
@@ -88,12 +92,13 @@ export function AtencionesTabla({
             <TableRow key={a.id}>
               <TableCell className="text-muted-foreground">{a.fecha}</TableCell>
               <TableCell>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant="outline">{a.cita_id ? "Cita" : "Sin cita"}</Badge>
-                  {a.motivo ? (
-                    <span className="text-sm text-muted-foreground">{a.motivo}</span>
-                  ) : null}
-                </div>
+                <Badge variant="outline">{a.cita_id ? "Cita" : "Sin cita"}</Badge>
+              </TableCell>
+              <TableCell className="hidden max-w-xs whitespace-normal break-words text-muted-foreground md:table-cell">
+                {a.motivo ?? "—"}
+              </TableCell>
+              <TableCell className="hidden text-muted-foreground md:table-cell">
+                {[a.consultorio?.nombre, a.sede?.nombre].filter(Boolean).join(" · ") || "—"}
               </TableCell>
               <TableCell className="hidden text-muted-foreground md:table-cell">
                 {a.profesional?.nombre ?? "—"}
@@ -120,7 +125,7 @@ export function AtencionesTabla({
           ))}
           {atenciones.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={5} className="text-center text-muted-foreground">
+              <TableCell colSpan={7} className="text-center text-muted-foreground">
                 Sin atenciones registradas.
               </TableCell>
             </TableRow>

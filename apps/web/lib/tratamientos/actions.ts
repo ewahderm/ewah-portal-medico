@@ -149,6 +149,8 @@ export async function crearTratamiento(
         paciente_id: datos.pacienteId,
         profesional_id: datos.profesionalId,
         fecha: datos.fecha,
+        // Sin consultorio (este camino no lo pide), pero sí la sede.
+        sede_id: datos.sedeId,
         created_by: check.usuario.id,
       })
       .select("id")

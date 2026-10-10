@@ -56,6 +56,7 @@ export function TratamientoDialog({
   corrigiendo,
   editando,
   desdeAtencion,
+  lugar,
   pacientesPendientes = new Set(),
   onGuardado,
   trigger,
@@ -69,6 +70,10 @@ export function TratamientoDialog({
   corrigiendo?: Correccion;
   editando?: Correccion;
   desdeAtencion?: DesdeAtencion;
+  /** Dónde ocurrió la atención (sede, y consultorio si lo hay). Si viene,
+   * el tratamiento lo hereda: no se vuelve a pedir la sede. La BD igual lo
+   * fuerza al guardar (trigger tratamientos_hereda_lugar, 0108). */
+  lugar?: { sede_id: string; texto: string };
   pacientesPendientes?: Set<string>;
   /** Se dispara además del toast, al guardar con éxito — para que quien
    * embebe este diálogo (ej. el detalle de una cita) pueda refrescar su
@@ -146,7 +151,7 @@ export function TratamientoDialog({
           </DialogTitle>
         </DialogHeader>
 
-        <form action={formAction} className="space-y-5">
+        <form action={formAction} className="space-y-4">
           {corrigiendo ? (
             <input type="hidden" name="corrigeA" value={corrigiendo.id} />
           ) : null}
@@ -176,26 +181,62 @@ export function TratamientoDialog({
             </Alert>
           ) : null}
 
-          <div className="space-y-2">
-            <Label htmlFor="pacienteId">Paciente</Label>
-            <Combobox
-              id="pacienteId"
-              name="pacienteId"
-              required
-              items={toItems(pacientes)}
-              value={pacienteId}
-              onValueChange={(valor) => setPacienteId(String(valor ?? ""))}
-              placeholder="Selecciona un paciente"
-            />
-            {pacientePendiente ? (
-              <Alert variant="destructive">
-                <AlertDescription>
-                  Este paciente tiene información obligatoria pendiente. Complétala en su
-                  ficha antes de registrar un tratamiento.
-                </AlertDescription>
-              </Alert>
-            ) : null}
-          </div>
+          {/* Lo que ya se sabe por la atención no se vuelve a digitar: se
+              muestra y viaja en campos ocultos. */}
+          {desdeAtencion || lugar ? (
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-2 rounded-lg border bg-muted/40 p-3 text-sm">
+              {desdeAtencion ? (
+                <>
+                  <div className="col-span-2 min-w-0 sm:col-span-1">
+                    <dt className="text-xs text-muted-foreground">Paciente</dt>
+                    <dd className="font-medium break-words">
+                      {pacientes.find((p) => p.id === pacienteId)?.nombre ?? "—"}
+                    </dd>
+                  </div>
+                  <div className="min-w-0">
+                    <dt className="text-xs text-muted-foreground">Fecha</dt>
+                    <dd className="font-medium">{desdeAtencion.fecha}</dd>
+                  </div>
+                </>
+              ) : null}
+              {lugar ? (
+                <div className="min-w-0">
+                  <dt className="text-xs text-muted-foreground">Lugar</dt>
+                  <dd className="font-medium break-words">{lugar.texto}</dd>
+                </div>
+              ) : null}
+            </dl>
+          ) : null}
+          {desdeAtencion ? (
+            <>
+              <input type="hidden" name="pacienteId" value={pacienteId} />
+              <input type="hidden" name="fecha" value={desdeAtencion.fecha} />
+            </>
+          ) : null}
+          {lugar ? <input type="hidden" name="sedeId" value={lugar.sede_id} /> : null}
+
+          {desdeAtencion ? null : (
+            <div className="space-y-2">
+              <Label htmlFor="pacienteId">Paciente</Label>
+              <Combobox
+                id="pacienteId"
+                name="pacienteId"
+                required
+                items={toItems(pacientes)}
+                value={pacienteId}
+                onValueChange={(valor) => setPacienteId(String(valor ?? ""))}
+                placeholder="Selecciona un paciente"
+              />
+            </div>
+          )}
+          {pacientePendiente ? (
+            <Alert variant="destructive">
+              <AlertDescription>
+                Este paciente tiene información obligatoria pendiente. Complétala en su
+                ficha antes de registrar un tratamiento.
+              </AlertDescription>
+            </Alert>
+          ) : null}
 
           <div className="space-y-2">
             <Label htmlFor="tipoTratamientoId">Tipo de tratamiento</Label>
@@ -215,7 +256,7 @@ export function TratamientoDialog({
             ) : null}
           </div>
 
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="profesionalId">Profesional</Label>
               <Combobox
@@ -227,30 +268,25 @@ export function TratamientoDialog({
                 placeholder="Selecciona"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="fecha">Fecha</Label>
-              <Input
-                id="fecha"
-                name="fecha"
-                type="date"
-                required
-                defaultValue={prefill?.fecha ?? desdeAtencion?.fecha ?? hoy()}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="sedeId">Sede</Label>
-              <Combobox
-                id="sedeId"
-                name="sedeId"
-                required
-                items={toItems(sedes)}
-                defaultValue={prefill?.sede_id}
-                placeholder="Selecciona"
-              />
-            </div>
+            {desdeAtencion ? null : (
+              <div className="space-y-2">
+                <Label htmlFor="fecha">Fecha</Label>
+                <Input id="fecha" name="fecha" type="date" required defaultValue={prefill?.fecha ?? hoy()} />
+              </div>
+            )}
+            {lugar ? null : (
+              <div className="space-y-2">
+                <Label htmlFor="sedeId">Sede</Label>
+                <Combobox
+                  id="sedeId"
+                  name="sedeId"
+                  required
+                  items={toItems(sedes)}
+                  defaultValue={prefill?.sede_id}
+                  placeholder="Selecciona"
+                />
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="medioPagoId">Medio de pago</Label>
               <Combobox
@@ -262,6 +298,20 @@ export function TratamientoDialog({
                 placeholder="Selecciona"
               />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="costo">Valor</Label>
+              <Input
+                id="costo"
+                name="costo"
+                type="number"
+                inputMode="numeric"
+                min="0"
+                step="1000"
+                placeholder="0"
+                required
+                defaultValue={prefill?.costo ?? ""}
+              />
+            </div>
           </div>
           {mediosPago.length === 0 ? (
             <AvisoCatalogoVacio>
@@ -271,25 +321,11 @@ export function TratamientoDialog({
           ) : null}
 
           <div className="space-y-2">
-            <Label htmlFor="costo">Valor</Label>
-            <Input
-              id="costo"
-              name="costo"
-              type="number"
-              min="0"
-              step="1000"
-              placeholder="0"
-              required
-              defaultValue={prefill?.costo ?? ""}
-            />
-          </div>
-
-          <div className="space-y-2">
             <Label htmlFor="notas">Observaciones (opcional)</Label>
             <Textarea
               id="notas"
               name="notas"
-              rows={4}
+              rows={3}
               placeholder="Evolución, indicaciones, reacciones..."
               defaultValue={prefill?.notas ?? ""}
             />
@@ -300,7 +336,7 @@ export function TratamientoDialog({
             <Input
               id="cufe"
               name="cufe"
-              placeholder="Código Único de Facturación Electrónica"
+              placeholder="Código de la factura electrónica"
               defaultValue={prefill?.cufe ?? ""}
             />
           </div>

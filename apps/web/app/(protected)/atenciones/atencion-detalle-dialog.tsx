@@ -26,6 +26,7 @@ import {
 } from "@/lib/pacientes/anamnesis";
 import { nombreCompleto } from "@/lib/pacientes/nombre";
 import { formatoMoneda } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import { TratamientoDialog } from "../tratamientos/tratamiento-dialog";
 import { AnularDialog } from "../tratamientos/anular-dialog";
 import { RevertirAnulacionButton } from "../tratamientos/revertir-anulacion-button";
@@ -163,6 +164,15 @@ export function AtencionDetalleDialog({
     nombre: `${t.fecha} — ${t.tipos_tratamiento?.nombre ?? "Tratamiento"}`,
   }));
 
+  // Dónde ocurrió la atención: lo heredan todos sus tratamientos.
+  const lugar =
+    atencion?.sede_id && atencion.sede
+      ? {
+          sede_id: atencion.sede_id,
+          texto: [atencion.consultorio?.nombre, atencion.sede.nombre].filter(Boolean).join(" · "),
+        }
+      : undefined;
+
   const paciente = atencion?.paciente;
   const pacienteOpcion: Opcion[] =
     atencion && paciente ? [{ id: atencion.paciente_id, nombre: nombreCompleto(paciente) }] : [];
@@ -178,39 +188,34 @@ export function AtencionDetalleDialog({
           <p className="text-sm text-muted-foreground">Cargando...</p>
         ) : (
           <>
-            <div className="space-y-3 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Paciente</span>
-                <span className="font-medium">{paciente ? nombreCompleto(paciente) : "—"}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Profesional</span>
-                <span className="font-medium">{atencion.profesional?.nombre ?? "—"}</span>
-              </div>
-              {atencion.cita ? (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Cita</span>
-                  <span className="font-medium">
-                    {atencion.cita.hora_inicio.slice(0, 5)} – {atencion.cita.hora_fin.slice(0, 5)}
-                    {atencion.cita.consultorios ? ` · ${atencion.cita.consultorios.nombre}` : ""}
-                  </span>
-                </div>
-              ) : (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Origen</span>
-                  <Badge variant="outline">Atención sin cita</Badge>
-                </div>
-              )}
+            {/* Etiqueta arriba y valor abajo: en celular nada se sale por la derecha. */}
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+              <Dato etiqueta="Paciente" className="col-span-2">
+                {paciente ? nombreCompleto(paciente) : "—"}
+              </Dato>
+              <Dato etiqueta="Profesional">{atencion.profesional?.nombre ?? "—"}</Dato>
+              <Dato etiqueta="Origen">
+                {atencion.cita ? (
+                  `Cita ${atencion.cita.hora_inicio.slice(0, 5)} – ${atencion.cita.hora_fin.slice(0, 5)}`
+                ) : (
+                  <Badge variant="outline">Sin cita</Badge>
+                )}
+              </Dato>
+              <Dato etiqueta="Lugar" className="col-span-2">
+                {lugar?.texto ??
+                  (atencion.cita?.consultorios
+                    ? [atencion.cita.consultorios.nombre, atencion.cita.consultorios.sedes?.nombre].filter(Boolean).join(" · ")
+                    : "—")}
+              </Dato>
               {atencion.motivo ? (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Motivo</span>
-                  <span className="font-medium">{atencion.motivo}</span>
-                </div>
+                <Dato etiqueta="Motivo" className="col-span-2">
+                  {atencion.motivo}
+                </Dato>
               ) : null}
-            </div>
+            </dl>
 
             <div className="space-y-2 border-t pt-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="text-sm font-medium">Anamnesis</span>
                 {!anamnesis && puedeCrearTratamiento ? (
                   <AnamnesisDialog
@@ -236,7 +241,7 @@ export function AtencionDetalleDialog({
             </div>
 
             <div className="space-y-2 border-t pt-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="text-sm font-medium">Tratamientos</span>
                 {puedeCrearTratamiento ? (
                   <TratamientoDialog
@@ -247,6 +252,7 @@ export function AtencionDetalleDialog({
                     mediosPago={mediosPago}
                     usuarioActualId={usuarioActualId}
                     pacientesPendientes={pacientesPendientes}
+                    lugar={lugar}
                     desdeAtencion={{
                       id: atencion.id,
                       paciente_id: atencion.paciente_id,
@@ -263,21 +269,24 @@ export function AtencionDetalleDialog({
                 <p className="text-sm text-muted-foreground">Todavía no hay tratamientos en esta atención.</p>
               ) : (
                 <>
-                  <div className="space-y-1">
+                  <div className="space-y-2">
                     {tratamientosVisibles.map((t) => (
-                      <div key={t.id} className="flex items-center justify-between gap-2 text-sm">
-                        <span className={t.anulado ? "text-muted-foreground line-through" : ""}>
-                          {t.tipos_tratamiento?.nombre ?? "—"}
-                          {t.anulado ? (
-                            <Badge variant="outline" className="ml-2 text-xs">
-                              Anulado
-                            </Badge>
-                          ) : null}
-                        </span>
-                        <div className="flex flex-wrap items-center justify-end gap-2">
-                          <span className={t.anulado ? "text-muted-foreground line-through" : "font-medium"}>
+                      <div key={t.id} className="rounded-lg border p-3 text-sm">
+                        <div className="flex items-start justify-between gap-3">
+                          <span className={cn("min-w-0 break-words font-medium", t.anulado && "text-muted-foreground line-through")}>
+                            {t.tipos_tratamiento?.nombre ?? "—"}
+                          </span>
+                          <span className={cn("shrink-0 font-semibold tabular-nums", t.anulado && "text-muted-foreground line-through")}>
                             {formatoMoneda(t.costo)}
                           </span>
+                        </div>
+                        {t.anulado ? (
+                          <Badge variant="outline" className="mt-1 text-xs">
+                            Anulado
+                          </Badge>
+                        ) : null}
+                        {/* Acciones del tratamiento en su propia fila, a lo ancho. */}
+                        <div className="mt-2 flex flex-wrap items-center justify-end gap-1.5 border-t border-dashed pt-2">
                           {!t.anulado ? (
                             <InsumosDialog
                               tratamientoId={t.id}
@@ -311,6 +320,7 @@ export function AtencionDetalleDialog({
                               mediosPago={mediosPago}
                               usuarioActualId={usuarioActualId}
                               pacientesPendientes={pacientesPendientes}
+                              lugar={lugar}
                               editando={{
                                 id: t.id,
                                 paciente_id: t.paciente_id,
@@ -341,6 +351,7 @@ export function AtencionDetalleDialog({
                               mediosPago={mediosPago}
                               usuarioActualId={usuarioActualId}
                               pacientesPendientes={pacientesPendientes}
+                              lugar={lugar}
                               corrigiendo={{
                                 id: t.id,
                                 paciente_id: t.paciente_id,
@@ -378,10 +389,10 @@ export function AtencionDetalleDialog({
             </div>
 
             <div className="space-y-2 border-t pt-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="text-sm font-medium">Evoluciones</span>
                 {puedeCrearTratamiento ? (
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <EvolucionDialog
                       pacienteId={atencion.paciente_id}
                       atencionId={atencion.id}
@@ -465,5 +476,14 @@ export function AtencionDetalleDialog({
         )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+function Dato({ etiqueta, className, children }: { etiqueta: string; className?: string; children: React.ReactNode }) {
+  return (
+    <div className={cn("min-w-0", className)}>
+      <dt className="text-xs text-muted-foreground">{etiqueta}</dt>
+      <dd className="font-medium break-words">{children}</dd>
+    </div>
   );
 }

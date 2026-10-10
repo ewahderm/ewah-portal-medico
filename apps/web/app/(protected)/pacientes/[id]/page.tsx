@@ -222,6 +222,8 @@ export default async function PacienteDetallePage({
       .from("atenciones")
       .select(
         `id, fecha, motivo, cita_id,
+         sede:sedes!atenciones_sede_id_fkey(nombre),
+         consultorio:consultorios!atenciones_consultorio_id_fkey(nombre),
          profesional:usuarios!atenciones_profesional_id_fkey(nombre),
          tratamientos(count), evoluciones_paciente(count), anamnesis_paciente(count)`,
       )
@@ -409,6 +411,7 @@ export default async function PacienteDetallePage({
                   usuarioActualId={usuario.id}
                   tiposTratamiento={tiposTratamiento}
                   sedes={sedes}
+                  consultorios={consultorios}
                   mediosPago={mediosPago}
                   insumos={insumos}
                   lotes={lotes}
