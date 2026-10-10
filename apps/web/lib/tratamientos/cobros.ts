@@ -178,10 +178,3 @@ export async function quitarArchivoFactura(cobroId: string, tipo: "pdf" | "xml")
   return {};
 }
 
-export async function urlArchivoFactura(path: string): Promise<string | null> {
-  const usuario = await getCurrentUsuario();
-  if (!usuario || !path.startsWith(`${usuario.clinica_id}/`)) return null;
-  const supabase = await createClient();
-  const { data } = await supabase.storage.from("cobro-facturas").createSignedUrl(path, 60 * 10, { download: true });
-  return data?.signedUrl ?? null;
-}

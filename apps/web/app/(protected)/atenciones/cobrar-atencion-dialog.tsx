@@ -8,7 +8,6 @@ import {
   guardarFacturaCobro,
   quitarArchivoFactura,
   subirArchivoFactura,
-  urlArchivoFactura,
   type CobroDeAtencion,
 } from "@/lib/tratamientos/cobros";
 import { FileInput } from "@/components/ui/file-input";
@@ -366,12 +365,6 @@ export function FacturaCobroDialog({
     });
   }
 
-  async function descargar(path: string) {
-    const url = await urlArchivoFactura(path);
-    if (url) window.open(url, "_blank", "noopener");
-    else setError("No se pudo descargar el archivo.");
-  }
-
   const archivo = (tipo: "pdf" | "xml", path: string | null) => (
     <div className="space-y-2">
       <Label>{tipo === "pdf" ? "PDF de la factura" : "XML de la factura"}</Label>
@@ -379,7 +372,14 @@ export function FacturaCobroDialog({
         <div className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm">
           <FileTextIcon className="size-4 shrink-0 text-muted-foreground" />
           <span className="min-w-0 flex-1 truncate">{path.split("/").pop()}</span>
-          <Button variant="outline" size="icon-sm" aria-label={`Descargar ${tipo.toUpperCase()}`} onClick={() => descargar(path)}>
+          {/* Enlace directo: sin ventanas emergentes (Safari las bloquea). */}
+          <Button
+            variant="outline"
+            size="icon-sm"
+            aria-label={`Descargar ${tipo.toUpperCase()}`}
+            nativeButton={false}
+            render={<a href={`/api/cobros/factura?cobro=${cobro.id}&tipo=${tipo}`} />}
+          >
             <DownloadIcon />
           </Button>
           {editable ? (
