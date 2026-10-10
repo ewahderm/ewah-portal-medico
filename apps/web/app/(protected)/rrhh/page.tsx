@@ -14,9 +14,10 @@ import {
 } from "@/lib/catalogos";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { RrhhTabs, type EmpleadoRow } from "./rrhh-tabs";
+import { getSolicitudes } from "@/lib/rrhh/solicitudes";
 
-export default async function RrhhPage() {
-  await requireUsuario();
+export default async function RrhhPage({ searchParams }: { searchParams: Promise<{ [k: string]: string | string[] | undefined }> }) {
+  const usuario = await requireUsuario();
   const supabase = await createClient();
 
   const { data: puedeVer } = await supabase.rpc("has_permission", {
@@ -68,6 +69,16 @@ export default async function RrhhPage() {
     getEpsActivasPorPais(supabase, paisOperacionId),
   ]);
 
+  const [{ data: puedeAprobar }, pendientes, resueltas, { data: clinica }] = await Promise.all([
+    supabase.rpc("has_permission", { modulo_code: "rrhh", permiso_code: "APPROVE" }),
+    getSolicitudes({ estado: "pendiente", limite: 200 }),
+    getSolicitudes({ estado: "resueltas", limite: 40 }),
+    supabase.from("clinicas").select("rrhh_sabado_laboral").eq("id", usuario.clinica_id).maybeSingle(),
+  ]);
+  const q = await searchParams;
+  const pestanas = ["empleados", "solicitudes", "accidentes", "protocolos", "nomina"];
+  const pestanaInicial = typeof q.tab === "string" && pestanas.includes(q.tab) ? q.tab : "empleados";
+
   const { data: usuariosClinica } = await supabase
     .from("usuarios")
     .select("id, nombre")
@@ -103,6 +114,8 @@ export default async function RrhhPage() {
         puedeCrear={!!puedeCrear}
         puedeEditar={!!puedeEditar}
         puedeVerNomina={!!puedeVerNomina}
+        solicitudes={{ pendientes, resueltas, sabadoLaboral: clinica?.rrhh_sabado_laboral ?? true, puedeAprobar: !!puedeAprobar }}
+        pestanaInicial={pestanaInicial}
       />
     </div>
   );

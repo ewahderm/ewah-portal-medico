@@ -92,6 +92,26 @@ async function contarUrgentesSst(supabase: Awaited<ReturnType<typeof createClien
   return error || typeof data !== "number" ? 0 : data;
 }
 
+// Solicitudes de RRHH pendientes, solo para quien puede aprobarlas.
+async function contarSolicitudesPendientes(supabase: Awaited<ReturnType<typeof createClient>>): Promise<number> {
+  const { data: puedeAprobar } = await supabase.rpc("has_permission", { modulo_code: "rrhh", permiso_code: "APPROVE" });
+  if (!puedeAprobar) return 0;
+  const { count, error } = await supabase.from("rrhh_solicitudes").select("id", { count: "exact", head: true }).eq("estado", "pendiente");
+  return error ? 0 : count ?? 0;
+}
+
+// ¿El usuario tiene ficha de empleado? Entonces ve "Mis solicitudes". Con el
+// cliente de servicio: quien no tiene acceso a RRHH no puede leer empleados.
+async function tieneFichaEmpleado(usuarioId: string, clinicaId: string): Promise<boolean> {
+  const { count } = await createAdminClient()
+    .from("empleados")
+    .select("id", { count: "exact", head: true })
+    .eq("usuario_id", usuarioId)
+    .eq("clinica_id", clinicaId)
+    .eq("activo", true);
+  return (count ?? 0) > 0;
+}
+
 export default async function ProtectedLayout({
   children,
 }: {
@@ -103,11 +123,13 @@ export default async function ProtectedLayout({
   // sesión (no el admin) — es la bandera cross-tenant del equipo de EWAH
   // Tech, nunca asignable desde ninguna pantalla de la app.
   const supabaseSesion = await createClient();
-  const [{ data: esSuperAdmin }, { data: modulosDisponibles, error: errorModulos }, urgentesHabilitacion, urgentesSst] = await Promise.all([
+  const [{ data: esSuperAdmin }, { data: modulosDisponibles, error: errorModulos }, urgentesHabilitacion, urgentesSst, solicitudesRrhh, esEmpleado] = await Promise.all([
     supabaseSesion.rpc("es_super_admin"),
     supabaseSesion.rpc("fn_modulos_nav_visibles"),
     contarUrgentesHabilitacion(supabaseSesion),
     contarUrgentesSst(supabaseSesion),
+    contarSolicitudesPendientes(supabaseSesion),
+    tieneFichaEmpleado(usuario.id, usuario.clinica_id),
   ]);
   // El filtro del menú es conveniencia, no seguridad: cada página vuelve a
   // exigir su permiso. Si la RPC falla (o la migración 0084 aún no está
@@ -128,9 +150,14 @@ export default async function ProtectedLayout({
             ? { ...menuItem, badge: urgentesSst }
             : item.href === "/habilitacion" && urgentesHabilitacion > 0
               ? { ...menuItem, badge: urgentesHabilitacion }
-              : menuItem;
+              : item.href === "/rrhh" && solicitudesRrhh > 0
+                ? { ...menuItem, badge: solicitudesRrhh }
+                : menuItem;
         }),
     }))
+    .map((grupo) => grupo.label === "Inicio" && esEmpleado
+      ? { ...grupo, items: [...grupo.items, { href: "/mis-solicitudes", label: "Mis solicitudes" }] }
+      : grupo)
     .filter((grupo) => grupo.items.length > 0)
     .map((grupo) => grupo.label === "Administración"
       ? {

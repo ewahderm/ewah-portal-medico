@@ -100,5 +100,59 @@ export const RRHH: Guia = {
         },
       ],
     },
+    {
+      id: "solicitudes-empleado",
+      titulo: "Pedir vacaciones o permisos (para el empleado)",
+      bloques: [
+        {
+          tipo: "texto",
+          texto:
+            "Si tienes usuario en EWAH y tu ficha de empleado está vinculada a él, en el menú aparece **Mis solicitudes**. No necesitas acceso al módulo de Recursos Humanos.",
+        },
+        {
+          tipo: "lista",
+          items: [
+            "Arriba ves **cuántos días de vacaciones tienes disponibles** (se acumulan 15 días hábiles por año trabajado) y **cuántas horas te faltan por reponer**.",
+            "`Nueva solicitud` → elige **Vacaciones** (desde y hasta; EWAH te dice cuántos días hábiles son), **Permiso por horas** (el día, desde qué hora hasta qué hora y el motivo) o **Reposición de horas** (las horas que trabajaste de más para reponer un permiso).",
+            "Puedes pedir **más días de vacaciones de los que tienes acumulados**: la solicitud se envía igual y quien aprueba lo ve marcado.",
+            "La solicitud queda **Pendiente** hasta que el administrador o Recursos Humanos la apruebe o la rechace. Te llega un correo con la respuesta. Mientras esté pendiente puedes `Cancelar solicitud`.",
+          ],
+        },
+        {
+          tipo: "nota",
+          tono: "info",
+          texto:
+            "Si no ves **Mis solicitudes**, tu usuario no está vinculado a tu ficha: pídele a Recursos Humanos que en tu ficha de empleado elija tu usuario en **Vincular a un usuario existente**.",
+        },
+      ],
+    },
+    {
+      id: "solicitudes-aprobar",
+      titulo: "Aprobar solicitudes (para el administrador o Recursos Humanos)",
+      bloques: [
+        {
+          tipo: "texto",
+          texto:
+            "En **Recursos Humanos → Solicitudes** está la bandeja **Por aprobar** (el número también aparece en el menú) y las resueltas recientemente. Cada vez que llega una solicitud, quienes aprueban reciben un correo.",
+        },
+        {
+          tipo: "pasos",
+          pasos: [
+            "Pulsa `Aprobar` o `Rechazar`. Para rechazar escribe el motivo: le llega al empleado.",
+            "En un **permiso por horas**, al aprobar eliges cómo queda: **Se repone** (el empleado debe reponer esas horas), **Remunerado, no se repone** (por ejemplo una cita médica o una calamidad) o **No remunerado** (no se repone, pero se descuenta del pago).",
+            "Al aprobar unas **vacaciones**, quedan registradas en la ficha del empleado y descuentan de su saldo. Si pidió más días de los acumulados, la solicitud lo muestra con la marca *Excede el saldo*; tú decides.",
+            "Las **reposiciones** que apruebes descuentan de las horas que el empleado debe reponer.",
+          ],
+        },
+        {
+          tipo: "lista",
+          items: [
+            "**Quién aprueba:** el Administrador siempre. Para que otra persona (por ejemplo un *Gerente de Recursos Humanos*) apruebe, crea ese rol en **Usuarios** y márcale **Aprobar** en Recursos Humanos. Nadie aprueba su propia solicitud, salvo el Administrador.",
+            "**Empleados sin usuario:** `Registrar solicitud` y eliges el empleado. Necesitas el permiso **Crear** en Recursos Humanos.",
+            "**Días hábiles:** domingos y festivos nunca cuentan. Al final de la pestaña defines si **el sábado es día laboral** en tu clínica.",
+          ],
+        },
+      ],
+    },
   ],
 };
