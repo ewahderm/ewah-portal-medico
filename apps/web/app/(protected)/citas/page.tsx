@@ -157,7 +157,8 @@ export default async function CitasPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      {/* En celular la agenda es la lista del día (AgendaDia) con su propia franja compacta. */}
+      <div className="hidden flex-wrap items-start justify-between gap-4 md:flex">
         <div>
           <h1 className="text-2xl font-semibold">Agenda</h1>
           <p className="text-sm text-muted-foreground">
@@ -220,7 +221,9 @@ export default async function CitasPage({
         </div>
       </div>
 
-      <FiltrosAgenda sedes={sedes} profesionales={profesionales} />
+      <div className="hidden md:block">
+        <FiltrosAgenda sedes={sedes} profesionales={profesionales} />
+      </div>
 
       <AgendaCalendario
         citas={citas}

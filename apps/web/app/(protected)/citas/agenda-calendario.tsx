@@ -10,54 +10,20 @@ import {
   type EventProps,
 } from "react-big-calendar";
 import { format } from "date-fns";
-import {
-  Clock,
-  CircleCheck,
-  CheckCheck,
-  TriangleAlert,
-  X,
-  RotateCcw,
-  Lock,
-  type LucideIcon,
-} from "lucide-react";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import "@/components/calendario/calendario-ewah.css";
 import { CitaDetalleDialog } from "./cita-detalle-dialog";
 import { CitaDialog } from "./cita-dialog";
 import { redondearA15 } from "@/lib/citas/horarios";
-import { nombreCompleto, ESTADO_LABEL, type CitaRow } from "./tipos";
+import { nombreCompleto, type CitaRow } from "./tipos";
+import { ESTADOS_LEYENDA, ESTADOS_POR_CLAVE } from "./estados-cita";
+import { AgendaDia } from "./agenda-dia";
 import { colorPorProfesional } from "./colores-profesional";
 import { localizerEs, mensajesCalendario } from "@/components/calendario/calendario-base";
 
 const localizer = localizerEs;
 const MENSAJES = mensajesCalendario({ evento: "Cita", sinEventos: "No hay citas en este rango." });
 
-// Insignia de estado (ícono en círculo) que se dibuja sobre cada evento y
-// se reutiliza tal cual en la leyenda de "Estado" — una sola tabla para no
-// duplicar la definición entre ambos lugares. El FONDO/borde del evento ya
-// no depende del estado (ver eventPropGetter más abajo): esa señal ahora es
-// 100% profesional, y el estado se comunica solo por esta insignia.
-type EstadoInfo = {
-  clave: string;
-  label: string;
-  Icono: LucideIcon;
-  bgInsignia: string;
-  colorIcono: string;
-};
-
-const ESTADOS_LEYENDA: EstadoInfo[] = [
-  { clave: "agendada", label: ESTADO_LABEL.agendada, Icono: Clock, bgInsignia: "var(--ewah-cyan)", colorIcono: "var(--ewah-navy)" },
-  { clave: "confirmada", label: ESTADO_LABEL.confirmada, Icono: CircleCheck, bgInsignia: "var(--ewah-cyan-dark)", colorIcono: "white" },
-  { clave: "atendida", label: ESTADO_LABEL.atendida, Icono: CheckCheck, bgInsignia: "var(--ewah-navy)", colorIcono: "white" },
-  { clave: "no_asistio", label: ESTADO_LABEL.no_asistio, Icono: TriangleAlert, bgInsignia: "oklch(0.75 0.15 70)", colorIcono: "var(--ewah-navy)" },
-  { clave: "cancelada", label: ESTADO_LABEL.cancelada, Icono: X, bgInsignia: "var(--destructive)", colorIcono: "white" },
-  { clave: "reprogramada", label: ESTADO_LABEL.reprogramada, Icono: RotateCcw, bgInsignia: "var(--ewah-slate)", colorIcono: "white" },
-  { clave: "bloqueo", label: "Bloqueo", Icono: Lock, bgInsignia: "var(--ewah-navy)", colorIcono: "white" },
-];
-
-const ESTADOS_POR_CLAVE: Record<string, EstadoInfo> = Object.fromEntries(
-  ESTADOS_LEYENDA.map((e) => [e.clave, e]),
-);
 
 function combinarFechaHora(fecha: string, hora: string) {
   const [y, m, d] = fecha.split("-").map(Number);
@@ -252,7 +218,21 @@ export function AgendaCalendario({
   }
 
   return (
-    <div className="ewah-calendario" style={{ height: "70vh" }}>
+    <>
+    <AgendaDia
+      citas={citas}
+      fecha={format(fecha, "yyyy-MM-dd")}
+      usuarioActualId={usuarioActualId}
+      puedeCrear={puedeCrear}
+      onAbrir={setCitaSeleccionadaId}
+      onNueva={(dia) => setNuevaCita({ fecha: dia })}
+      onCambiarFecha={(dia) => {
+        const params = new URLSearchParams(window.location.search);
+        params.set("fecha", dia);
+        router.push(`/citas?${params.toString()}`);
+      }}
+    />
+    <div className="ewah-calendario hidden md:block" style={{ height: "70vh" }}>
       {profesionales.length > 0 ? (
         <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
           <span className="font-medium text-foreground">Profesional:</span>
@@ -319,6 +299,7 @@ export function AgendaCalendario({
           };
         }}
       />
+    </div>
 
       {citaSeleccionada ? (
         <CitaDetalleDialog
@@ -364,6 +345,6 @@ export function AgendaCalendario({
           }}
         />
       ) : null}
-    </div>
+    </>
   );
 }
