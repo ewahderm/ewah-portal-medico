@@ -95,6 +95,7 @@ export function AgendaCalendario({
   citas,
   vista,
   fecha,
+  fechaISO,
   puedeEditar,
   puedeCrear,
   puedeCrearTratamiento,
@@ -118,6 +119,9 @@ export function AgendaCalendario({
   citas: CitaRow[];
   vista: "day" | "week" | "month";
   fecha: Date;
+  // El mismo día como texto: un Date cruza del servidor (UTC) al navegador
+  // (Colombia) corrido un día; la lista del celular usa el texto.
+  fechaISO: string;
   puedeEditar: boolean;
   puedeCrear: boolean;
   puedeCrearTratamiento: boolean;
@@ -221,7 +225,7 @@ export function AgendaCalendario({
     <>
     <AgendaDia
       citas={citas}
-      fecha={format(fecha, "yyyy-MM-dd")}
+      fecha={fechaISO}
       usuarioActualId={usuarioActualId}
       puedeCrear={puedeCrear}
       onAbrir={setCitaSeleccionadaId}

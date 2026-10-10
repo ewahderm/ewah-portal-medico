@@ -229,6 +229,7 @@ export default async function CitasPage({
         citas={citas}
         vista={vista}
         fecha={fecha}
+        fechaISO={fechaISO}
         puedeEditar={!!puedeEditar}
         puedeCrear={!!puedeCrear}
         puedeCrearTratamiento={!!puedeCrearTratamiento}
