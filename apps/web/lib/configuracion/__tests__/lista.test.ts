@@ -10,6 +10,7 @@ const vacia: Hechos = {
   tiposTratamiento: 0,
   tiposSinCups: 0,
   tiposSinServicio: 0,
+  tiposSinPrecio: 0,
   mediosPago: 0,
   serviciosHabilitados: 0,
   insumos: null,

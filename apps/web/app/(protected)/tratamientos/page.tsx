@@ -4,7 +4,7 @@ import { requireUsuario, esAdministrador } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { nombreCompleto } from "@/lib/pacientes/nombre";
 import { formatoMoneda } from "@/lib/format";
-import { getSedesActivas, getMediosPagoActivos, getTiposTratamientoActivos } from "@/lib/catalogos";
+import { getSedesActivas, getTiposTratamientoActivos } from "@/lib/catalogos";
 import { tieneInfoPendiente } from "@/lib/pacientes/completitud";
 import { getPacientesActivosParaPicker } from "@/lib/pacientes/picker";
 import {
@@ -41,6 +41,8 @@ type TratamientoRow = {
   fecha: string;
   edad_paciente: number | null;
   costo: number | null;
+  valor_cobrado: number | null;
+  cobro_id: string | null;
   notas: string | null;
   cufe: string | null;
   anulado: boolean;
@@ -50,7 +52,7 @@ type TratamientoRow = {
   tipo_tratamiento_id: string;
   profesional_id: string;
   sede_id: string;
-  medio_pago_id: string;
+  medio_pago_id: string | null;
   pacientes: {
     primer_nombre: string;
     segundo_nombre: string | null;
@@ -112,7 +114,7 @@ export default async function TratamientosPage({
   let historialQuery = supabase
     .from("tratamientos")
     .select(
-      `id, fecha, edad_paciente, costo, notas, cufe, anulado, anulado_motivo, corrige_a,
+      `id, fecha, edad_paciente, costo, valor_cobrado, cobro_id, notas, cufe, anulado, anulado_motivo, corrige_a,
        paciente_id, tipo_tratamiento_id, profesional_id, sede_id, medio_pago_id,
        pacientes(primer_nombre, segundo_nombre, primer_apellido, segundo_apellido),
        tipos_tratamiento(nombre),
@@ -143,7 +145,6 @@ export default async function TratamientosPage({
     tiposTratamiento,
     { data: profesionales },
     sedes,
-    mediosPago,
     { data: insumosData },
     { data: lotesData },
     { data: fotosData },
@@ -160,7 +161,6 @@ export default async function TratamientosPage({
     getTiposTratamientoActivos(supabase),
     supabase.from("usuarios").select("id, nombre").eq("activo", true).order("nombre"),
     getSedesActivas(supabase),
-    getMediosPagoActivos(supabase),
     supabase.from("insumos").select("id, nombre").eq("activo", true).order("orden"),
     supabase
       .from("lotes")
@@ -224,7 +224,6 @@ export default async function TratamientosPage({
               tiposTratamiento={tiposTratamiento ?? []}
               profesionales={profesionales ?? []}
               sedes={sedes ?? []}
-              mediosPago={mediosPago ?? []}
               usuarioActualId={usuario.id}
               pacientesPendientes={pacientesPendientes}
               trigger={<Button>Nuevo tratamiento</Button>}
@@ -254,7 +253,7 @@ export default async function TratamientosPage({
                 <TableHead>Tratamiento</TableHead>
                 <TableHead className="hidden md:table-cell">Sede</TableHead>
                 <TableHead className="hidden md:table-cell">Profesional</TableHead>
-                <TableHead className="hidden md:table-cell">Valor</TableHead>
+                <TableHead className="hidden md:table-cell">Cobrado</TableHead>
                 <TableHead className="hidden md:table-cell">Observaciones</TableHead>
                 <TableHead />
               </TableRow>
@@ -297,7 +296,13 @@ export default async function TratamientosPage({
                     {t.profesional?.nombre ?? "—"}
                   </TableCell>
                   <TableCell className="hidden text-muted-foreground md:table-cell">
-                    {formatoMoneda(t.costo)}
+                    <span className="block tabular-nums">{formatoMoneda(t.valor_cobrado ?? t.costo)}</span>
+                    {t.valor_cobrado !== null && t.costo !== null && t.valor_cobrado !== t.costo ? (
+                      <span className="block text-xs line-through">{formatoMoneda(t.costo)}</span>
+                    ) : null}
+                    {!t.anulado && !t.cobro_id ? (
+                      <Badge variant="outline" className="mt-0.5 text-amber-600">Sin cobrar</Badge>
+                    ) : null}
                   </TableCell>
                   <TableCell className="hidden max-w-xs whitespace-normal break-words text-muted-foreground md:table-cell">
                     {t.notas ?? "—"}
@@ -341,7 +346,6 @@ export default async function TratamientosPage({
                         tiposTratamiento={tiposTratamiento ?? []}
                         profesionales={profesionales ?? []}
                         sedes={sedes ?? []}
-                        mediosPago={mediosPago ?? []}
                         usuarioActualId={usuario.id}
                         pacientesPendientes={pacientesPendientes}
                         editando={{
@@ -353,6 +357,8 @@ export default async function TratamientosPage({
                           medio_pago_id: t.medio_pago_id,
                           fecha: t.fecha,
                           costo: t.costo,
+                          valor_cobrado: t.valor_cobrado,
+                          cobro_id: t.cobro_id,
                           notas: t.notas,
                           cufe: t.cufe,
                         }}
@@ -371,7 +377,6 @@ export default async function TratamientosPage({
                         tiposTratamiento={tiposTratamiento ?? []}
                         profesionales={profesionales ?? []}
                         sedes={sedes ?? []}
-                        mediosPago={mediosPago ?? []}
                         usuarioActualId={usuario.id}
                         pacientesPendientes={pacientesPendientes}
                         corrigiendo={{
@@ -383,6 +388,8 @@ export default async function TratamientosPage({
                           medio_pago_id: t.medio_pago_id,
                           fecha: t.fecha,
                           costo: t.costo,
+                          valor_cobrado: t.valor_cobrado,
+                          cobro_id: t.cobro_id,
                           notas: t.notas,
                           cufe: t.cufe,
                         }}

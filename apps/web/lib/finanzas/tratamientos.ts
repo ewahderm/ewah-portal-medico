@@ -1,7 +1,10 @@
-// Ingresos desde tratamientos (FC3): lógica pura que comparten la pantalla
-// de cobros, el tablero y la configuración de medios de pago.
+// Ingresos desde los cobros de las atenciones (FC3 + 0109): lógica pura que
+// comparten la pantalla de cobros, el tablero y la configuración de medios
+// de pago. Desde 0109 la unidad es el cobro de la atención (un ingreso por
+// cobro), y las atenciones sin cobrar aparecen como 'sin_cobrar'.
 
 export type SituacionIngreso =
+  | "sin_cobrar"
   | "por_generar"
   | "por_confirmar"
   | "por_cobrar"
@@ -15,22 +18,30 @@ export type SituacionIngreso =
   | "excluido";
 
 export type IngresoPendiente = {
-  tratamiento_id: string;
+  // null solo en 'sin_cobrar' (la atención aún no tiene cobro).
+  cobro_id: string | null;
+  atencion_id: string;
   fecha: string;
   valor: number | null;
   situacion: SituacionIngreso;
   movimiento_id: string | null;
-  medio_pago_id: string;
+  medio_pago_id: string | null;
   medio_pago: string | null;
+  // Tratamientos del cobro o de la atención ("Consulta + Toxina").
   tratamiento: string | null;
   // null si quien consulta no puede ver pacientes ni tratamientos.
   paciente: string | null;
+  paciente_id?: string | null;
   sede_id: string;
   // Solo en la vista de excluidos: por qué se decidió no meterlo.
   motivo?: string | null;
 };
 
 export const SITUACIONES: Record<SituacionIngreso, { titulo: string; ayuda: string }> = {
+  sin_cobrar: {
+    titulo: "Atenciones sin cobrar",
+    ayuda: "Tienen tratamientos pero nadie registró el cobro. Ábrelas en la ficha del paciente y usa “Cobrar atención” con el medio de pago y el total.",
+  },
   por_generar: {
     titulo: "Listos para registrar",
     ayuda: "Su medio de pago ya tiene cuenta. Ponlos al día para que entren al flujo de caja.",
@@ -41,15 +52,15 @@ export const SITUACIONES: Record<SituacionIngreso, { titulo: string; ayuda: stri
   },
   por_cobrar: {
     titulo: "Por cobrar",
-    ayuda: "Tratamientos a crédito. Registra el cobro cuando el paciente pague.",
+    ayuda: "Atenciones cobradas a crédito. Registra lo recibido cuando el paciente pague.",
   },
   sin_valor: {
     titulo: "Sin valor",
-    ayuda: "El tratamiento no tiene valor. Corrígelo en Tratamientos o registra aquí lo que se cobró.",
+    ayuda: "El cobro no tiene valor. Corrige el tratamiento o registra aquí lo que se cobró.",
   },
   medio_sin_cuenta: {
     titulo: "Medio de pago sin cuenta",
-    ayuda: "Asigna a qué cuenta llega ese medio de pago y ponlos al día, o registra el cobro de cada uno.",
+    ayuda: "Asigna a qué cuenta llega ese medio de pago y ponlos al día, o registra lo recibido de cada uno.",
   },
   fecha_futura: {
     titulo: "Con fecha futura",
@@ -57,24 +68,24 @@ export const SITUACIONES: Record<SituacionIngreso, { titulo: string; ayuda: stri
   },
   corregido_sin_anular: {
     titulo: "Corregidos sin anular el original",
-    ayuda: "El tratamiento tiene un registro corregido pero no se anuló: los dos cuentan como ingreso. Anula el que sobra en Tratamientos.",
+    ayuda: "Un tratamiento tiene un registro corregido con su propio cobro pero no se anuló: los dos cuentan como ingreso. Anula el que sobra en Tratamientos.",
   },
   anulado_liquidado: {
     titulo: "Anulados con el cobro ya abonado",
     ayuda:
-      "El tratamiento se anuló, pero la pasarela ya abonó ese cobro. Si devolviste la plata al paciente, registra la salida; si fue un error de la liquidación, anúlala en Pasarelas y pon al día.",
+      "El cobro se anuló, pero la pasarela ya lo abonó. Si devolviste la plata al paciente, registra la salida; si fue un error de la liquidación, anúlala en Pasarelas y pon al día.",
   },
   en_flujo: {
     titulo: "Ya en el flujo",
-    ayuda: "Tratamientos cuyo ingreso ya está registrado en el flujo de caja (los 200 más recientes).",
+    ayuda: "Cobros cuyo ingreso ya está registrado en el flujo de caja (los 200 más recientes).",
   },
   excluido: {
     titulo: "Excluidos del flujo",
-    ayuda: "Tratamientos que decidiste no meter en el flujo de caja. Puedes volver a incluirlos cuando quieras.",
+    ayuda: "Cobros que decidiste no meter en el flujo de caja. Puedes volver a incluirlos cuando quieras.",
   },
   anulado_con_ingreso: {
     titulo: "Anulados con ingreso",
-    ayuda: "El tratamiento se anuló pero su ingreso sigue registrado. Al poner al día se anula.",
+    ayuda: "El cobro se anuló pero su ingreso sigue registrado. Al poner al día se anula.",
   },
 };
 
@@ -97,6 +108,8 @@ export function configDeDestino(destino: DestinoMedio): { cuenta_id: string | nu
 }
 
 export type ResumenPendientes = {
+  // Atenciones con tratamientos que nadie cobró (se cobran desde la atención).
+  sinCobrar: { cantidad: number; valor: number };
   // Lo que "Poner al día" resuelve solo.
   porGenerar: { cantidad: number; valor: number };
   anuladosConIngreso: number;
@@ -105,12 +118,13 @@ export type ResumenPendientes = {
   // Lo que pide una acción de la persona (sin valor, medio sin cuenta).
   porRevisar: number;
   fechaFutura: number;
-  // Medios sin cuenta, con cuántos tratamientos y por cuánto.
+  // Medios sin cuenta, con cuántos cobros y por cuánto.
   mediosSinCuenta: { medioPagoId: string; nombre: string; cantidad: number; valor: number }[];
 };
 
 export function resumirPendientes(pendientes: IngresoPendiente[]): ResumenPendientes {
   const r: ResumenPendientes = {
+    sinCobrar: { cantidad: 0, valor: 0 },
     porGenerar: { cantidad: 0, valor: 0 },
     anuladosConIngreso: 0,
     porCobrar: { cantidad: 0, valor: 0 },
@@ -123,6 +137,10 @@ export function resumirPendientes(pendientes: IngresoPendiente[]): ResumenPendie
   for (const p of pendientes) {
     const valor = p.valor ?? 0;
     switch (p.situacion) {
+      case "sin_cobrar":
+        r.sinCobrar.cantidad++;
+        r.sinCobrar.valor += valor;
+        break;
       case "por_generar":
         r.porGenerar.cantidad++;
         r.porGenerar.valor += valor;
@@ -143,10 +161,11 @@ export function resumirPendientes(pendientes: IngresoPendiente[]): ResumenPendie
         break;
       case "medio_sin_cuenta": {
         r.porRevisar++;
-        const m = medios.get(p.medio_pago_id) ?? { medioPagoId: p.medio_pago_id, nombre: p.medio_pago ?? "Medio de pago", cantidad: 0, valor: 0 };
+        const id = p.medio_pago_id ?? "";
+        const m = medios.get(id) ?? { medioPagoId: id, nombre: p.medio_pago ?? "Medio de pago", cantidad: 0, valor: 0 };
         m.cantidad++;
         m.valor += valor;
-        medios.set(p.medio_pago_id, m);
+        medios.set(id, m);
         break;
       }
       case "sin_valor":
@@ -184,8 +203,9 @@ export function vistaDeParametro(v: string | string[] | undefined): VistaCobros 
   return v === "en_flujo" || v === "excluidos" ? v : "pendientes";
 }
 
-// Situaciones en las que se puede decidir no meter el tratamiento en el
-// flujo (las demás ya tienen un ingreso vivo que primero hay que anular).
+// Situaciones en las que se puede decidir no meter el cobro en el flujo (las
+// demás ya tienen un ingreso vivo que primero hay que anular, o, como
+// 'sin_cobrar', todavía no tienen cobro).
 const EXCLUIBLES: SituacionIngreso[] = ["por_generar", "por_confirmar", "por_cobrar", "sin_valor", "medio_sin_cuenta", "fecha_futura"];
 
 export function sePuedeExcluir(situacion: SituacionIngreso): boolean {

@@ -1,8 +1,8 @@
 "use server";
 
-// Ingresos desde tratamientos (FC3): a qué cuenta llega cada medio de
-// pago, poner al día lo pendiente y registrar cobros. La BD (0093) genera
-// los ingresos y vuelve a validar todo.
+// Ingresos desde los cobros de las atenciones (FC3 + 0109): a qué cuenta
+// llega cada medio de pago, poner al día lo pendiente y registrar lo
+// recibido. La BD genera los ingresos y vuelve a validar todo.
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
@@ -48,14 +48,14 @@ export async function guardarConfirmacionMedio(medioPagoId: string, requiere: bo
   return {};
 }
 
-export async function confirmarPago(input: { tratamientoId: string; fecha: string }): Promise<Resultado> {
-  if (!esUuid(input.tratamientoId)) return { error: "Datos inválidos." };
+export async function confirmarPago(input: { cobroId: string; fecha: string }): Promise<Resultado> {
+  if (!esUuid(input.cobroId)) return { error: "Datos inválidos." };
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input.fecha)) return { error: "Elige la fecha del pago." };
   if (input.fecha > hoyBogota()) return { error: "La fecha del pago no puede ser futura." };
   const check = await requirePermiso(MODULO_FINANZAS, "CREATE");
   if (!check.ok) return { error: check.error };
   const supabase = await createClient();
-  const { error } = await supabase.rpc("fn_fin_confirmar_pago", { p_tratamiento: input.tratamientoId, p_fecha: input.fecha });
+  const { error } = await supabase.rpc("fn_fin_confirmar_pago", { p_cobro: input.cobroId, p_fecha: input.fecha });
   if (error) return { error: mensajeError("confirmarPago", error, "No se pudo confirmar el pago.") };
   revalidar();
   return {};
@@ -72,8 +72,8 @@ export async function ponerAlDiaIngresos(): Promise<Resultado & { generados?: nu
   return { generados: Number(r.generados ?? 0), valor: Number(r.valor ?? 0), anulados: Number(r.anulados ?? 0), fallidos: Number(r.fallidos ?? 0) };
 }
 
-export async function registrarCobro(input: { tratamientoId: string; cuentaId: string | null; fecha: string; monto: number | null }): Promise<Resultado> {
-  if (!esUuid(input.tratamientoId) || (input.cuentaId && !esUuid(input.cuentaId))) return { error: "Datos inválidos." };
+export async function registrarCobro(input: { cobroId: string; cuentaId: string | null; fecha: string; monto: number | null }): Promise<Resultado> {
+  if (!esUuid(input.cobroId) || (input.cuentaId && !esUuid(input.cuentaId))) return { error: "Datos inválidos." };
   const check = await requirePermiso(MODULO_FINANZAS, "CREATE");
   if (!check.ok) return { error: check.error };
   const supabase = await createClient();
@@ -82,7 +82,7 @@ export async function registrarCobro(input: { tratamientoId: string; cuentaId: s
   const error = validarCobro({ ...input, hoy: hoyBogota(), fechaInicio: config.fecha_inicio });
   if (error) return { error };
   const { error: errorBd } = await supabase.rpc("fn_fin_registrar_cobro", {
-    p_tratamiento: input.tratamientoId,
+    p_cobro: input.cobroId,
     p_cuenta: input.cuentaId,
     p_fecha: input.fecha,
     p_monto: input.monto,
@@ -92,26 +92,26 @@ export async function registrarCobro(input: { tratamientoId: string; cuentaId: s
   return {};
 }
 
-export async function excluirTratamiento(input: { tratamientoId: string; motivo: string }): Promise<Resultado> {
-  if (!esUuid(input.tratamientoId)) return { error: "Datos inválidos." };
+export async function excluirCobro(input: { cobroId: string; motivo: string }): Promise<Resultado> {
+  if (!esUuid(input.cobroId)) return { error: "Datos inválidos." };
   const invalido = validarMotivoExclusion(input.motivo);
   if (invalido) return { error: invalido };
   const check = await requirePermiso(MODULO_FINANZAS, "CREATE");
   if (!check.ok) return { error: check.error };
   const supabase = await createClient();
-  const { error } = await supabase.rpc("fn_fin_excluir_tratamiento", { p_tratamiento: input.tratamientoId, p_motivo: input.motivo.trim() });
-  if (error) return { error: mensajeError("excluirTratamiento", error, "No se pudo excluir el tratamiento del flujo de caja.") };
+  const { error } = await supabase.rpc("fn_fin_excluir_cobro", { p_cobro: input.cobroId, p_motivo: input.motivo.trim() });
+  if (error) return { error: mensajeError("excluirCobro", error, "No se pudo excluir el cobro del flujo de caja.") };
   revalidar();
   return {};
 }
 
-export async function reincluirTratamiento(tratamientoId: string): Promise<Resultado> {
-  if (!esUuid(tratamientoId)) return { error: "Datos inválidos." };
+export async function reincluirCobro(cobroId: string): Promise<Resultado> {
+  if (!esUuid(cobroId)) return { error: "Datos inválidos." };
   const check = await requirePermiso(MODULO_FINANZAS, "CREATE");
   if (!check.ok) return { error: check.error };
   const supabase = await createClient();
-  const { error } = await supabase.rpc("fn_fin_reincluir_tratamiento", { p_tratamiento: tratamientoId });
-  if (error) return { error: mensajeError("reincluirTratamiento", error, "No se pudo volver a incluir el tratamiento.") };
+  const { error } = await supabase.rpc("fn_fin_reincluir_cobro", { p_cobro: cobroId });
+  if (error) return { error: mensajeError("reincluirCobro", error, "No se pudo volver a incluir el cobro.") };
   revalidar();
   return {};
 }

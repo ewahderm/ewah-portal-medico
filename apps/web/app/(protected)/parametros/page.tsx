@@ -35,6 +35,7 @@ import { MotivoMovimientoDialog } from "./motivo-movimiento-dialog";
 import { CargosTable, type CargoRow } from "./cargos-table";
 import { CargoDialog } from "./cargo-dialog";
 import { TiposTratamientoTable, type TipoTratamientoRow } from "./tipos-tratamiento-table";
+import type { PrecioConAutor } from "./precios-tratamiento-dialog";
 import { TipoTratamientoDialog } from "./tipo-tratamiento-dialog";
 import { DatosBasicosClinicaDialog } from "./datos-basicos-clinica-dialog";
 import {
@@ -137,6 +138,7 @@ export default async function ParametrosPage({ searchParams }: { searchParams: P
     cupsActivos,
     practicasMedicas,
     serviciosHabilitados,
+    preciosTratamientoData,
   ] = await Promise.all([
     Promise.all(
       CATALOGOS.map(async (catalogo) => {
@@ -225,6 +227,9 @@ export default async function ParametrosPage({ searchParams }: { searchParams: P
     getCupsActivadosClinica(supabase),
     getPracticasMedicasActivas(supabase),
     getServiciosHabilitadosClinica(supabase),
+    supabase
+      .from("precios_tratamiento")
+      .select("tipo_tratamiento_id, valor, vigente_desde, created_at, autor:usuarios!precios_tratamiento_created_by_fkey(nombre)"),
   ]);
 
   const cupsTabInicial = await buscarCups("");
@@ -415,6 +420,7 @@ export default async function ParametrosPage({ searchParams }: { searchParams: P
       tabla_ui: (
         <TiposTratamientoTable
           valores={(tiposTratamientoData.data ?? []) as unknown as TipoTratamientoRow[]}
+          precios={((preciosTratamientoData.data ?? []) as unknown as PrecioConAutor[]).map((p) => ({ ...p, valor: Number(p.valor) }))}
           cups={cupsActivos}
           servicios={serviciosOpciones}
           editable

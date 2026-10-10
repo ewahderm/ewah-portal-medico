@@ -199,7 +199,7 @@ export const FINANZAS_COBROS: Guia = {
   slug: "cobros-y-bold",
   titulo: "Cobros de tratamientos y pasarelas de pago",
   resumen:
-    "Qué pasa con cada cobro desde que registras el tratamiento hasta que la plata llega al banco: medios de pago, cobros pendientes, link de pago, reporte de la pasarela (Bold, Wompi, PayU…) y liquidación.",
+    "Qué pasa con cada cobro desde que cobras la atención hasta que la plata llega al banco: medios de pago, cobros pendientes, link de pago, reporte de la pasarela (Bold, Wompi, PayU…) y liquidación.",
   grupo: "Flujo de caja",
   icono: "credit-card",
   ruta: "/finanzas/cobros",
@@ -216,7 +216,7 @@ export const FINANZAS_COBROS: Guia = {
         {
           tipo: "pasos",
           pasos: [
-            "**Registras el tratamiento** con un medio de pago que va a la pasarela (por ejemplo Datáfono o Link de pago). Ejemplo: una consulta de $2.840.000 pagada con tarjeta Visa.",
+            "**Cobras la atención** con un medio de pago que va a la pasarela (por ejemplo Datáfono o Link de pago). Ejemplo: una atención con consulta y toxina por $2.840.000 pagada con tarjeta Visa. Es un solo cobro por el total, igual que el pago que hace el paciente.",
             "**El cobro queda pendiente de abono.** El ingreso se anota en la cuenta de la pasarela por el valor completo. Es plata tuya, pero todavía no está en tu banco.",
             "**La pasarela te abona** al banco un total que junta varios pagos y ya trae descontadas la comisión y las retenciones. Del ejemplo, llegan $2.686.226,40 y quedan $153.773,60 de deducciones.",
             "**Tú liquidas.** Marcas los cobros que incluía ese abono y confirmas cuánto llegó. EWAH pasa la plata de la pasarela al banco y registra aparte la comisión y las retenciones.",
@@ -263,7 +263,7 @@ export const FINANZAS_COBROS: Guia = {
           tipo: "nota",
           tono: "info",
           texto:
-            "**Medio de pago ≠ pasarela.** El medio de pago es *cómo paga el paciente* (tarjeta de crédito, tarjeta de débito, link de pago, PSE, efectivo…). La pasarela es *quién procesa ese pago* (Bold, Wompi…). En EWAH cada medio apunta a una sola cuenta: si todo lo cobras con una pasarela, deja los medios con su nombre normal y asígnalos a la cuenta de esa pasarela. Si usas **dos o más pasarelas**, pon la pasarela en el nombre del medio (por ejemplo \"Tarjeta de crédito (Bold)\" y \"Tarjeta de crédito (Wompi)\") para que el personal elija bien al registrar el tratamiento.",
+            "**Medio de pago ≠ pasarela.** El medio de pago es *cómo paga el paciente* (tarjeta de crédito, tarjeta de débito, link de pago, PSE, efectivo…). La pasarela es *quién procesa ese pago* (Bold, Wompi…). En EWAH cada medio apunta a una sola cuenta: si todo lo cobras con una pasarela, deja los medios con su nombre normal y asígnalos a la cuenta de esa pasarela. Si usas **dos o más pasarelas**, pon la pasarela en el nombre del medio (por ejemplo \"Tarjeta de crédito (Bold)\" y \"Tarjeta de crédito (Wompi)\") para que el personal elija bien al cobrar la atención.",
         },
         {
           tipo: "nota",
@@ -281,44 +281,45 @@ export const FINANZAS_COBROS: Guia = {
         {
           tipo: "texto",
           texto:
-            "Cada tratamiento con valor entra **solo** al flujo de caja como ingreso de **Servicios de salud**, sin que hagas nada, siempre que su medio de pago tenga cuenta. Lo que no pudo entrar aparece en **Cobros**. Arriba eliges qué ver:",
+            "Cada atención **cobrada** entra **sola** al flujo de caja como **un ingreso** de **Servicios de salud** por el total cobrado, sin que hagas nada, siempre que su medio de pago tenga cuenta. Lo que no pudo entrar aparece en **Cobros**. Arriba eliges qué ver:",
         },
         {
           tipo: "lista",
           items: [
-            "**Pendientes** (la vista por defecto): tratamientos que aún no entraron. Cada fila lleva la marca *Pendiente*.",
-            "**Ya en el flujo:** tratamientos cuyo ingreso ya está registrado (marca *Ya en el flujo*; se muestran los 200 más recientes).",
-            "**Excluidos:** tratamientos que decidiste no meter en el flujo (marca *Excluido*), con su motivo.",
+            "**Pendientes** (la vista por defecto): cobros que aún no entraron y atenciones que nadie ha cobrado. Cada fila lleva la marca *Pendiente*.",
+            "**Ya en el flujo:** cobros cuyo ingreso ya está registrado (marca *Ya en el flujo*; se muestran los 200 más recientes).",
+            "**Excluidos:** cobros que decidiste no meter en el flujo (marca *Excluido*), con su motivo.",
           ],
         },
         {
           tipo: "texto",
-          texto: "Dentro de **Pendientes**, cada sección te dice por qué el tratamiento no ha entrado y qué hacer:",
+          texto: "Dentro de **Pendientes**, cada sección te dice por qué el cobro no ha entrado y qué hacer:",
         },
         {
           tipo: "lista",
           items: [
+            "**Atenciones sin cobrar:** tienen tratamientos pero nadie registró el cobro. Pulsa `Ir a la ficha`, abre la atención y usa `Cobrar atención`.",
             "**Listos para registrar:** su medio ya tiene cuenta. Pulsa `Poner al día` y entran todos de una vez.",
             "**Medio de pago sin cuenta:** el medio de pago no tiene destino. Asígnalo en Configuración y pulsa `Poner al día`, o registra el cobro de cada uno a mano.",
-            "**Por cobrar:** tratamientos a crédito. Cuando el paciente pague, pulsa `Registrar cobro` y elige la cuenta, la fecha y el valor.",
+            "**Por cobrar:** atenciones cobradas a crédito. Cuando el paciente pague, pulsa `Registrar cobro` y elige la cuenta, la fecha y el valor.",
             "**Esperando confirmación de la pasarela:** medios (como el link de pago) que esperan que confirmes que se pagó. Ver la siguiente sección.",
-            "**Sin valor:** el tratamiento no tiene valor. Corrígelo en Tratamientos o registra aquí lo que se cobró.",
+            "**Sin valor:** el cobro no tiene valor. Corrige el tratamiento o registra aquí lo que se cobró.",
             "**Con fecha futura:** entrarán cuando llegue su fecha, al poner al día.",
-            "**Corregidos sin anular / Anulados:** casos de tratamientos corregidos o anulados que piden que revises cuál de los registros sobra.",
+            "**Corregidos sin anular / Anulados:** casos de cobros o tratamientos corregidos o anulados que piden que revises cuál de los registros sobra.",
           ],
         },
         {
           tipo: "pasos",
           pasos: [
-            "Si un tratamiento **no debe generar ingreso** (una cortesía, un registro de prueba, algo que se cobró fuera de la clínica), pulsa `No meter en el flujo` y escribe el motivo.",
-            "El tratamiento **no se borra ni se modifica**: solo sale de los pendientes y aparece en **Excluidos**. Desde allí puedes `Volver a incluir` cuando quieras.",
+            "Si un cobro **no debe generar ingreso** (una cortesía, un registro de prueba, algo que se cobró fuera de la clínica), pulsa `No meter en el flujo` y escribe el motivo.",
+            "La atención y su cobro **no se borran ni se modifican**: solo sale de los pendientes y aparece en **Excluidos**. Desde allí puedes `Volver a incluir` cuando quieras.",
           ],
         },
         {
           tipo: "nota",
           tono: "aviso",
           texto:
-            "Un tratamiento que **ya entró** al flujo no se puede excluir. Si entró por error, primero se anula su ingreso en **Movimientos** (con permiso para anular) y después vuelve a Pendientes.",
+            "Un cobro que **ya entró** al flujo no se puede excluir. Si entró por error, primero se anula su ingreso en **Movimientos** (con permiso para anular) y después vuelve a Pendientes.",
         },
         { tipo: "imagen", archivo: "finanzas-cobros.jpg", alt: "Cobros pendientes, ya en el flujo y excluidos" },
       ],
@@ -443,12 +444,12 @@ export const FINANZAS_COBROS: Guia = {
         {
           tipo: "lista",
           items: [
-            "**Registré un tratamiento y no aparece en Ingresos.** Revisa **Cobros → Pendientes**: allí dice por qué (medio sin cuenta, a crédito, esperando confirmación, sin valor o fecha futura). Lo más común es un medio de pago sin cuenta asignada.",
-            "**La pasarela me cobró pero no encuentro el tratamiento.** Sube el reporte: el pago aparece en *Pagos sin su cobro* con aviso de que no tiene cobro. Registra el tratamiento que falta y vuelve a subir el mismo reporte: no duplica nada y empareja el pago con el cobro nuevo.",
+            "**Registré un tratamiento y no aparece en Ingresos.** Lo más común es que la atención **no se haya cobrado**: aparece en **Cobros → Pendientes → Atenciones sin cobrar**. Si ya se cobró, allí mismo dice por qué no entró (medio sin cuenta, a crédito, esperando confirmación, sin valor o fecha futura).",
+            "**La pasarela me cobró pero no encuentro el cobro.** El pago de la pasarela se compara con el **total de la atención**. Si la atención no se cobró en EWAH, cóbrala con ese total y medio de pago, y vuelve a subir el mismo reporte: no duplica nada y empareja el pago con el cobro nuevo.",
             "**Llegó menos plata de la esperada.** Si no subiste el reporte, puede ser otra franquicia o tarjeta con comisión distinta: sube el reporte para ver el valor real. Si aun así no cuadra, revisa que marcaste exactamente los cobros del abono.",
             "**El paciente no pagó el link.** Usa `No se pagó` en *Esperando confirmación de la pasarela* (si el medio tiene la confirmación activa) o `No meter en el flujo`.",
             "**Tengo dos pasarelas.** Crea una cuenta de tipo *Pasarela de pago* por cada una, asigna a cada medio de pago su cuenta y sube cada reporte eligiendo su pasarela. Liquida cada una por separado.",
-            "**Anulé un tratamiento cuyo cobro ya se liquidó.** Aparece en *Anulados con el cobro ya abonado*: la pasarela ya pagó esa plata. Si le devolviste el dinero al paciente, registra la salida; si fue un error de la liquidación, anúlala en Pasarelas y pon al día.",
+            "**Anulé un cobro que ya se liquidó.** Aparece en *Anulados con el cobro ya abonado*: la pasarela ya pagó esa plata. Si le devolviste el dinero al paciente, registra la salida; si fue un error de la liquidación, anúlala en Pasarelas y pon al día.",
             "**El mes ya está cerrado.** Un ingreso nuevo de un mes cerrado entra en el primer día abierto y lo indica en su descripción.",
           ],
         },

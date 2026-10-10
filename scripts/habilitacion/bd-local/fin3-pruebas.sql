@@ -28,7 +28,7 @@ select id as tarjeta from fin_cuentas where tipo = 'tarjeta_socio' \gset
 select pg_temp.trat(:'hoy', 80000, :'efectivo_mp') as antes \gset
 select t.ok(not exists (select 1 from pg_temp.vivo(:'antes')), 'sin cuenta asignada al medio no se genera ingreso');
 select t.ok(situacion = 'medio_sin_cuenta' and medio_pago = 'Medio Reporte' and paciente = 'Paciente Colombia' and valor = 80000,
-  'queda por revisar, con el medio y el paciente para resolverlo') from fn_fin_ingresos_pendientes() where tratamiento_id = :'antes';
+  'queda por revisar, con el medio y el paciente para resolverlo') from fn_fin_ingresos_pendientes() where cobro_id = :'antes';
 
 -- Medio de pago → cuenta.
 insert into fin_medios_pago (clinica_id, medio_pago_id, cuenta_id) values (clinica_actual(), :'efectivo_mp', :'efectivo');
@@ -44,7 +44,7 @@ delete from fin_medios_pago where medio_pago_id = :'efectivo_mp';
 select t.ok(count(*) = 1, 'por la API una configuración no se borra') from fin_medios_pago where medio_pago_id = :'efectivo_mp';
 
 -- Al asignar la cuenta, el pendiente queda listo y la puesta al día lo genera.
-select t.ok(situacion = 'por_generar', 'con la cuenta asignada queda listo para generar') from fn_fin_ingresos_pendientes() where tratamiento_id = :'antes';
+select t.ok(situacion = 'por_generar', 'con la cuenta asignada queda listo para generar') from fn_fin_ingresos_pendientes() where cobro_id = :'antes';
 select pg_temp.saldo(:'efectivo') as efectivo_antes \gset
 select t.ok(fn_fin_generar_ingresos() = '{"generados": 1, "valor": 80000, "anulados": 0, "fallidos": 0}'::jsonb, 'la puesta al día genera el ingreso pendiente');
 select t.ok(pg_temp.saldo(:'efectivo') = :'efectivo_antes'::numeric + 80000, 'y el efectivo sube');
@@ -57,7 +57,7 @@ select t.ok(tipo = 'ingreso' and categoria_codigo = 'SERVICIOS_SALUD' and cuenta
   and sede_id is not null and created_by = auth.uid() and fecha = :'hoy',
   'el tratamiento genera su ingreso (servicios de salud, sin el nombre del paciente)') from pg_temp.vivo(:'t1');
 select t.ok(pg_temp.saldo(:'efectivo') = :'efectivo_antes'::numeric + 230000, 'el ingreso suma al efectivo');
-select t.ok(not exists (select 1 from fn_fin_ingresos_pendientes() where tratamiento_id = :'t1'), 'y no queda pendiente');
+select t.ok(not exists (select 1 from fn_fin_ingresos_pendientes() where cobro_id = :'t1'), 'y no queda pendiente');
 
 -- Pasarela: entra pendiente de abono con fecha esperada.
 select pg_temp.trat(:'hoy', 100000, :'bold_mp') as t2 \gset
@@ -67,7 +67,7 @@ select t.ok(cuenta_id = :'bold' and estado = 'pendiente_abono' and fecha_esperad
 -- Crédito: por cobrar, sin movimiento.
 select pg_temp.trat(:'hoy', 300000, :'credito_mp') as t3 \gset
 select t.ok(not exists (select 1 from pg_temp.vivo(:'t3')), 'el crédito no mueve plata al registrarse');
-select t.ok(situacion = 'por_cobrar' and valor = 300000, 'queda por cobrar') from fn_fin_ingresos_pendientes() where tratamiento_id = :'t3';
+select t.ok(situacion = 'por_cobrar' and valor = 300000, 'queda por cobrar') from fn_fin_ingresos_pendientes() where cobro_id = :'t3';
 
 -- Lo que no aplica.
 select pg_temp.trat('2026-01-10', 50000, :'efectivo_mp') as t_antes_inicio \gset
@@ -76,10 +76,10 @@ select pg_temp.trat(:'hoy', null, :'efectivo_mp') as t_sin_valor \gset
 select pg_temp.trat(:'hoy'::date + 3, 70000, :'efectivo_mp') as t_futuro \gset
 select t.ok(not exists (select 1 from fin_movimientos where origen_id in (:'t_antes_inicio', :'t_cortesia', :'t_sin_valor', :'t_futuro')),
   'antes del inicio, cortesía, sin valor o futuro: no generan ingreso (y el tratamiento se guarda)');
-select t.ok(not exists (select 1 from fn_fin_ingresos_pendientes() where tratamiento_id in (:'t_antes_inicio', :'t_cortesia')),
+select t.ok(not exists (select 1 from fn_fin_ingresos_pendientes() where cobro_id in (:'t_antes_inicio', :'t_cortesia')),
   'lo anterior al inicio y las cortesías no piden revisión');
-select t.ok((select situacion from fn_fin_ingresos_pendientes() where tratamiento_id = :'t_sin_valor') = 'sin_valor'
-  and (select situacion from fn_fin_ingresos_pendientes() where tratamiento_id = :'t_futuro') = 'fecha_futura',
+select t.ok((select situacion from fn_fin_ingresos_pendientes() where cobro_id = :'t_sin_valor') = 'sin_valor'
+  and (select situacion from fn_fin_ingresos_pendientes() where cobro_id = :'t_futuro') = 'fecha_futura',
   'sin valor y con fecha futura quedan por revisar');
 
 -- Anular el tratamiento anula su ingreso; revertir lo genera de nuevo.
@@ -95,7 +95,7 @@ select t.ok(pg_temp.saldo(:'efectivo') = :'efectivo_antes'::numeric + 230000, 'y
 -- Anular a mano el ingreso de un tratamiento (cuenta equivocada): vuelve a pendiente.
 select id as ingreso_t2 from pg_temp.vivo(:'t2') \gset
 select fn_fin_anular_movimiento(:'ingreso_t2', 'El cobro entró por el banco, no por Bold');
-select t.ok(situacion = 'por_generar', 'anulado a mano, el tratamiento vuelve a quedar pendiente') from fn_fin_ingresos_pendientes() where tratamiento_id = :'t2';
+select t.ok(situacion = 'por_generar', 'anulado a mano, el tratamiento vuelve a quedar pendiente') from fn_fin_ingresos_pendientes() where cobro_id = :'t2';
 
 -- Registrar el cobro (crédito o resolución a mano).
 select t.debe_fallar(format($q$select fn_fin_registrar_cobro(%L, %L, %L, 300000)$q$, :'t3', :'tarjeta', :'hoy'), 'tarjeta de un socio');
@@ -108,10 +108,10 @@ select fn_fin_registrar_cobro(:'t3', :'banco', :'hoy', 300000) as cobro \gset
 select t.ok(cuenta_id = :'banco' and estado = 'registrado' and origen = 'tratamiento' and descripcion like 'Cobro: Tratamiento Reporte del %',
   'el cobro entra al banco como ingreso del tratamiento') from fin_movimientos where id = :'cobro';
 select t.ok(pg_temp.saldo(:'banco') = :'banco_antes'::numeric + 300000, 'y suma al banco');
-select t.ok(not exists (select 1 from fn_fin_ingresos_pendientes() where tratamiento_id = :'t3'), 'ya no está por cobrar');
+select t.ok(not exists (select 1 from fn_fin_ingresos_pendientes() where cobro_id = :'t3'), 'ya no está por cobrar');
 select t.debe_fallar(format($q$select fn_fin_registrar_cobro(%L, %L, %L, 300000)$q$, :'t3', :'banco', :'hoy'), 'ya tiene su ingreso');
 select fn_fin_registrar_cobro(:'t2', :'banco', :'hoy', 100000);
-select t.ok(not exists (select 1 from fn_fin_ingresos_pendientes() where tratamiento_id = :'t2'), 'el pendiente también se resuelve registrando el cobro');
+select t.ok(not exists (select 1 from fn_fin_ingresos_pendientes() where cobro_id = :'t2'), 'el pendiente también se resuelve registrando el cobro');
 select t.debe_fallar(format($q$select fn_fin_registrar_cobro(%L, %L, %L, 1)$q$, :'t1', :'banco', :'hoy'), 'ya tiene su ingreso');
 reset role;
 
@@ -121,21 +121,21 @@ select t.como('00000000-0000-0000-0000-00000000000a'); set role authenticated;
 select pg_temp.trat(:'hoy', 2000000, :'efectivo_mp') as t_falla \gset
 select t.ok(exists (select 1 from tratamientos where id = :'t_falla') and not exists (select 1 from pg_temp.vivo(:'t_falla')),
   'si el ingreso no se puede generar, el tratamiento se guarda igual');
-select t.ok(situacion = 'por_generar', 'y queda pendiente para la puesta al día') from fn_fin_ingresos_pendientes() where tratamiento_id = :'t_falla';
+select t.ok(situacion = 'por_generar', 'y queda pendiente para la puesta al día') from fn_fin_ingresos_pendientes() where cobro_id = :'t_falla';
 reset role;
 alter table fin_movimientos drop constraint t_prueba_tope;
 
 -- Un tratamiento anulado cuyo ingreso quedó vivo (p. ej. por un fallo) se pone al día.
-alter table tratamientos disable trigger tratamientos_flujo_caja;
+alter table cobros_atencion disable trigger cobros_atencion_flujo_caja;
 update tratamientos set anulado = true, anulado_motivo = 'Anulado sin sincronizar', anulado_en = now() where id = :'t1';
-alter table tratamientos enable trigger tratamientos_flujo_caja;
+alter table cobros_atencion enable trigger cobros_atencion_flujo_caja;
 select t.como('00000000-0000-0000-0000-00000000000a'); set role authenticated;
-select t.ok(situacion = 'anulado_con_ingreso', 'el ingreso vivo de un tratamiento anulado queda por revisar') from fn_fin_ingresos_pendientes() where tratamiento_id = :'t1';
+select t.ok(situacion = 'anulado_con_ingreso', 'el ingreso vivo de un tratamiento anulado queda por revisar') from fn_fin_ingresos_pendientes() where cobro_id = :'t1';
 select t.ok(fn_fin_generar_ingresos() = '{"generados": 1, "valor": 2000000, "anulados": 1, "fallidos": 0}'::jsonb, 'la puesta al día lo anula y genera lo que faltaba');
 select t.ok(not exists (select 1 from pg_temp.vivo(:'t1')), 'el tratamiento anulado ya no tiene ingreso');
 -- El inicio se puede mover hacia atrás: el tratamiento del 10 de enero queda pendiente.
 update fin_config set fecha_inicio = '2026-01-05', motivo_cambio = 'Cargar también la primera semana de enero';
-select t.ok(situacion = 'por_generar', 'mover el inicio hacia atrás deja pendientes los tratamientos de ese rango') from fn_fin_ingresos_pendientes() where tratamiento_id = :'t_antes_inicio';
+select t.ok(situacion = 'por_generar', 'mover el inicio hacia atrás deja pendientes los tratamientos de ese rango') from fn_fin_ingresos_pendientes() where cobro_id = :'t_antes_inicio';
 select t.ok((fn_fin_generar_ingresos() ->> 'generados')::int = 1, 'y la puesta al día los genera');
 reset role;
 
@@ -197,7 +197,7 @@ select pg_temp.corregir(:'tc', 200000, :'credito_mp') as tc2 \gset
 select t.ok(cuenta_id = :'banco' and monto_original = 200000 and cobro_manual and fecha = :'hoy',
   'al editar el tratamiento, el cobro pasa al registro corregido') from pg_temp.vivo(:'tc2');
 select t.ok(pg_temp.saldo(:'banco') = :'banco_tc'::numeric, 'y el banco no cambia');
-select t.ok(not exists (select 1 from fn_fin_ingresos_pendientes() where tratamiento_id in (:'tc', :'tc2')), 'y el paciente no queda debiendo');
+select t.ok(not exists (select 1 from fn_fin_ingresos_pendientes() where cobro_id in (:'tc', :'tc2')), 'y el paciente no queda debiendo');
 
 -- Un tratamiento con ingreso automático que se edita: el corregido genera el suyo y el original se anula.
 select pg_temp.trat(:'hoy', 90000, :'efectivo_mp') as te \gset
@@ -207,14 +207,14 @@ select t.ok(pg_temp.saldo(:'efectivo') = :'efectivo_te'::numeric + 5000 and not 
   'editar el valor deja solo el ingreso del corregido');
 -- Edición a medias (el original no se anuló): los dos tendrían ingreso.
 select pg_temp.corregir(:'te2', 95000, :'efectivo_mp', false) as te3 \gset
-select t.ok(situacion = 'corregido_sin_anular', 'una corrección sin anular el original queda por revisar') from fn_fin_ingresos_pendientes() where tratamiento_id = :'te2';
+select t.ok(situacion = 'corregido_sin_anular', 'una corrección sin anular el original queda por revisar') from fn_fin_ingresos_pendientes() where cobro_id = :'te2';
 update tratamientos set anulado = true, anulado_motivo = 'Anulado tras revisar', anulado_por = auth.uid(), anulado_en = now() where id = :'te2';
-select t.ok(not exists (select 1 from fn_fin_ingresos_pendientes() where tratamiento_id in (:'te2', :'te3')), 'al anular el original se resuelve');
+select t.ok(not exists (select 1 from fn_fin_ingresos_pendientes() where cobro_id in (:'te2', :'te3')), 'al anular el original se resuelve');
 
 -- Cuenta desactivada después de asignarla: sus tratamientos quedan por revisar.
 update fin_cuentas set activa = false where id = :'bold';
 select pg_temp.trat(:'hoy', 60000, :'bold_mp') as tb \gset
-select t.ok(situacion = 'medio_sin_cuenta', 'si la cuenta del medio se desactivó, queda por revisar') from fn_fin_ingresos_pendientes() where tratamiento_id = :'tb';
+select t.ok(situacion = 'medio_sin_cuenta', 'si la cuenta del medio se desactivó, queda por revisar') from fn_fin_ingresos_pendientes() where cobro_id = :'tb';
 update fin_cuentas set activa = true where id = :'bold';
 select fn_fin_generar_ingresos();
 select t.ok(estado = 'pendiente_abono', 'reactivada, la puesta al día lo registra pendiente de abono') from pg_temp.vivo(:'tb');
@@ -245,7 +245,7 @@ reset role;
 -- Finanzas sin acceso clínico no ve nombres de pacientes.
 select t.como('00000000-0000-0000-0000-00000000000a'); set role authenticated;
 select pg_temp.trat(:'hoy', 10000, :'credito_mp') as t_contador \gset
-select t.ok(paciente = 'Paciente Colombia', 'quien ve tratamientos sí ve el nombre') from fn_fin_ingresos_pendientes() where tratamiento_id = :'t_contador';
+select t.ok(paciente = 'Paciente Colombia', 'quien ve tratamientos sí ve el nombre') from fn_fin_ingresos_pendientes() where cobro_id = :'t_contador';
 reset role;
 select t.como('00000000-0000-0000-0000-0000000f3c01'); set role authenticated;
 select t.ok(count(*) > 0 and bool_and(paciente is null), 'el contador ve lo pendiente sin el nombre del paciente') from fn_fin_ingresos_pendientes();

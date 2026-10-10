@@ -64,9 +64,11 @@ function datosTratamientoDesdeForm(formData: FormData) {
     tipoTratamientoId: String(formData.get("tipoTratamientoId") ?? ""),
     profesionalId: String(formData.get("profesionalId") ?? ""),
     sedeId: String(formData.get("sedeId") ?? ""),
-    medioPagoId: String(formData.get("medioPagoId") ?? ""),
     fecha: String(formData.get("fecha") ?? "").trim(),
+    // Precio (propuesto por el precio vigente, editable) y lo que se cobra
+    // por este tratamiento. El medio de pago va en el cobro de la atención.
     costoTexto: String(formData.get("costo") ?? "").trim(),
+    valorCobradoTexto: String(formData.get("valorCobrado") ?? "").trim(),
     notas: campoOpcional(formData, "notas"),
     cufe: campoOpcional(formData, "cufe"),
   };
@@ -78,15 +80,18 @@ function validarDatosTratamiento(datos: ReturnType<typeof datosTratamientoDesdeF
     !datos.tipoTratamientoId ||
     !datos.profesionalId ||
     !datos.sedeId ||
-    !datos.medioPagoId ||
     !datos.fecha ||
     !datos.costoTexto
   ) {
-    return "Paciente, tratamiento, profesional, sede, medio de pago, fecha y valor son obligatorios.";
+    return "Paciente, tratamiento, profesional, sede, fecha y precio son obligatorios.";
   }
   const costo = Number(datos.costoTexto);
   if (Number.isNaN(costo) || costo < 0) {
-    return "El valor debe ser un número válido.";
+    return "El precio debe ser un número válido.";
+  }
+  if (datos.valorCobradoTexto) {
+    const cobrado = Number(datos.valorCobradoTexto);
+    if (Number.isNaN(cobrado) || cobrado < 0) return "El valor cobrado debe ser un número válido.";
   }
   return null;
 }
@@ -171,9 +176,9 @@ export async function crearTratamiento(
       tipo_tratamiento_id: datos.tipoTratamientoId,
       profesional_id: datos.profesionalId,
       sede_id: datos.sedeId,
-      medio_pago_id: datos.medioPagoId,
       fecha: datos.fecha,
       costo: Number(datos.costoTexto),
+      valor_cobrado: datos.valorCobradoTexto ? Number(datos.valorCobradoTexto) : Number(datos.costoTexto),
       notas: datos.notas,
       cufe: datos.cufe,
       corrige_a: corrigeA,
@@ -236,9 +241,9 @@ export async function editarTratamiento(
       tipo_tratamiento_id: datos.tipoTratamientoId,
       profesional_id: datos.profesionalId,
       sede_id: datos.sedeId,
-      medio_pago_id: datos.medioPagoId,
       fecha: datos.fecha,
       costo: Number(datos.costoTexto),
+      valor_cobrado: datos.valorCobradoTexto ? Number(datos.valorCobradoTexto) : Number(datos.costoTexto),
       notas: datos.notas,
       cufe: datos.cufe,
       corrige_a: editaId,
@@ -249,6 +254,14 @@ export async function editarTratamiento(
     .single();
 
   if (insertError || !tratamiento) return { error: "No se pudo guardar el tratamiento editado." };
+
+  // Si el original ya estaba cobrado, el corregido entra a ese mismo cobro
+  // con lo que ya se cobró (lo pagado no cambia por corregir un dato).
+  const { error: cobroError } = await supabase.rpc("fn_tratamiento_reemplazar_en_cobro", {
+    p_original: editaId,
+    p_nuevo: tratamiento.id,
+  });
+  if (cobroError) return { error: "Se guardó el tratamiento corregido, pero no se pudo pasar al cobro de la atención." };
 
   const { error: anularError } = await supabase
     .from("tratamientos")
@@ -288,7 +301,11 @@ export async function anularTratamiento(id: string, motivo: string): Promise<Res
     })
     .eq("id", id);
 
-  if (error) return { error: "No se pudo anular el tratamiento." };
+  if (error) {
+    // El único rechazo esperable con permiso: el tratamiento está en el
+    // cobro de la atención junto con otros (la BD lo explica).
+    return { error: /cobro/.test(error.message) ? error.message : "No se pudo anular el tratamiento." };
+  }
 
   revalidatePath("/tratamientos");
   return {};
@@ -604,9 +621,11 @@ export type TratamientoDeAtencion = {
   tipo_tratamiento_id: string;
   profesional_id: string;
   sede_id: string;
-  medio_pago_id: string;
+  medio_pago_id: string | null;
   fecha: string;
   costo: number | null;
+  valor_cobrado: number | null;
+  cobro_id: string | null;
   notas: string | null;
   cufe: string | null;
   anulado: boolean;
@@ -628,7 +647,7 @@ export async function listarTratamientosDeAtencion(atencionId: string): Promise<
     .from("tratamientos")
     .select(
       `id, paciente_id, tipo_tratamiento_id, profesional_id, sede_id, medio_pago_id,
-       fecha, costo, notas, cufe, anulado, anulado_motivo,
+       fecha, costo, valor_cobrado, cobro_id, notas, cufe, anulado, anulado_motivo,
        tipos_tratamiento(nombre), sedes(nombre),
        profesional:usuarios!tratamientos_profesional_id_fkey(nombre),
        tratamiento_fotos(count), tratamiento_anexos(count), tratamiento_consentimientos(count)`,
@@ -682,6 +701,7 @@ export type TratamientoDetalle = {
   id: string;
   fecha: string;
   costo: number | null;
+  valor_cobrado: number | null;
   notas: string | null;
   anulado: boolean;
   anulado_motivo: string | null;
@@ -700,7 +720,7 @@ export async function obtenerTratamientoDetalle(tratamientoId: string): Promise<
   const { data } = await supabase
     .from("tratamientos")
     .select(
-      `id, fecha, costo, notas, anulado, anulado_motivo,
+      `id, fecha, costo, valor_cobrado, notas, anulado, anulado_motivo,
        tipos_tratamiento(nombre), sedes(nombre),
        profesional:usuarios!tratamientos_profesional_id_fkey(nombre)`,
     )

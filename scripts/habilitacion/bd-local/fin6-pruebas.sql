@@ -49,7 +49,7 @@ insert into tratamientos (clinica_id, paciente_id, tipo_tratamiento_id, profesio
 values (clinica_actual(), '00000000-0000-0000-0000-000000000321', '00000000-0000-0000-0000-000000000301', auth.uid(), '00000000-0000-0000-0000-000000000341',
   '2026-01-25', 45000, (select id from sedes where clinica_id = clinica_actual() order by orden limit 1), '00000000-0000-0000-0000-000000000311', auth.uid())
 returning id as t_cerrado \gset
-select t.ok(fecha = '2026-02-01' and descripcion like '%(tratamiento del 25/01/2026, mes cerrado)',
+select t.ok(fecha = '2026-02-01' and descripcion like '%(cobro del 25/01/2026, mes cerrado)',
   'un tratamiento del mes cerrado genera su ingreso el primer día abierto, con su fecha en la nota')
   from fin_movimientos where origen = 'tratamiento' and origen_id = :'t_cerrado' and estado <> 'anulado';
 
@@ -111,11 +111,12 @@ select t.ok(count(*) filter (where u.email = 'contador@x.co') = 0 and count(*) f
 -- Endurecimiento: lista cerrada de funciones del flujo de caja que corren
 -- con privilegios del dueño (security definer) y RLS en todas las tablas.
 select t.ok(array_agg(p.proname::text order by p.proname) = array[
-    'fn_fin_alertas_pendientes', 'fn_fin_anular_liquidacion', 'fn_fin_anular_movimiento', 'fn_fin_anular_pago', 'fn_fin_anular_registro', 'fn_fin_candidatos_pago',
-    'fn_fin_cerrar_mes', 'fn_fin_clinicas_alertas', 'fn_fin_conciliar_pagos', 'fn_fin_confirmar_pago', 'fn_fin_destinatarios', 'fn_fin_devolucion_prestamo', 'fn_fin_excluir_tratamiento', 'fn_fin_fecha_abierta', 'fn_fin_generar_ingresos', 'fn_fin_importar_pagos',
-    'fn_fin_ingreso_de_tratamiento', 'fn_fin_ingresos_pendientes', 'fn_fin_liquidacion_cobro_trasladado', 'fn_fin_liquidar_pasarela',
-    'fn_fin_mes_abierto', 'fn_fin_reabrir_mes', 'fn_fin_reembolsar_socio', 'fn_fin_registrar_cobro', 'fn_fin_reincluir_tratamiento', 'fn_fin_resolver_cambio_pago',
-    'fn_fin_tratamiento_sincronizar', 'fn_fin_tratamientos_flujo', 'fn_fin_tratamientos_situacion', 'fn_fin_vincular_pago']::text[],
+    'fn_fin_alertas_pendientes', 'fn_fin_anular_liquidacion', 'fn_fin_anular_movimiento', 'fn_fin_anular_pago', 'fn_fin_anular_registro', 'fn_fin_atenciones_sin_cobrar',
+    'fn_fin_candidatos_pago', 'fn_fin_cerrar_mes', 'fn_fin_clinicas_alertas', 'fn_fin_cobro_descripcion', 'fn_fin_cobro_sincronizar', 'fn_fin_cobros_flujo',
+    'fn_fin_cobros_situacion', 'fn_fin_conciliar_pagos', 'fn_fin_confirmar_pago', 'fn_fin_destinatarios', 'fn_fin_devolucion_prestamo', 'fn_fin_excluir_cobro',
+    'fn_fin_fecha_abierta', 'fn_fin_generar_ingresos', 'fn_fin_importar_pagos', 'fn_fin_ingreso_de_cobro', 'fn_fin_ingresos_pendientes', 'fn_fin_liquidacion_cobro_trasladado',
+    'fn_fin_liquidar_pasarela', 'fn_fin_mes_abierto', 'fn_fin_reabrir_mes', 'fn_fin_reembolsar_socio', 'fn_fin_registrar_cobro', 'fn_fin_reincluir_cobro',
+    'fn_fin_resolver_cambio_pago', 'fn_fin_vincular_pago']::text[],
   'lista cerrada de funciones privilegiadas: ' || array_to_string(array_agg(p.proname::text order by p.proname), ', '))
 from pg_proc p where p.pronamespace = 'public'::regnamespace and p.proname like 'fn_fin_%' and p.prosecdef;
 select t.ok(bool_and(c.relrowsecurity), 'todas las tablas del flujo de caja tienen RLS')

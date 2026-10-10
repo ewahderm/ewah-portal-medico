@@ -18,7 +18,9 @@ import {
 } from "@/components/ui/dialog";
 import { Combobox } from "@/components/ui/combobox";
 import { toItems, type Opcion } from "@/lib/forms/opciones";
-import { hoy } from "@/lib/format";
+import { formatoMoneda, hoy } from "@/lib/format";
+import { obtenerPreciosTratamiento } from "@/lib/tratamientos/cobros";
+import { precioVigente, type PrecioTratamiento } from "@/lib/tratamientos/precios";
 import { AvisoCatalogoVacio } from "../_components/aviso-catalogo-vacio";
 
 type Correccion = {
@@ -27,9 +29,12 @@ type Correccion = {
   tipo_tratamiento_id: string;
   profesional_id: string;
   sede_id: string;
-  medio_pago_id: string;
+  medio_pago_id: string | null;
   fecha: string;
   costo: number | null;
+  valor_cobrado: number | null;
+  // Con cobro vigente, lo cobrado no cambia al editar (lo pagado es lo pagado).
+  cobro_id: string | null;
   notas: string | null;
   cufe: string | null;
 };
@@ -51,7 +56,6 @@ export function TratamientoDialog({
   tiposTratamiento,
   profesionales,
   sedes,
-  mediosPago,
   usuarioActualId,
   corrigiendo,
   editando,
@@ -65,7 +69,6 @@ export function TratamientoDialog({
   tiposTratamiento: Opcion[];
   profesionales: Opcion[];
   sedes: Opcion[];
-  mediosPago: Opcion[];
   usuarioActualId: string;
   corrigiendo?: Correccion;
   editando?: Correccion;
@@ -94,6 +97,31 @@ export function TratamientoDialog({
   const pacienteFijo = Boolean(prefill || desdeAtencion);
   const [pacienteId, setPacienteId] = useState(pacienteInicial);
   const pacientePendiente = pacientesPendientes.has(pacienteId);
+
+  // Precio: se propone el vigente para el tipo y la fecha; si la persona lo
+  // cambia a mano, ya no se pisa. Lo cobrado sigue al precio hasta que se
+  // escriba aparte (por ejemplo, un descuento solo para este tratamiento).
+  const [precios, setPrecios] = useState<PrecioTratamiento[] | null>(null);
+  const [tipoId, setTipoId] = useState(prefill?.tipo_tratamiento_id ?? desdeAtencion?.tipo_tratamiento_id ?? "");
+  const [fecha, setFecha] = useState(prefill?.fecha ?? desdeAtencion?.fecha ?? hoy());
+  const [precio, setPrecio] = useState(prefill?.costo != null ? String(prefill.costo) : "");
+  const [precioPropio, setPrecioPropio] = useState(Boolean(prefill));
+  const [cobrado, setCobrado] = useState(
+    prefill?.valor_cobrado != null ? String(prefill.valor_cobrado) : prefill?.costo != null ? String(prefill.costo) : "",
+  );
+  const [cobradoPropio, setCobradoPropio] = useState(
+    prefill ? prefill.valor_cobrado != null && prefill.valor_cobrado !== prefill.costo : false,
+  );
+  const yaCobrado = Boolean(editando?.cobro_id);
+  const deLista = precios && tipoId ? precioVigente(precios, tipoId, fecha) : null;
+
+  function proponer(lista: PrecioTratamiento[], tipo: string, dia: string, forzar = false) {
+    if (!tipo || (precioPropio && !forzar)) return;
+    const p = precioVigente(lista, tipo, dia);
+    if (p === null) return;
+    setPrecio(String(p));
+    if (!cobradoPropio) setCobrado(String(p));
+  }
 
   useCerrarAlExito(pending, !state?.error, () => {
     setOpen(false);
@@ -137,6 +165,12 @@ export function TratamientoDialog({
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
+        if (next && precios === null) {
+          obtenerPreciosTratamiento().then((lista) => {
+            setPrecios(lista);
+            proponer(lista, tipoId, fecha);
+          });
+        }
       }}
     >
       <DialogTrigger render={trigger as React.ReactElement} />
@@ -246,6 +280,13 @@ export function TratamientoDialog({
               required
               items={toItems(tiposTratamiento)}
               defaultValue={prefill?.tipo_tratamiento_id ?? desdeAtencion?.tipo_tratamiento_id ?? undefined}
+              onValueChange={(valor) => {
+                const tipo = String(valor ?? "");
+                setTipoId(tipo);
+                // Elegir otro tipo siempre propone su precio.
+                if (precios) proponer(precios, tipo, fecha, true);
+                setPrecioPropio(false);
+              }}
               placeholder="Selecciona un tratamiento"
             />
             {tiposTratamiento.length === 0 ? (
@@ -271,7 +312,17 @@ export function TratamientoDialog({
             {desdeAtencion ? null : (
               <div className="space-y-2">
                 <Label htmlFor="fecha">Fecha</Label>
-                <Input id="fecha" name="fecha" type="date" required defaultValue={prefill?.fecha ?? hoy()} />
+                <Input
+                  id="fecha"
+                  name="fecha"
+                  type="date"
+                  required
+                  value={fecha}
+                  onChange={(e) => {
+                    setFecha(e.target.value);
+                    if (precios) proponer(precios, tipoId, e.target.value);
+                  }}
+                />
               </div>
             )}
             {lugar ? null : (
@@ -288,18 +339,7 @@ export function TratamientoDialog({
               </div>
             )}
             <div className="space-y-2">
-              <Label htmlFor="medioPagoId">Medio de pago</Label>
-              <Combobox
-                id="medioPagoId"
-                name="medioPagoId"
-                required
-                items={toItems(mediosPago)}
-                defaultValue={prefill?.medio_pago_id}
-                placeholder="Selecciona"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="costo">Valor</Label>
+              <Label htmlFor="costo">Precio</Label>
               <Input
                 id="costo"
                 name="costo"
@@ -309,16 +349,43 @@ export function TratamientoDialog({
                 step="1000"
                 placeholder="0"
                 required
-                defaultValue={prefill?.costo ?? ""}
+                value={precio}
+                onChange={(e) => {
+                  setPrecio(e.target.value);
+                  setPrecioPropio(true);
+                  if (!cobradoPropio) setCobrado(e.target.value);
+                }}
               />
+              {deLista !== null && precio !== "" && Number(precio) !== deLista ? (
+                <p className="text-xs text-muted-foreground">Precio de lista: {formatoMoneda(deLista)}</p>
+              ) : precios && tipoId && deLista === null ? (
+                <p className="text-xs text-muted-foreground">Este tipo aún no tiene precio en Parámetros.</p>
+              ) : null}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="valorCobrado">Valor cobrado</Label>
+              <Input
+                id="valorCobrado"
+                name="valorCobrado"
+                type="number"
+                inputMode="numeric"
+                min="0"
+                step="1000"
+                placeholder="0"
+                value={cobrado}
+                readOnly={yaCobrado}
+                onChange={(e) => {
+                  setCobrado(e.target.value);
+                  setCobradoPropio(true);
+                }}
+              />
+              <p className="text-xs text-muted-foreground">
+                {yaCobrado
+                  ? "Ya se cobró en la atención: lo cobrado no cambia al editar."
+                  : "Igual al precio, salvo un descuento solo para este tratamiento. El de toda la atención se hace al cobrarla."}
+              </p>
             </div>
           </div>
-          {mediosPago.length === 0 ? (
-            <AvisoCatalogoVacio>
-              Todavía no tienes medios de pago (efectivo, tarjeta, transferencia...). Créalos en Tratamientos → Medios
-              de pago para poder registrar el tratamiento.
-            </AvisoCatalogoVacio>
-          ) : null}
 
           <div className="space-y-2">
             <Label htmlFor="notas">Observaciones (opcional)</Label>

@@ -11,7 +11,8 @@ const COLUMNAS: ColumnaXlsx[] = [
   { header: "Tratamiento", key: "tratamiento" },
   { header: "Sede", key: "sede" },
   { header: "Profesional", key: "profesional" },
-  { header: "Valor", key: "valor" },
+  { header: "Precio", key: "valor" },
+  { header: "Valor cobrado", key: "cobrado" },
   { header: "Observaciones", key: "notas" },
   { header: "Anulado", key: "anulado" },
   { header: "Motivo de anulación", key: "anulado_motivo" },
@@ -36,7 +37,7 @@ export async function GET(request: NextRequest) {
   let query = supabase
     .from("tratamientos")
     .select(
-      `fecha, costo, notas, anulado, anulado_motivo,
+      `fecha, costo, valor_cobrado, notas, anulado, anulado_motivo,
        pacientes(primer_nombre, segundo_nombre, primer_apellido, segundo_apellido),
        tipos_tratamiento(nombre),
        sedes(nombre),
@@ -62,6 +63,7 @@ export async function GET(request: NextRequest) {
   type FilaTratamiento = {
     fecha: string;
     costo: number | null;
+    valor_cobrado: number | null;
     notas: string | null;
     anulado: boolean;
     anulado_motivo: string | null;
@@ -83,6 +85,7 @@ export async function GET(request: NextRequest) {
     sede: t.sedes?.nombre ?? "",
     profesional: t.profesional?.nombre ?? "",
     valor: t.costo ? formatoMoneda(t.costo) : "",
+    cobrado: t.valor_cobrado !== null ? formatoMoneda(t.valor_cobrado) : "",
     notas: t.notas ?? "",
     anulado: t.anulado ? "Sí" : "No",
     anulado_motivo: t.anulado_motivo ?? "",

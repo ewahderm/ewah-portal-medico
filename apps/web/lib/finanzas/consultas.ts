@@ -448,12 +448,12 @@ export async function getFlujoMeses(supabase: Supabase, desde: string, hasta: st
   return ((data ?? []) as { mes: string; entradas: number; salidas: number }[]).map((m) => ({ mes: m.mes, entradas: Number(m.entradas), salidas: Number(m.salidas) }));
 }
 
-// Tratamientos que ya entraron al flujo ('en_flujo') o que se excluyeron
+// Cobros que ya entraron al flujo ('en_flujo') o que se excluyeron
 // ('excluidos'). null si no se pudo consultar.
-export async function getTratamientosFlujo(supabase: Supabase, vista: "en_flujo" | "excluidos"): Promise<IngresoPendiente[] | null> {
-  const { data, error } = await supabase.rpc("fn_fin_tratamientos_flujo", { p_vista: vista });
+export async function getCobrosFlujo(supabase: Supabase, vista: "en_flujo" | "excluidos"): Promise<IngresoPendiente[] | null> {
+  const { data, error } = await supabase.rpc("fn_fin_cobros_flujo", { p_vista: vista });
   if (error) {
-    console.error("[finanzas] fn_fin_tratamientos_flujo", error);
+    console.error("[finanzas] fn_fin_cobros_flujo", error);
     return null;
   }
   return ((data ?? []) as IngresoPendiente[]).map((p) => ({ ...p, valor: p.valor === null ? null : Number(p.valor) }));
@@ -462,9 +462,11 @@ export async function getTratamientosFlujo(supabase: Supabase, vista: "en_flujo"
 // ---------- Reporte de la pasarela (0103) ----------
 
 export type CandidatoPago = {
-  tipo: "cobro" | "tratamiento";
+  // 'cobro' = ingreso pendiente de abono; 'confirmacion' = cobro de una
+  // atención que espera la confirmación de la pasarela.
+  tipo: "cobro" | "confirmacion";
   movimiento_id: string | null;
-  tratamiento_id: string | null;
+  cobro_id: string | null;
   fecha: string;
   valor: number;
   descripcion: string | null;

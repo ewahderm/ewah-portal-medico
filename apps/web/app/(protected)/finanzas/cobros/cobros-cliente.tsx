@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRightIcon, CheckCircle2Icon, RefreshCwIcon } from "lucide-react";
-import { confirmarPago, excluirTratamiento, ponerAlDiaIngresos, registrarCobro, reincluirTratamiento } from "@/lib/finanzas/tratamientos-acciones";
+import { confirmarPago, excluirCobro, ponerAlDiaIngresos, registrarCobro, reincluirCobro } from "@/lib/finanzas/tratamientos-acciones";
 import {
   SITUACIONES,
   VISTAS_COBROS,
@@ -62,7 +62,8 @@ export function CobrosCliente({
   const nada = pendientes.length === 0;
 
   async function reincluir(p: IngresoPendiente) {
-    const r = await reincluirTratamiento(p.tratamiento_id);
+    if (!p.cobro_id) return;
+    const r = await reincluirCobro(p.cobro_id);
     if (r.error) return toast.add({ title: "No se pudo volver a incluir", description: r.error, type: "error" });
     toast.add({ title: "Vuelve a los pendientes", description: "Entrará al flujo de caja al poner al día.", type: "success" });
     router.refresh();
@@ -86,7 +87,7 @@ export function CobrosCliente({
           <CardContent>
             {otraVista.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                {vista === "en_flujo" ? "Todavía no hay tratamientos con ingreso en el flujo de caja." : "No has excluido ningún tratamiento del flujo de caja."}
+                {vista === "en_flujo" ? "Todavía no hay cobros con ingreso en el flujo de caja." : "No has excluido ningún cobro del flujo de caja."}
               </p>
             ) : (
               <Lista filas={otraVista} puedeCrear={false} onCobrar={setCobrando} onExcluir={setExcluyendo} puedeExcluir={false} onReincluir={puedeCrear ? reincluir : undefined} />
@@ -104,12 +105,13 @@ export function CobrosCliente({
 
       <Seccion situacion="corregido_sin_anular" filas={de("corregido_sin_anular")} puedeCrear={false} onCobrar={setCobrando} onExcluir={setExcluyendo} puedeExcluir={puedeCrear} />
       <Seccion situacion="anulado_liquidado" filas={de("anulado_liquidado")} puedeCrear={false} onCobrar={setCobrando} onExcluir={setExcluyendo} puedeExcluir={puedeCrear} />
+      <Seccion situacion="sin_cobrar" filas={de("sin_cobrar")} total={resumen.sinCobrar.valor} puedeCrear={false} onCobrar={setCobrando} onExcluir={setExcluyendo} puedeExcluir={false} />
 
       {nada ? (
         <Card>
           <CardContent className="flex items-center gap-3 py-6 text-sm text-muted-foreground">
             <CheckCircle2Icon className="size-5 text-emerald-700" />
-            Todos los tratamientos desde el {fechaLegible(fechaInicio)} ya tienen su ingreso registrado.
+            Todas las atenciones desde el {fechaLegible(fechaInicio)} están cobradas y con su ingreso registrado.
           </CardContent>
         </Card>
       ) : null}
@@ -134,7 +136,7 @@ export function CobrosCliente({
                 <li key={m.medioPagoId} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm">
                   <span className="font-medium">{m.nombre}</span>
                   <span className="text-muted-foreground tabular-nums">
-                    {m.cantidad} {m.cantidad === 1 ? "tratamiento" : "tratamientos"} · {formatoDinero(m.valor)}
+                    {m.cantidad} {m.cantidad === 1 ? "cobro" : "cobros"} · {formatoDinero(m.valor)}
                   </span>
                 </li>
               ))}
@@ -201,10 +203,11 @@ function ConfirmarPagoDialog({ pendiente: p, hoy, fechaInicio, onCerrar }: { pen
     ev.preventDefault();
     if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return setError("Elige la fecha del pago.");
     if (fecha > hoy) return setError("La fecha del pago no puede ser futura.");
-    if (fecha < minimo) return setError("El pago no puede ser anterior al tratamiento ni al inicio del flujo de caja.");
+    if (fecha < minimo) return setError("El pago no puede ser anterior al cobro ni al inicio del flujo de caja.");
     setEnviando(true);
     setError(null);
-    const r = await confirmarPago({ tratamientoId: p.tratamiento_id, fecha });
+    if (!p.cobro_id) return;
+    const r = await confirmarPago({ cobroId: p.cobro_id, fecha });
     setEnviando(false);
     if (r.error) return setError(r.error);
     toast.add({ title: "Pago confirmado", description: "Entra a la pasarela, pendiente de abono.", type: "success" });
@@ -261,7 +264,8 @@ function ExcluirDialog({ pendiente: p, onCerrar }: { pendiente: IngresoPendiente
     if (invalido) return setError(invalido);
     setEnviando(true);
     setError(null);
-    const r = await excluirTratamiento({ tratamientoId: p.tratamiento_id, motivo });
+    if (!p.cobro_id) return;
+    const r = await excluirCobro({ cobroId: p.cobro_id, motivo });
     setEnviando(false);
     if (r.error) return setError(r.error);
     toast.add({ title: "Excluido del flujo de caja", description: "Lo ves en la pestaña Excluidos, donde puedes volver a incluirlo.", type: "success" });
@@ -276,7 +280,7 @@ function ExcluirDialog({ pendiente: p, onCerrar }: { pendiente: IngresoPendiente
           <DialogTitle>{noPagado ? "No se pagó" : "No meter en el flujo de caja"}</DialogTitle>
           <DialogDescription>
             {p.paciente ?? "Paciente"} · {p.tratamiento ?? "Tratamiento"} del {fechaLegible(p.fecha)}
-            {p.valor === null ? "" : ` · ${formatoDinero(p.valor)}`}. {noPagado ? "No entrará al flujo de caja; si el paciente paga después, lo vuelves a incluir desde Excluidos." : "No generará ingreso ni pedirá revisión."} El tratamiento no se modifica.
+            {p.valor === null ? "" : ` · ${formatoDinero(p.valor)}`}. {noPagado ? "No entrará al flujo de caja; si el paciente paga después, lo vuelves a incluir desde Excluidos." : "No generará ingreso ni pedirá revisión."} La atención y su cobro no se modifican.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={guardar} className="space-y-3">
@@ -318,7 +322,7 @@ function PonerAlDia({ resumen, puedeCrear }: { resumen: ReturnType<typeof resumi
       ? `${resumen.porGenerar.cantidad} ${resumen.porGenerar.cantidad === 1 ? "ingreso" : "ingresos"} por ${formatoDinero(resumen.porGenerar.valor)}`
       : null,
     resumen.anuladosConIngreso
-      ? `${resumen.anuladosConIngreso} ${resumen.anuladosConIngreso === 1 ? "ingreso" : "ingresos"} de tratamientos anulados por anular`
+      ? `${resumen.anuladosConIngreso} ${resumen.anuladosConIngreso === 1 ? "ingreso" : "ingresos"} de cobros anulados por anular`
       : null,
   ].filter(Boolean);
 
@@ -348,7 +352,7 @@ function PonerAlDia({ resumen, puedeCrear }: { resumen: ReturnType<typeof resumi
       <RefreshCwIcon />
       <AlertDescription className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <span>
-          Listos para poner al día: {partes.join(" y ")}. Entran con la fecha de cada tratamiento. Si alguno llegó a otra cuenta,
+          Listos para poner al día: {partes.join(" y ")}. Entran con la fecha de cada cobro. Si alguno llegó a otra cuenta,
           registra su cobro en la lista de abajo antes de poner al día.
         </span>
         {puedeCrear ? (
@@ -424,17 +428,23 @@ function Lista({
     <>
       <ul className="divide-y">
         {filas.slice(0, LIMITE).map((p) => (
-          <li key={p.tratamiento_id} className="flex flex-wrap items-center gap-3 py-3">
+          <li key={p.cobro_id ?? p.atencion_id} className="flex flex-wrap items-center gap-3 py-3">
             <span className="min-w-0 flex-1">
               <span className="block text-sm font-medium break-words">{p.paciente || "Paciente"}</span>
               <span className="block text-xs text-muted-foreground">
-                {fechaLegible(p.fecha)} · {p.tratamiento ?? "Tratamiento"} · {p.medio_pago ?? "Sin medio"}
+                {fechaLegible(p.fecha)} · {p.tratamiento ?? "Tratamiento"} · {p.medio_pago ?? (p.situacion === "sin_cobrar" ? "Sin cobrar" : "Sin medio")}
               </span>
               {p.motivo ? <span className="block text-xs text-muted-foreground break-words">Motivo: {p.motivo}</span> : null}
             </span>
             <MarcaEstado situacion={p.situacion} />
             <span className="text-sm font-semibold tabular-nums">{p.valor === null ? "Sin valor" : formatoDinero(p.valor)}</span>
-            {puedeCrear ? (
+            {p.situacion === "sin_cobrar" && p.paciente_id ? (
+              // Se cobra desde la atención (medio de pago y total), no desde aquí.
+              <Button size="sm" variant="outline" nativeButton={false} render={<Link href={`/pacientes/${p.paciente_id}`} />}>
+                Ir a la ficha
+              </Button>
+            ) : null}
+            {puedeCrear && p.cobro_id ? (
               <Button size="sm" variant="outline" onClick={() => onCobrar(p)}>
                 {p.situacion === "por_confirmar" ? "Confirmar pago" : "Registrar cobro"}
               </Button>
@@ -483,7 +493,8 @@ function CobroDialog({
     if (invalido) return setError(invalido);
     setEnviando(true);
     setError(null);
-    const r = await registrarCobro({ tratamientoId: p.tratamiento_id, cuentaId, fecha, monto });
+    if (!p.cobro_id) return;
+    const r = await registrarCobro({ cobroId: p.cobro_id, cuentaId, fecha, monto });
     setEnviando(false);
     if (r.error) return setError(r.error);
     toast.add({ title: "Cobro registrado", description: `${formatoDinero(monto ?? 0)}${p.paciente ? ` de ${p.paciente}` : ""}`, type: "success" });

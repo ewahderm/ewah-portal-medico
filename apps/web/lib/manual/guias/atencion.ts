@@ -172,7 +172,7 @@ export const ATENCIONES: Guia = {
 export const TRATAMIENTOS: Guia = {
   slug: "tratamientos",
   titulo: "Tratamientos",
-  resumen: "Registra procedimientos con su valor y medio de pago, insumos aplicados, fotos y consentimiento. Se corrigen anulando.",
+  resumen: "Registra procedimientos con su precio y lo cobrado, cobra la atención completa con su medio de pago, e insumos, fotos y consentimiento. Se corrigen anulando.",
   grupo: "Atención",
   icono: "clipboard",
   ruta: "/tratamientos",
@@ -197,16 +197,72 @@ export const TRATAMIENTOS: Guia = {
           tipo: "pasos",
           pasos: [
             "Pulsa `Nuevo tratamiento` (o `Agregar tratamiento` dentro de una atención).",
-            "Elige **Paciente**, **Tipo de tratamiento**, **Profesional**, **Fecha** y **Sede**.",
-            "Elige el **Medio de pago** y escribe el **Valor**. Si facturaste electrónicamente, agrega el **CUFE**.",
-            "Pulsa `Registrar tratamiento`.",
+            "Elige el **Tipo de tratamiento** y el **Profesional**. Dentro de una atención, el paciente, la fecha y el lugar (consultorio y sede) ya vienen de la atención y no se vuelven a escribir.",
+            "El **Precio** se llena solo con el precio vigente de ese tratamiento. Puedes cambiarlo si hoy cobras otro.",
+            "**Valor cobrado** arranca igual al precio. Cámbialo solo si a *este* tratamiento le haces un descuento propio. El descuento de toda la atención se hace al cobrarla.",
+            "Si facturaste electrónicamente, agrega el **CUFE**. Pulsa `Registrar tratamiento`.",
           ],
         },
         { tipo: "imagen", archivo: "tratamiento-nuevo.jpg", alt: "Formulario Nuevo tratamiento" },
         {
           tipo: "nota",
           tono: "info",
-          texto: "Si tienes el **Flujo de caja** activado, el tratamiento genera solo su ingreso en la cuenta de su medio de pago. Ver la guía “Cobros e ingresos de tratamientos”.",
+          texto: "El tratamiento **ya no pide el medio de pago**: el paciente paga la atención completa, no cada tratamiento. El medio de pago se elige al **cobrar la atención** (sección siguiente).",
+        },
+      ],
+    },
+    {
+      id: "cobrar",
+      titulo: "Cobra la atención",
+      bloques: [
+        {
+          tipo: "texto",
+          texto:
+            "Cuando el paciente paga, se cobra **la atención completa** de una sola vez, con un medio de pago. Así el pago que hace el paciente (en efectivo, con el datáfono o con un link de Bold) coincide con un solo cobro en EWAH.",
+        },
+        {
+          tipo: "pasos",
+          pasos: [
+            "Abre la atención (desde la Agenda con `Atender` o desde la ficha del paciente, pestaña **Atenciones**).",
+            "En la sección **Cobro** pulsa `Cobrar atención`. Verás cada tratamiento con su precio y lo que se va a cobrar.",
+            "Si haces un **descuento**, escribe el **Total a cobrar**: EWAH lo reparte entre los tratamientos en proporción a su valor. Quita la marca *Aplica descuento* en los tratamientos que nunca llevan descuento. También puedes ajustar a mano el valor de cada uno.",
+            "Elige el **Medio de pago** y la fecha, y pulsa `Cobrar`.",
+          ],
+        },
+        {
+          tipo: "lista",
+          items: [
+            "Mientras no se cobre, la atención muestra **Por cobrar** y cada tratamiento la marca *Sin cobrar*.",
+            "Si agregas otro tratamiento después de cobrar, queda *Sin cobrar* y se cobra aparte con el mismo botón.",
+            "Si el cobro quedó mal (otro medio de pago, otro valor), anúlalo con su botón y vuelve a cobrar: el cobro anulado queda en el historial.",
+            "Para anular un tratamiento que se cobró junto con otros, primero anula el cobro. Si solo corriges un dato con `Editar`, el registro corregido conserva lo que ya se cobró.",
+          ],
+        },
+        {
+          tipo: "nota",
+          tono: "info",
+          texto:
+            "Con el **Flujo de caja** activado, cada cobro genera **un solo ingreso** por el total de la atención en la cuenta de su medio de pago. Ver la guía “Cobros de tratamientos y pasarelas de pago”.",
+        },
+      ],
+    },
+    {
+      id: "precios",
+      titulo: "Precios de los tratamientos",
+      bloques: [
+        {
+          tipo: "pasos",
+          pasos: [
+            "Ve a **Parámetros → Tratamientos → Tipos de tratamiento**. La columna **Precio vigente** muestra el precio de hoy.",
+            "Pulsa el precio (o `Poner precio`), escribe el nuevo valor y desde qué fecha rige, y pulsa `Guardar precio`.",
+            "Con una fecha futura queda **programado** (por ejemplo, el aumento de enero): empieza a proponerse ese día.",
+          ],
+        },
+        {
+          tipo: "nota",
+          tono: "info",
+          texto:
+            "Un precio nunca se borra ni se edita: cada cambio queda en el **historial** con quién lo hizo. Los tratamientos ya registrados conservan el precio con el que se registraron.",
         },
       ],
     },

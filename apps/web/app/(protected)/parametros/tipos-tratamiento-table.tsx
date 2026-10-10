@@ -14,6 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { TipoTratamientoDialog } from "./tipo-tratamiento-dialog";
+import { PreciosTratamientoDialog, type PrecioConAutor } from "./precios-tratamiento-dialog";
 import type { Opcion } from "@/lib/forms/opciones";
 import {
   describirCodigosPorSede,
@@ -39,11 +40,13 @@ export type TipoTratamientoRow = {
 
 export function TiposTratamientoTable({
   valores,
+  precios,
   cups,
   servicios,
   editable,
 }: {
   valores: TipoTratamientoRow[];
+  precios: PrecioConAutor[];
   cups: CupsOpcion[];
   servicios: Opcion[];
   editable: boolean;
@@ -76,6 +79,7 @@ export function TiposTratamientoTable({
         <TableHeader>
           <TableRow>
             <TableHead>Nombre</TableHead>
+            <TableHead>Precio vigente</TableHead>
             <TableHead className="hidden md:table-cell">Código</TableHead>
             <TableHead className="hidden md:table-cell">Servicio · cód. por sede</TableHead>
             <TableHead className="hidden md:table-cell">CUPS</TableHead>
@@ -86,6 +90,9 @@ export function TiposTratamientoTable({
           {valores.map((valor) => (
             <TableRow key={valor.id}>
               <TableCell>{valor.nombre}</TableCell>
+              <TableCell>
+                <PreciosTratamientoDialog tipoId={valor.id} tipoNombre={valor.nombre} precios={precios} editable={editable} />
+              </TableCell>
               <TableCell className="hidden font-mono text-xs text-muted-foreground md:table-cell">
                 {valor.codigo ?? "—"}
               </TableCell>
@@ -129,7 +136,7 @@ export function TiposTratamientoTable({
           ))}
           {valores.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={5} className="text-center text-muted-foreground">
+              <TableCell colSpan={6} className="text-center text-muted-foreground">
                 Todavía no hay tipos de tratamiento registrados.
               </TableCell>
             </TableRow>

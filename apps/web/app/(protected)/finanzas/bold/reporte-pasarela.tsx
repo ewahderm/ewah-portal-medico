@@ -182,7 +182,7 @@ export function ReportePasarela({
 }
 
 function etiquetaCandidato(c: CandidatoPago): string {
-  const que = c.tipo === "tratamiento" ? "Esperando confirmación" : "Cobro";
+  const que = c.tipo === "confirmacion" ? "Esperando confirmación" : "Cobro";
   return `${que} · ${fechaLegible(c.fecha)} · ${c.paciente ?? c.descripcion ?? "Tratamiento"}`;
 }
 
@@ -209,7 +209,7 @@ function FilaSinEmparejar({ pago: p, nombrePasarela, puedeCrear }: { pago: PagoS
     if (!c) return setError("Elige el cobro.");
     setPendiente(true);
     setError(null);
-    const r = await vincularPagoPasarela({ pagoId: p.id, movimientoId: c.movimiento_id, tratamientoId: c.tratamiento_id });
+    const r = await vincularPagoPasarela({ pagoId: p.id, movimientoId: c.movimiento_id, cobroId: c.cobro_id });
     setPendiente(false);
     if (r.error) return setError(r.error);
     toast.add({ title: "Pago emparejado", description: `${formatoDinero(p.compra)} con su cobro.`, type: "success" });
@@ -279,7 +279,7 @@ function FilaSinEmparejar({ pago: p, nombrePasarela, puedeCrear }: { pago: PagoS
   );
 }
 
-const claveCandidato = (c: CandidatoPago) => `${c.tipo}:${c.movimiento_id ?? c.tratamiento_id}`;
+const claveCandidato = (c: CandidatoPago) => `${c.tipo}:${c.movimiento_id ?? c.cobro_id}`;
 
 export function MarcaValoresReales({ real }: { real: boolean }) {
   return real ? (

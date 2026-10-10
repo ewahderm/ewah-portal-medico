@@ -84,17 +84,18 @@ export async function conciliarPagosPasarela(cuentaId: string): Promise<Resultad
   return { emparejados: Number(c.emparejados ?? 0), sinEmparejar: Number(c.sin_emparejar ?? 0) };
 }
 
-// Empareja un pago con el cobro (movimientoId) o el tratamiento (tratamientoId) que la persona elige.
-export async function vincularPagoPasarela(input: { pagoId: string; movimientoId?: string | null; tratamientoId?: string | null }): Promise<Resultado> {
+// Empareja un pago con el ingreso (movimientoId) o con el cobro de una
+// atención que esperaba la confirmación (cobroId) que la persona elige.
+export async function vincularPagoPasarela(input: { pagoId: string; movimientoId?: string | null; cobroId?: string | null }): Promise<Resultado> {
   if (!esUuid(input.pagoId)) return { error: "Datos inválidos." };
   const mov = input.movimientoId ?? null;
-  const trat = input.tratamientoId ?? null;
-  if ((mov === null) === (trat === null)) return { error: "Elige un cobro o un tratamiento." };
+  const trat = input.cobroId ?? null;
+  if ((mov === null) === (trat === null)) return { error: "Elige un ingreso o un cobro por confirmar." };
   if ((mov && !esUuid(mov)) || (trat && !esUuid(trat))) return { error: "Datos inválidos." };
   const check = await requirePermiso(MODULO_FINANZAS, "CREATE");
   if (!check.ok) return { error: check.error };
   const supabase = await createClient();
-  const { error } = await supabase.rpc("fn_fin_vincular_pago", { p_pago: input.pagoId, p_movimiento: mov, p_tratamiento: trat });
+  const { error } = await supabase.rpc("fn_fin_vincular_pago", { p_pago: input.pagoId, p_movimiento: mov, p_cobro: trat });
   if (error) return { error: mensajeError("vincularPagoPasarela", error, "No se pudo emparejar el pago.") };
   revalidar();
   return {};

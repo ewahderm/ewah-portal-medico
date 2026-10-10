@@ -81,6 +81,34 @@ export async function editarTipoTratamiento(
   return null;
 }
 
+// Precio con historial (0109): nunca se edita uno anterior, se registra uno
+// nuevo con la fecha desde la que rige (puede ser futura: un aumento
+// programado).
+export async function agregarPrecioTratamiento(
+  tipoTratamientoId: string,
+  valor: number,
+  vigenteDesde: string,
+): Promise<ResultadoAccion> {
+  if (!tipoTratamientoId) return { error: "Tipo de tratamiento inválido." };
+  if (!Number.isFinite(valor) || valor < 0) return { error: "Escribe un precio válido (0 o más)." };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(vigenteDesde)) return { error: "Elige desde qué fecha rige el precio." };
+
+  const check = await requirePermiso("EDIT");
+  if (!check.ok) return { error: check.error };
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("precios_tratamiento").insert({
+    clinica_id: check.usuario.clinica_id,
+    tipo_tratamiento_id: tipoTratamientoId,
+    valor: Math.round(valor),
+    vigente_desde: vigenteDesde,
+  });
+  if (error) return { error: "No se pudo guardar el precio." };
+
+  revalidatePath("/parametros");
+  return {};
+}
+
 export async function toggleTipoTratamiento(id: string, activo: boolean): Promise<ResultadoAccion> {
   const check = await requirePermiso("EDIT");
   if (!check.ok) return { error: check.error };

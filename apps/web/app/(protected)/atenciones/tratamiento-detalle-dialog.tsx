@@ -62,8 +62,13 @@ export function TratamientoDetalleDialog({ tratamientoId }: { tratamientoId: str
                 <dd>{detalle.sedes?.nombre ?? "—"}</dd>
               </div>
               <div>
-                <dt className="text-xs text-muted-foreground">Valor</dt>
-                <dd>{formatoMoneda(detalle.costo)}</dd>
+                <dt className="text-xs text-muted-foreground">Valor cobrado</dt>
+                <dd>
+                  {formatoMoneda(detalle.valor_cobrado ?? detalle.costo)}
+                  {detalle.valor_cobrado !== null && detalle.costo !== null && detalle.valor_cobrado !== detalle.costo ? (
+                    <span className="ml-1 text-xs text-muted-foreground line-through">{formatoMoneda(detalle.costo)}</span>
+                  ) : null}
+                </dd>
               </div>
             </div>
             {detalle.anulado && detalle.anulado_motivo ? (

@@ -150,7 +150,7 @@ function CerrarMes({ mes, verificacion, puedeAprobar }: { mes: Mes; verificacion
             } />
           <Chequeo ok={verificacion.porRevisar === 0} texto={
               verificacion.porRevisar
-                ? `${verificacion.porRevisar} ${verificacion.porRevisar === 1 ? "tratamiento" : "tratamientos"} por revisar en Cobros`
+                ? `${verificacion.porRevisar} ${verificacion.porRevisar === 1 ? "cobro" : "cobros o atenciones"} por revisar en Cobros`
                 : "Sin ingresos por revisar"
             } />
         </ul>

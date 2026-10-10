@@ -39,6 +39,7 @@ export async function leerConfiguracion(clinicaId: string): Promise<{ modulos: M
     { count: tiposSinServicio },
     mediosPago,
     serviciosHabilitados,
+    { data: tiposConPrecios },
   ] = await Promise.all([
     supabase
       .from("clinicas")
@@ -54,7 +55,11 @@ export async function leerConfiguracion(clinicaId: string): Promise<{ modulos: M
     supabase.from("tipos_tratamiento").select("id", { count: "exact", head: true }).eq("activo", true).is("practica_medica_id", null),
     activos(supabase, "medios_pago"),
     contar(supabase, "clinica_servicios_habilitados"),
+    supabase.from("tipos_tratamiento").select("id, precios_tratamiento(id)").eq("activo", true),
   ]);
+  const tiposSinPrecio = ((tiposConPrecios ?? []) as { precios_tratamiento: { id: string }[] | null }[]).filter(
+    (t) => !t.precios_tratamiento?.length,
+  ).length;
 
   const [insumos, proveedores, neveras, cargos, empleados, valoresLegales, finanzas, habilitacionPerfil, sstPerfil] = await Promise.all([
     tiene("inventario") ? activos(supabase, "insumos") : Promise.resolve(null),
@@ -101,6 +106,7 @@ export async function leerConfiguracion(clinicaId: string): Promise<{ modulos: M
     tiposTratamiento,
     tiposSinCups: tiposSinCups ?? 0,
     tiposSinServicio: tiposSinServicio ?? 0,
+    tiposSinPrecio,
     mediosPago,
     serviciosHabilitados,
     insumos,

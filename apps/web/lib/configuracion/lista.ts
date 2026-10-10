@@ -48,6 +48,7 @@ export type Hechos = {
   tiposTratamiento: number;
   tiposSinCups: number;
   tiposSinServicio: number;
+  tiposSinPrecio: number;
   mediosPago: number;
   serviciosHabilitados: number;
   // Solo se leen si el módulo está activo; null = no aplica.
@@ -184,11 +185,22 @@ export function armarConfiguracion(h: Hechos, activos: Set<string>): ModuloConfi
           id: "medios-pago",
           titulo: "Medios de pago",
           queEs: "Cómo te pagan los pacientes: efectivo, datáfono, transferencia, link de pago…",
-          impacto: "Cada tratamiento pide su medio de pago: sin medios de pago no se pueden registrar tratamientos.",
+          impacto: "El cobro de cada atención pide su medio de pago: sin medios de pago no se pueden cobrar las atenciones.",
           ...obligatorio(h.mediosPago > 0),
           detalle: h.mediosPago > 0 ? plural(h.mediosPago, "medio", "medios") : undefined,
           href: PARAMETROS("tratamientos", "medios_pago"),
           accion: "Crear medios",
+        },
+        {
+          id: "precios",
+          titulo: "Precio de cada tratamiento",
+          queEs: "Cuánto cuesta cada tipo de tratamiento. Guarda el historial y puedes programar un aumento desde una fecha.",
+          impacto:
+            "Al registrar un tratamiento el precio se llena solo. Sin precio hay que escribirlo cada vez, con más riesgo de errores en lo cobrado.",
+          ...recomendado(h.tiposTratamiento > 0 && h.tiposSinPrecio === 0),
+          detalle: h.tiposSinPrecio > 0 ? `${plural(h.tiposSinPrecio, "tipo", "tipos")} sin precio` : undefined,
+          href: PARAMETROS("tratamientos", "tipos_tratamiento"),
+          accion: "Poner precios",
         },
         {
           id: "cups",

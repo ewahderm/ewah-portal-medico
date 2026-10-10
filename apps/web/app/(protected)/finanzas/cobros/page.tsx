@@ -1,7 +1,7 @@
 import { TriangleAlertIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { requireUsuario } from "@/lib/auth/session";
-import { getAccesoFinanzas, getConfigFinanzas, getCuentas, getIngresosPendientes, getTratamientosFlujo } from "@/lib/finanzas/consultas";
+import { getAccesoFinanzas, getConfigFinanzas, getCuentas, getIngresosPendientes, getCobrosFlujo } from "@/lib/finanzas/consultas";
 import { vistaDeParametro } from "@/lib/finanzas/tratamientos";
 import { hoyBogota } from "@/lib/habilitacion/servidor";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -35,7 +35,7 @@ export default async function CobrosPage({ searchParams }: { searchParams: Promi
   const [pendientes, cuentas, otraVista] = await Promise.all([
     getIngresosPendientes(supabase),
     getCuentas(supabase),
-    vista === "pendientes" ? Promise.resolve([]) : getTratamientosFlujo(supabase, vista),
+    vista === "pendientes" ? Promise.resolve([]) : getCobrosFlujo(supabase, vista),
   ]);
   if (!pendientes || !otraVista) {
     return (

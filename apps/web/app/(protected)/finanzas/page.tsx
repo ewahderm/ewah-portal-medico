@@ -70,7 +70,7 @@ export default async function FinanzasPage() {
     getIngresosPendientes(supabase),
   ]);
   const cobros = resumirPendientes(pendientes ?? []);
-  const atender = cobros.porGenerar.cantidad + cobros.anuladosConIngreso + cobros.porRevisar;
+  const atender = cobros.porGenerar.cantidad + cobros.anuladosConIngreso + cobros.porRevisar + cobros.sinCobrar.cantidad;
   const resumen = resumirCuentas(datos.cuentas);
   const mes = resumirPeriodo(delMes.map((m) => ({ tipo: m.tipo, categoria: codigoCategoria(m), valor_cop: m.valor_cop, origen: m.origen })));
   const nombreCategoria = new Map(datos.categorias.map((c) => [c.codigo, c.nombre]));
@@ -121,7 +121,7 @@ export default async function FinanzasPage() {
               icono={ClipboardListIcon}
               titulo="Por cobrar a pacientes"
               valor={formatoDinero(cobros.porCobrar.valor)}
-              detalle={`${cobros.porCobrar.cantidad} ${cobros.porCobrar.cantidad === 1 ? "tratamiento" : "tratamientos"} a crédito`}
+              detalle={`${cobros.porCobrar.cantidad} ${cobros.porCobrar.cantidad === 1 ? "atención" : "atenciones"} a crédito`}
             />
           </Link>
         ) : null}

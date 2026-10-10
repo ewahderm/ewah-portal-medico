@@ -138,7 +138,7 @@ select pg_temp.saldo(:'bold') as bold_h1 \gset
 update tratamientos set anulado = true, anulado_motivo = 'Paciente pidió devolución', anulado_por = auth.uid(), anulado_en = now() where id = :'c1';
 select t.ok(estado = 'registrado', 'el cobro liquidado sigue vigente') from fin_movimientos where id = :'m1';
 select t.ok(pg_temp.saldo(:'bold') = :'bold_h1'::numeric, 'la pasarela no queda en negativo');
-select t.ok(situacion = 'anulado_liquidado', 'y queda por revisar') from fn_fin_ingresos_pendientes() where tratamiento_id = :'c1';
+select t.ok(situacion = 'anulado_liquidado', 'y queda por revisar') from fn_fin_ingresos_pendientes() where cobro_id = :'c1';
 select t.ok((fn_fin_generar_ingresos() ->> 'anulados')::int = 0, 'la puesta al día no lo toca');
 -- Un crédito cobrado con Bold y liquidado: al corregir el tratamiento, el corregido hereda el abono.
 select pg_temp.liquidar(gen_random_uuid(), array[:'m4']::uuid[], :'banco', :'hoy', 93996) as liq4 \gset

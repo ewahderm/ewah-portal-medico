@@ -11,7 +11,8 @@ import {
 } from "../tratamientos";
 
 const fila = (p: Partial<IngresoPendiente>): IngresoPendiente => ({
-  tratamiento_id: crypto.randomUUID(),
+  cobro_id: crypto.randomUUID(),
+  atencion_id: crypto.randomUUID(),
   fecha: "2026-03-02",
   valor: 100000,
   situacion: "por_generar",
@@ -50,7 +51,9 @@ describe("resumirPendientes", () => {
       fila({ situacion: "medio_sin_cuenta", medio_pago_id: "m2", medio_pago: "Nequi", valor: 50000 }),
       fila({ situacion: "medio_sin_cuenta", medio_pago_id: "m2", medio_pago: "Nequi", valor: 70000 }),
       fila({ situacion: "medio_sin_cuenta", medio_pago_id: "m3", medio_pago: "PSE", valor: 10000 }),
+      fila({ situacion: "sin_cobrar", cobro_id: null, medio_pago_id: null, medio_pago: null, valor: 450000 }),
     ]);
+    expect(r.sinCobrar).toEqual({ cantidad: 1, valor: 450000 });
     expect(r.porGenerar).toEqual({ cantidad: 2, valor: 100000 });
     expect(r.anuladosConIngreso).toBe(1);
     expect(r.porCobrar).toEqual({ cantidad: 1, valor: 300000 });

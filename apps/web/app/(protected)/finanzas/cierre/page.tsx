@@ -59,7 +59,7 @@ export default async function CierrePage() {
     const resumen = resumirPendientes(pendientes ?? []);
     verificacion = {
       boldVencidos: (pasarela ?? []).filter((p) => (p.fecha_esperada ?? p.fecha) <= fin).length,
-      porRevisar: resumen.porRevisar + resumen.porGenerar.cantidad + resumen.anuladosConIngreso,
+      porRevisar: resumen.porRevisar + resumen.porGenerar.cantidad + resumen.anuladosConIngreso + resumen.sinCobrar.cantidad,
       cuentas: cuentas
         .filter((c) => c.es_disponible && (c.activa || (saldos.get(c.id) ?? 0) !== 0))
         .map((c) => ({ id: c.id, nombre: c.nombre, moneda: c.moneda, saldo: saldos.get(c.id) ?? c.saldo_inicial })),

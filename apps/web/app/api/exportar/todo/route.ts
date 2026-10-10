@@ -17,14 +17,14 @@ async function hojasTratamientos(supabase: Supabase): Promise<Hoja[]> {
   const { data } = await supabase
     .from("tratamientos")
     .select(
-      `fecha, costo, notas, anulado, anulado_motivo,
+      `fecha, costo, valor_cobrado, notas, anulado, anulado_motivo,
        pacientes(primer_nombre, segundo_nombre, primer_apellido, segundo_apellido),
        tipos_tratamiento(nombre), sedes(nombre),
        profesional:usuarios!tratamientos_profesional_id_fkey(nombre)`,
     )
     .order("fecha", { ascending: false });
   type Fila = {
-    fecha: string; costo: number | null; notas: string | null; anulado: boolean; anulado_motivo: string | null;
+    fecha: string; costo: number | null; valor_cobrado: number | null; notas: string | null; anulado: boolean; anulado_motivo: string | null;
     pacientes: { primer_nombre: string; segundo_nombre: string | null; primer_apellido: string; segundo_apellido: string | null } | null;
     tipos_tratamiento: { nombre: string } | null; sedes: { nombre: string } | null; profesional: { nombre: string } | null;
   };
@@ -32,6 +32,7 @@ async function hojasTratamientos(supabase: Supabase): Promise<Hoja[]> {
     fecha: t.fecha, paciente: t.pacientes ? nombreCompleto(t.pacientes) : "",
     tratamiento: t.tipos_tratamiento?.nombre ?? "", sede: t.sedes?.nombre ?? "",
     profesional: t.profesional?.nombre ?? "", valor: t.costo ? formatoMoneda(t.costo) : "",
+    cobrado: t.valor_cobrado !== null ? formatoMoneda(t.valor_cobrado) : "",
     notas: t.notas ?? "", anulado: t.anulado ? "Sí" : "No", anulado_motivo: t.anulado_motivo ?? "",
   }));
   return [{
@@ -39,7 +40,8 @@ async function hojasTratamientos(supabase: Supabase): Promise<Hoja[]> {
     columnas: [
       { header: "Fecha", key: "fecha" }, { header: "Paciente", key: "paciente" },
       { header: "Tratamiento", key: "tratamiento" }, { header: "Sede", key: "sede" },
-      { header: "Profesional", key: "profesional" }, { header: "Valor", key: "valor" },
+      { header: "Profesional", key: "profesional" }, { header: "Precio", key: "valor" },
+      { header: "Valor cobrado", key: "cobrado" },
       { header: "Observaciones", key: "notas" }, { header: "Anulado", key: "anulado" },
       { header: "Motivo de anulación", key: "anulado_motivo" },
     ],

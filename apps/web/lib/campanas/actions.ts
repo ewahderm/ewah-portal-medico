@@ -154,7 +154,7 @@ export async function listarFunnelCampana(campanaId: string): Promise<FunnelCamp
       supabase.from("citas").select("paciente_id").in("paciente_id", pacienteIds),
       supabase
         .from("tratamientos")
-        .select("paciente_id, costo")
+        .select("paciente_id, costo, valor_cobrado")
         .in("paciente_id", pacienteIds)
         .eq("anulado", false),
     ]);
@@ -162,7 +162,7 @@ export async function listarFunnelCampana(campanaId: string): Promise<FunnelCamp
   const contactados = new Set((contactosData ?? []).map((c) => c.paciente_id)).size;
   const agendaronCita = new Set((citasData ?? []).map((c) => c.paciente_id)).size;
   const convertidos = new Set((tratamientosData ?? []).map((t) => t.paciente_id)).size;
-  const ingresos = (tratamientosData ?? []).reduce((acc, t) => acc + (t.costo ?? 0), 0);
+  const ingresos = (tratamientosData ?? []).reduce((acc, t) => acc + (t.valor_cobrado ?? t.costo ?? 0), 0);
 
   return { leads: pacienteIds.length, contactados, agendaronCita, convertidos, ingresos };
 }

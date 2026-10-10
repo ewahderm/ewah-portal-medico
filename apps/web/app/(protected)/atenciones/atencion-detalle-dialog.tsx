@@ -28,6 +28,8 @@ import { nombreCompleto } from "@/lib/pacientes/nombre";
 import { formatoMoneda } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { TratamientoDialog } from "../tratamientos/tratamiento-dialog";
+import { listarCobrosDeAtencion, type CobroDeAtencion } from "@/lib/tratamientos/cobros";
+import { AnularCobroDialog, CobrarAtencionDialog } from "./cobrar-atencion-dialog";
 import { AnularDialog } from "../tratamientos/anular-dialog";
 import { RevertirAnulacionButton } from "../tratamientos/revertir-anulacion-button";
 import { InsumosDialog } from "../tratamientos/insumos-dialog";
@@ -100,6 +102,7 @@ export function AtencionDetalleDialog({
 }) {
   const [atencion, setAtencion] = useState<AtencionDetalleTipo | null>(null);
   const [tratamientos, setTratamientos] = useState<TratamientoDeAtencion[] | null>(null);
+  const [cobros, setCobros] = useState<CobroDeAtencion[]>([]);
   const [tratamientosPaciente, setTratamientosPaciente] = useState<TratamientoDePaciente[]>([]);
   const [evoluciones, setEvoluciones] = useState<EvolucionDeAtencion[] | null>(null);
   const [anamnesis, setAnamnesis] = useState<AnamnesisDeAtencion | null>(null);
@@ -124,6 +127,9 @@ export function AtencionDetalleDialog({
     listarTratamientosDeAtencion(atencionId).then((data) => {
       if (!cancelado) setTratamientos(data);
     });
+    listarCobrosDeAtencion(atencionId).then((data) => {
+      if (!cancelado) setCobros(data);
+    });
     listarEvolucionesDeAtencion(atencionId).then((data) => {
       if (!cancelado) setEvoluciones(data);
     });
@@ -137,6 +143,7 @@ export function AtencionDetalleDialog({
 
   function refrescarTratamientos() {
     listarTratamientosDeAtencion(atencionId).then(setTratamientos);
+    listarCobrosDeAtencion(atencionId).then(setCobros);
     if (atencion) listarTratamientosDelPaciente(atencion.paciente_id).then(setTratamientosPaciente);
     onCambio?.();
   }
@@ -153,9 +160,11 @@ export function AtencionDetalleDialog({
     ? (tratamientos ?? [])
     : (tratamientos ?? []).filter((t) => !t.anulado);
   const hayAnulados = tratamientosVisibles.some((t) => t.anulado);
-  const totalTratamientos = tratamientosVisibles
-    .filter((t) => !t.anulado)
-    .reduce((suma, t) => suma + (t.costo ?? 0), 0);
+  const vigentes = tratamientosVisibles.filter((t) => !t.anulado);
+  const totalTratamientos = vigentes.reduce((suma, t) => suma + (t.valor_cobrado ?? t.costo ?? 0), 0);
+  // Lo que falta por cobrar: tratamientos vigentes sin cobro.
+  const porCobrar = vigentes.filter((t) => !t.cobro_id);
+  const totalPorCobrar = porCobrar.reduce((suma, t) => suma + (t.valor_cobrado ?? t.costo ?? 0), 0);
 
   // Todos los tratamientos vigentes del paciente, no solo los de esta
   // atención: en un control se hace seguimiento a lo realizado antes.
@@ -249,7 +258,6 @@ export function AtencionDetalleDialog({
                     tiposTratamiento={tiposTratamiento}
                     profesionales={profesionales}
                     sedes={sedes}
-                    mediosPago={mediosPago}
                     usuarioActualId={usuarioActualId}
                     pacientesPendientes={pacientesPendientes}
                     lugar={lugar}
@@ -276,13 +284,20 @@ export function AtencionDetalleDialog({
                           <span className={cn("min-w-0 break-words font-medium", t.anulado && "text-muted-foreground line-through")}>
                             {t.tipos_tratamiento?.nombre ?? "—"}
                           </span>
-                          <span className={cn("shrink-0 font-semibold tabular-nums", t.anulado && "text-muted-foreground line-through")}>
-                            {formatoMoneda(t.costo)}
+                          <span className={cn("shrink-0 text-right font-semibold tabular-nums", t.anulado && "text-muted-foreground line-through")}>
+                            {formatoMoneda(t.valor_cobrado ?? t.costo)}
+                            {t.valor_cobrado !== null && t.costo !== null && t.valor_cobrado !== t.costo ? (
+                              <span className="block text-xs font-normal text-muted-foreground line-through">{formatoMoneda(t.costo)}</span>
+                            ) : null}
                           </span>
                         </div>
                         {t.anulado ? (
                           <Badge variant="outline" className="mt-1 text-xs">
                             Anulado
+                          </Badge>
+                        ) : !t.cobro_id ? (
+                          <Badge variant="outline" className="mt-1 text-xs text-amber-600">
+                            Sin cobrar
                           </Badge>
                         ) : null}
                         {/* Acciones del tratamiento en su propia fila, a lo ancho. */}
@@ -317,8 +332,7 @@ export function AtencionDetalleDialog({
                               tiposTratamiento={tiposTratamiento}
                               profesionales={profesionales}
                               sedes={sedes}
-                              mediosPago={mediosPago}
-                              usuarioActualId={usuarioActualId}
+                                        usuarioActualId={usuarioActualId}
                               pacientesPendientes={pacientesPendientes}
                               lugar={lugar}
                               editando={{
@@ -330,6 +344,8 @@ export function AtencionDetalleDialog({
                                 medio_pago_id: t.medio_pago_id,
                                 fecha: t.fecha,
                                 costo: t.costo,
+                                valor_cobrado: t.valor_cobrado,
+                                cobro_id: t.cobro_id,
                                 notas: t.notas,
                                 cufe: t.cufe,
                               }}
@@ -348,8 +364,7 @@ export function AtencionDetalleDialog({
                               tiposTratamiento={tiposTratamiento}
                               profesionales={profesionales}
                               sedes={sedes}
-                              mediosPago={mediosPago}
-                              usuarioActualId={usuarioActualId}
+                                        usuarioActualId={usuarioActualId}
                               pacientesPendientes={pacientesPendientes}
                               lugar={lugar}
                               corrigiendo={{
@@ -361,6 +376,8 @@ export function AtencionDetalleDialog({
                                 medio_pago_id: t.medio_pago_id,
                                 fecha: t.fecha,
                                 costo: t.costo,
+                                valor_cobrado: t.valor_cobrado,
+                                cobro_id: t.cobro_id,
                                 notas: t.notas,
                                 cufe: t.cufe,
                               }}
@@ -381,10 +398,69 @@ export function AtencionDetalleDialog({
                     <span>Total</span>
                     <span>{formatoMoneda(totalTratamientos)}</span>
                   </div>
+                  {totalPorCobrar > 0 ? (
+                    <div className="flex items-center justify-between text-sm text-amber-700 dark:text-amber-500">
+                      <span>Por cobrar</span>
+                      <span className="tabular-nums">{formatoMoneda(totalPorCobrar)}</span>
+                    </div>
+                  ) : null}
                   {hayAnulados ? (
                     <p className="text-xs text-muted-foreground">No incluye tratamientos anulados.</p>
                   ) : null}
                 </>
+              )}
+            </div>
+
+            {/* El paciente paga la atención: un cobro con su medio de pago por el
+                total (Finanzas genera un solo ingreso y la pasarela concilia contra él). */}
+            <div className="space-y-2 border-t pt-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-sm font-medium">Cobro</span>
+                {porCobrar.length > 0 && puedeCrearTratamiento ? (
+                  <CobrarAtencionDialog
+                    key={porCobrar.map((t) => t.id).join(",")}
+                    atencionId={atencion.id}
+                    tratamientos={porCobrar.map((t) => ({
+                      id: t.id,
+                      nombre: t.tipos_tratamiento?.nombre ?? "Tratamiento",
+                      precio: t.costo,
+                      cobrado: Math.round(t.valor_cobrado ?? t.costo ?? 0),
+                    }))}
+                    mediosPago={mediosPago}
+                    onCobrado={refrescarTratamientos}
+                  />
+                ) : null}
+              </div>
+              {cobros.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  {vigentes.length === 0 ? "Sin tratamientos para cobrar." : "Todavía no se ha cobrado esta atención."}
+                </p>
+              ) : (
+                <ul className="space-y-2">
+                  {cobros.map((c) => (
+                    <li key={c.id} className={cn("rounded-lg border p-3 text-sm", c.anulado && "opacity-60")}>
+                      <div className="flex items-start justify-between gap-3">
+                        <span className="min-w-0">
+                          <span className={cn("block font-medium", c.anulado && "line-through")}>
+                            {c.medios_pago?.nombre ?? "Medio de pago"} · {c.fecha}
+                          </span>
+                          {c.notas ? <span className="block text-xs text-muted-foreground break-words">{c.notas}</span> : null}
+                          {c.anulado ? (
+                            <span className="block text-xs text-muted-foreground break-words">
+                              Anulado{c.anulado_motivo ? `: ${c.anulado_motivo}` : ""}
+                            </span>
+                          ) : null}
+                        </span>
+                        <span className="flex shrink-0 items-center gap-2">
+                          <span className={cn("font-semibold tabular-nums", c.anulado && "line-through")}>{formatoMoneda(c.valor)}</span>
+                          {!c.anulado && puedeAnularTratamiento ? (
+                            <AnularCobroDialog cobroId={c.id} valor={c.valor} onAnulado={refrescarTratamientos} />
+                          ) : null}
+                        </span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
               )}
             </div>
 
