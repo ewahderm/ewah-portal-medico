@@ -2,6 +2,7 @@
 
 import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
+import { hoy } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 import { requirePermiso as requirePermisoBase } from "@/lib/auth/requirePermiso";
 import { requireEntitlement } from "@/lib/auth/requireEntitlement";
@@ -398,8 +399,11 @@ export async function registrarConsumo(
   // distintos (captura tardía). created_at debe reflejar cuándo se aplicó,
   // no cuándo se tipeó, porque de eso dependen los filtros de fecha y los
   // reportes de Inventario (ver listarMovimientos). Hora fija (mediodía
-  // Colombia) para no cruzar de día al convertir date -> timestamptz.
-  const fechaUso = tratamiento?.fecha ? `${tratamiento.fecha}T12:00:00-05:00` : undefined;
+  // Colombia) para no cruzar de día al convertir date -> timestamptz. Si el
+  // tratamiento es de hoy se deja la hora real: con mediodía fijo, un lote
+  // recibido esta tarde aparecía DESPUÉS de su propio consumo.
+  const fechaUso =
+    tratamiento?.fecha && tratamiento.fecha !== hoy() ? `${tratamiento.fecha}T12:00:00-05:00` : undefined;
 
   const { error } = await supabase.from("movimientos_insumos").insert({
     clinica_id: check.usuario.clinica_id,
@@ -415,7 +419,9 @@ export async function registrarConsumo(
     ...(fechaUso ? { created_at: fechaUso } : {}),
   });
 
-  if (error) return { error: "No se pudo registrar el consumo." };
+  // Los rechazos de la BD (0112: lote de otra sede, tratamiento anulado…)
+  // están escritos para la persona.
+  if (error) return { error: error.code === "P0001" ? error.message : "No se pudo registrar el consumo." };
 
   revalidatePath("/tratamientos");
   revalidatePath("/inventario");
